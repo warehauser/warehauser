@@ -1,0 +1,38 @@
+# Ignore IDE directories
+.vscode/
+.idea/
+
+# Ignore the virtual environment directories
+venv/
+
+# Ignore the general ignore directory
+ignore/
+
+!.vscode/extensions.json
+
+# Ignore Python bytecode files
+*.pyc
+__pycache__
+
+*.local
+
+# Ignore local installation and runtime directories
+dist/
+logs/
+
+# Ignore MacOS DS_Store files
+.DS_Store
+**/.DS_Store
+
+# Ignore Django migration directories
+**/migrations
+
+# Ignore sqllite database file
+db.sqlite3
+
+core/scripts/db/data/
+core/static/core/media/images/barcodes/
+docs/build/*
+
+.env
+core/tasks.py
