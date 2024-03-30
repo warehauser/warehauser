@@ -1,3 +1,5 @@
 Warehauser is an open source warehouse management backend system written in Python using the Django library. It is designed to be simple to understand but powerful enough to handle the most complex business logic.
 
-The developer(s) currently do not share contact information, but if you may raise issues in github.com/stingermissile/warehauser/issues to request bug fixes, feature enhancements, or consulting or training services.
+This software is provided under the Apache 2.0 license.
+
+The developer(s) maybe contacted at warehauser@warehauser.org.
