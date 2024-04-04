@@ -25,8 +25,9 @@ from django.utils.translation import gettext as _
 from abc import ABC, abstractmethod
 
 from django.db.models import ProtectedError
+
 from core.models import *
-from core.views import *
+from core.views  import *
 
 class WarehauserThread(threading.Thread, ABC):
     def run(self):
@@ -72,7 +73,7 @@ class EventQueueThread(WarehauserThread):
     def process(self):
         try:
             with db_mutex(f'eventqueue'):
-                batched_events = Event.objects.filter(is_batched=True, status=EventStatus.OPEN.value)
+                batched_events = Event.objects.filter(is_batched=True, status=STATUS_OPEN)
                 for event in batched_events:
                     EventProcessThread(event).start()
         except DBMutexError as e:
@@ -92,12 +93,10 @@ class GarbageCollectorThread(WarehauserThread):
     def process(self):
         try:
             with db_mutex(f'garbagecollector'):
-                self._collect(Event.objects.filter(is_virtual=True, status=EventStatus.DESTROY.value))
-                self._collect(Warehause.objects.filter(is_virtual=True, status=WarehauseStatus.DESTROY.value))
-                self._collect(Product.objects.filter(is_virtual=True, status=ProductStatus.DESTROY.value))
+                self._collect(Event.objects.filter(is_virtual=True, status=STATUS_DESTROY))
+                self._collect(Warehause.objects.filter(is_virtual=True, status=STATUS_DESTROY))
+                self._collect(Product.objects.filter(is_virtual=True, status=STATUS_DESTROY))
         except DBMutexError as e:
             raise WarehauserError(_('Unable to secure mutex for garbagecollector.'), WarehauserErrorCodes.MUTEX_ERROR, {_('error'): e})
         except DBMutexTimeoutError as e:
             raise WarehauserError(_('Unable to secure mutex for garbagecollector.'), WarehauserErrorCodes.MUTEX_TIMEOUT_ERROR, {_('error'): e})
-
-
