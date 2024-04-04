@@ -16,7 +16,8 @@
 
 import logging
 
-from .utils import WarehauserError, WarehauserErrorCodes, WarehauseStatus, ProductStatus, EventStatus
+from .status import STATUS_OPEN
+from .utils  import WarehauserError, WarehauserErrorCodes
 
 class ModelCallback:
     @classmethod
@@ -29,7 +30,7 @@ class ModelCallback:
 
     @classmethod
     def check_status(cls, model):
-        if model.get_status() != WarehauseStatus.OPEN:
+        if model.get_status() != STATUS_OPEN:
             raise WarehauserError(msg=f'{model._meta.verbose_name} status is not OPEN.', code=WarehauserErrorCodes.STATUS_ERROR, extra={'self': model, 'status': model.status})
 
     @classmethod
@@ -61,10 +62,9 @@ class ModelCallback:
     # @classmethod
     # def clean_descr(cls, model):
     #     pass
-    pass
 
 
-
+# Warehause callback
 class WarehauseCallback(ModelCallback):
     @classmethod
     def check_has_capacity(cls, warehause, product):
@@ -198,11 +198,11 @@ class WarehauseCallback(ModelCallback):
         pass
 
 
-
+# Product callback
 class ProductCallback(ModelCallback):
     @classmethod
     def check_status(cls, model):
-        if model.status != ProductStatus.OPEN:
+        if model.status != STATUS_OPEN:
             raise WarehauserError(msg=f'{model.Meta.verbose_name} status is not OPEN.', code=WarehauserErrorCodes.STATUS_ERROR, extra={'self': model, 'status': model.status})
 
     @classmethod
@@ -261,8 +261,8 @@ class ProductCallback(ModelCallback):
 
         if quantity > model.quantity:
             raise WarehauserError(msg=f'Not enough quantity in warehause to perform split.',
-                                code=WarehauserErrorCodes.WAREHAUSE_QUANTITY_LOW,
-                                extra={'self': model, 'quantity': quantity})
+                                  code=WarehauserErrorCodes.WAREHAUSE_QUANTITY_LOW,
+                                  extra={'self': model, 'quantity': quantity})
 
         if quantity <= float(0.0):
             raise WarehauserError(msg=f'quantity must be a positive float value.',
@@ -276,11 +276,11 @@ class ProductCallback(ModelCallback):
         pass
 
 
-
+# Event callback
 class EventCallback(ModelCallback):
     @classmethod
     def pre_process(cls, event):
-        cls.check_status(model=event)
+        pass
 
     @classmethod
     def post_process(cls, event):

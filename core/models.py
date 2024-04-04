@@ -29,7 +29,8 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 
 from .callbacks import ModelCallback, WarehauseCallback, ProductCallback, EventCallback
-from .utils import WarehauserError, WarehauserErrorCodes, WarehauseStatus, EventStatus
+from .status import WAREHAUSEDEF_STATUS_CODES, WAREHAUSE_STATUS_CODES, PRODUCTDEF_STATUS_CODES, PRODUCT_STATUS_CODES, EVENTDEF_STATUS_CODES, EVENT_STATUS_CODES, STATUS_DESTROY, STATUS_CLOSED, STATUS_PROCESSING, STATUS_ON_HOLD, STATUS_OPEN
+from .utils import WarehauserError, WarehauserErrorCodes
 
 CHARFIELD_MAX_LENGTH = settings.CHARFIELD_MAX_LENGTH
 
@@ -40,7 +41,6 @@ class AbstractModel(models.Model):
     created_at  = models.DateTimeField(auto_now_add=True, null=False, blank=False,)
     updated_at  = models.DateTimeField(auto_now_add=False, null=True, blank=False,)
     options     = models.JSONField(null=True, blank=False,)
-    status      = models.IntegerField(null=False, blank=False, default=1,)
     barcode     = models.CharField(max_length=CHARFIELD_MAX_LENGTH, null=False, blank=False,)
     descr       = models.CharField(max_length=CHARFIELD_MAX_LENGTH, null=True, blank=False, default=None,)
     is_virtual  = models.BooleanField(null=False, blank=False, default=False,)
@@ -278,6 +278,7 @@ class WarehauseFields(models.Model):
 
 class WarehauseDef(AbstractDefModel, WarehauseFields):
     parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=False,)
+    status      = models.IntegerField(choices=WAREHAUSEDEF_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
 
     def create_instance(self, data:dict = None, callback = None):
         if callback is None:
@@ -304,6 +305,7 @@ class WarehauseDef(AbstractDefModel, WarehauseFields):
 
 class Warehause(AbstractInstModel, WarehauseFields):
     parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=False,)
+    status      = models.IntegerField(choices=WAREHAUSE_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
     dfn         = models.ForeignKey('WarehauseDef', on_delete=models.CASCADE, related_name='instances', null=False, blank=False,)
 
     user        = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='warehause', null=True, blank=False, default=None,)
@@ -470,6 +472,7 @@ class ProductFields(models.Model):
 
 class ProductDef(AbstractDefModel, ProductFields):
     parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=False,)
+    status      = models.IntegerField(choices=PRODUCTDEF_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
 
     # a list of appropriate Warehauses this ProductDef can be stored
     # if none are listed then store at any Warehause that returns is_storage True
@@ -514,6 +517,7 @@ class ProductDef(AbstractDefModel, ProductFields):
 
 class Product(AbstractInstModel, ProductFields):
     parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=False,)
+    status      = models.IntegerField(choices=PRODUCT_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
     dfn         = models.ForeignKey('ProductDef', on_delete=models.CASCADE, related_name='instances', null=False, blank=False,)
 
     warehause   = models.ForeignKey('Warehause', on_delete=models.CASCADE, related_name='stock', null=True, blank=False,)
@@ -638,9 +642,9 @@ class Product(AbstractInstModel, ProductFields):
 
         if self.quantity == float(0.0):
             if self.is_virtual:
-                self.status = WarehauseStatus.DESTROY
+                self.status = STATUS_DESTROY
             else:
-                self.status = WarehauseStatus.CLOSED
+                self.status = STATUS_CLOSED
             self.warehause = None
 
         self.callback().post_split(self, dfn, quantity, product)
@@ -667,6 +671,7 @@ class EventFields(models.Model):
 
 class EventDef(AbstractDefModel, EventFields):
     parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=False,)
+    status      = models.IntegerField(choices=EVENTDEF_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
 
     def create_instance(self, data:dict = None, callback = None):
         if callback is None:
@@ -693,6 +698,7 @@ class EventDef(AbstractDefModel, EventFields):
 
 class Event(AbstractInstModel, EventFields):
     parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=False,)
+    status      = models.IntegerField(choices=EVENT_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
     dfn         = models.ForeignKey('EventDef', on_delete=models.CASCADE, related_name='instances', null=False, blank=False,)
 
     warehause   = models.ForeignKey('Warehause', on_delete=models.CASCADE, related_name='events', null=True, blank=False,)
@@ -706,10 +712,6 @@ class Event(AbstractInstModel, EventFields):
         if self._callback:
             return self._callback
         return EventCallback
-
-    def register_process_results(self, status, result):
-        self.set_option('result', result)
-        self.status = status
 
     def process(self):
         self.callback().pre_process(event=self)
@@ -731,23 +733,26 @@ class Event(AbstractInstModel, EventFields):
                     proc_func = getattr(module, proc_name)
             except:
                 err = f"Unable to load function '{base_module}.{self.proc_name}'."
-                self.register_process_results(EventStatus.CLOSED.value, {'error': err})
+                self.register_process_results(STATUS_CLOSED, {'error': err})
 
                 self.save()
                 return self
 
             self.proc_start = timezone.now()
+            self.status = STATUS_PROCESSING
+            self.save()
+
             try:
                 proc_func(self)
             finally:
                 self.proc_end = timezone.now()
 
-            if self.status == EventStatus.DESTROY.value:
-                logging.error(msg=f'Event [{self}] is deleted due to previous errors.')
+            if self.status == STATUS_DESTROY:
                 try:
                     self.delete()
                 except:
                     pass
+                logging.error(msg=f'Event [{self}] is deleted.')
                 return None
             else:
                 self.save()

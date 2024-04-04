@@ -16,24 +16,6 @@
 
 from enum import IntEnum
 
-class WarehauseStatus(IntEnum):
-    DESTROY: int     = -1
-    CLOSED: int      = 0
-    OPEN: int        = 1
-
-class ProductStatus(IntEnum):
-    DESTROY: int     = -1
-    CLOSED: int      = 0
-    OPEN: int        = 1
-    TRANSFERRED: int = 2
-
-class EventStatus(IntEnum):
-    DESTROY: int     = -1
-    CLOSED: int      = 0
-    OPEN: int        = 1
-    PROCESSING: int  = 2
-    ONHOLD: int      = 3
-
 class WarehauserErrorCodes(IntEnum):
     # Define your error codes here
     NONE_NOT_ALLOWED                    = 0
