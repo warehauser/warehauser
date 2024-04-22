@@ -1,4 +1,4 @@
-# Copyright 2024 stingermissile @ github.com
+# Copyright 2024 warehauser @ github.com
 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,14 +22,12 @@ from db_mutex.db_mutex import db_mutex
 
 from django.utils.translation import gettext as _
 
-from abc import ABC, abstractmethod
-
 from django.db.models import ProtectedError
 
 from core.models import *
 from core.views  import *
 
-class WarehauserThread(threading.Thread, ABC):
+class WarehauserThread(threading.Thread):
     def run(self):
         logging.info(f"[{self}]: {_('Started.')}")
         self.process()
@@ -38,7 +36,6 @@ class WarehauserThread(threading.Thread, ABC):
     def __str__(self):
         return f"{_('Task')} {self.__module__}.{self.__class__.__name__}(id={self.ident})"
 
-    @abstractmethod
     def process(self):
         pass
 

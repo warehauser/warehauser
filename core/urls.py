@@ -1,4 +1,4 @@
-# Copyright 2024 stingermissile @ github.com
+# Copyright 2024 warehauser @ github.com
 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,6 +29,11 @@ router.register(prefix=r'eventdefs',     viewset=views.EventDefViewSet,     base
 router.register(prefix=r'events',        viewset=views.EventViewSet,        basename='event')
 
 urlpatterns = [
+    path('auth/login/', views.auth_login_view, name='auth_login'),
+    path('auth/logout/', views.auth_logout_view, name='auth_logout'),
+    path('auth/forgot_password/', views.auth_forgot_password_view, name='auth_forgot_password'),
+    path('auth/change_password/', views.auth_change_password_view, name='auth_change_password'),
+    path('auth/profile/', views.auth_user_profile_view, name='auth_user_profile'),
     path('api/', include(router.urls)),
     path('', views.home_view, name='home'),
 ]

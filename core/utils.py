@@ -1,4 +1,4 @@
-# Copyright 2024 stingermissile @ github.com
+# Copyright 2024 warehauser @ github.com
 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,24 @@
 # utils.py
 
 from enum import IntEnum
+import re
+import random
+import string
+
+def generate_otp_code(length=6):
+    """
+    Generate a random OTP code (security code to verify password reset requests).
+    """
+    characters = string.ascii_letters + string.digits
+    return ''.join(random.choice(characters) for _ in range(length))
+
+# Define a function for validating an email address
+def is_valid_email(email:str):
+    # Make a regular expression for validating an email address
+    valid_email_regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
+
+    # pass the regular expression and the string into the fullmatch() method
+    return re.fullmatch(valid_email_regex, email)
 
 class WarehauserErrorCodes(IntEnum):
     # Define your error codes here

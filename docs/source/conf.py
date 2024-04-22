@@ -7,8 +7,8 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'warehauser'
-copyright = '2024, Warwick Hall (stingermissile@github.com)'
-author = 'Warwick Hall (stingermissile@github.com)'
+copyright = '2024, Warwick Hall (warehauser@github.com)'
+author = 'Warwick Hall (warehauser@github.com)'
 release = '0.1a'
 
 # -- General configuration ---------------------------------------------------

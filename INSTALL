@@ -1,0 +1,95 @@
+Installation
+------------
+
+Please note that on some systems python is installed as python3. If this is the case replace all python commands with python3.
+
+1. Make sure Python is installed (see Python: https://www.python.org/).
+
+2. Make sure virtualenv package is installed. On the command line run:
+
+    pip install virtualenv
+
+3. On command line in your working directory run:
+
+    git clone https://github.com/warehauser/warehauser.git
+    cd warehauser
+    virtualenv venv
+
+4. On Windows run:
+
+    venv\Scripts\activate
+
+On Linux or MacOS:
+
+    source venv/Scripts/activate
+
+5. Install required packages:
+
+    pip install -r warehauser/requirements.txt
+
+6. Create (or ensure one is created) your warehauser database. See Django documentation on supported database management systems that are supported.
+
+7. Edit your .env environment variables file to include environment secrets. Note that the Django (library used by warehauser) SECRET_KEY can be set in your environment variables or in the .env file as DJANGO_SECRET_KEY.
+
+8. On the command line run:
+
+    python manage.py makemigrations
+    python manage.py migrate
+
+9. Set up users, groups and permissions. Open a Django shell via the command line by running:
+
+    python manage.py shell
+
+Create groups in the shell by running these commands:
+
+    from django.contrib.auth.models import Group
+    g1 = Group.objects.create(name='admin')
+    g2 = Group.objects.create(name='user')
+    g3 = Group.objects.create(name='warehauser_admin')
+    g4 = Group.objects.create(name='warehauser_user')
+    g3.user_set.add(g1)
+    g4.user_set.add(g2)
+
+Create users while in the shell by running these commands:
+
+    from django.contrib.auth.models import User
+    User.objects.create(username='warehauser', email='<email address>', password='<password>', is_superuser=True)
+
+Note you can use whatever group names you like, but remember them for the next step and you need two unique groups as default.
+
+10. In warehauser/settings.py register the two groups above like so:
+
+WAREHAUSER_ADMIN_GROUP = 'warehauser_admin'
+WAREHAUSER_USER_GROUP = 'warehauser_user'
+
+(Replace the group names with the names of the groups you created in step 9 if different.)
+
+11. Create a superuser. In warehauser we assign all privileges via groups but the admin groups should still have is_superuser flag set to True as well to be compatible with third party libraries such as django-gaurdian.
+
+    python manage.py createsuperuser
+    python manage.py addtogroup <username> warehause_admin
+
+where <username> is the username you created in the createsuperuser command above, and replace warehause_admin with the name of the group created above for admins.
+
+Create as many user accounts as you need by repeating these steps:
+
+    python manage.py createsuperuser --no-superuser
+    python manage.py addtogroup <username> warehause_user
+
+where again <username> is the username you created in the createsuperuser command above, and replace warehause_user with the name of the group created above for users.
+
+
+Quick Start Guide
+-----------------
+
+1. When you are ready to start the warehauser server, on the command line run:
+
+    python manage.py runserver
+
+2. Navigate to the administration console in your web browser. It can be found at http://<host>:<port|8000>/admin/.
+
+2. Define your Def objects including WarehauserDef, ProductDef, and EventDef. You can use the admin console at http://<IP ADDRESS|localhost>:<PORT|8000>/admin/, log in as the warehause_admin user you created aboce, and follow the prompts to add the definition models.
+
+3. If you wish to run the scheduler then on another command line run:
+
+    python warehauser/scheduler.py

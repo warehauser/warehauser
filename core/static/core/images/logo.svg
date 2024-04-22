@@ -1,0 +1,23 @@
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 160 140"
+    id="vector">
+    <path
+        id="path"
+        d="M 50.25 53.23 L 109.63 53.23 L 109.63 112.62 L 50.25 112.62 L 50.25 53.23 Z M 54.4 57.39 L 54.4 108.46 L 105.48 108.46 L 105.48 57.39 L 54.4 57.39 Z"
+        fill="#ffffff00"
+        stroke="#ccffff"
+        stroke-width="10"/>
+    <path
+        id="path_1"
+        d="M 30 15 L 12 15 L 12 130 L 30 130"
+        fill="#ffffff00"
+        stroke="#ccffff"
+        stroke-width="15"/>
+    <path
+        id="path_2"
+        d="M 129 15 L 149 15 L 149 130 L 129 130"
+        fill="#ffffff00"
+        stroke="#ccffff"
+        stroke-width="15"/>
+</svg>

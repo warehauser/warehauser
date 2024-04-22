@@ -1,4 +1,4 @@
-# Copyright 2024 stingermissile @ github.com
+# Copyright 2024 warehauser @ github.com
 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,7 +34,8 @@ FILTER_FIELDS_STANDARD     = {
     'updated_at': ['exact', 'isnull', 'lt', 'lte', 'gt', 'gte',],
     'options': ['exact', 'isnull',],
     'is_virtual': ['exact',],
-    'barcode': ['iexact',],
+    'barcode': ['exact',],
+    'descr': ['iexact',],
 }
 
 FILTER_FIELDS_DEF_STANDARD = {
@@ -77,10 +78,15 @@ class WarehauserFilterSet(filters.FilterSet):
 FILTER_FIELDS_WAREHAUSE_COMMON = {
     'is_storage': ['exact',],
     'is_mobile': ['exact',],
+    'is_permissive': ['exact',],
     'max_weight': ['exact', 'lt', 'lte', 'gt', 'gte',],
     'max_height': ['exact', 'lt', 'lte', 'gt', 'gte',],
     'max_width': ['exact', 'lt', 'lte', 'gt', 'gte',],
-    'max_length': ['exact', 'lt', 'lte', 'gt', 'gte',],
+    'tare_length': ['exact', 'lt', 'lte', 'gt', 'gte',],
+    'tare_weight': ['exact', 'lt', 'lte', 'gt', 'gte',],
+    'tare_height': ['exact', 'lt', 'lte', 'gt', 'gte',],
+    'tare_width': ['exact', 'lt', 'lte', 'gt', 'gte',],
+    'tare_length': ['exact', 'lt', 'lte', 'gt', 'gte',],
 }
 
 class WarehauseDefFilter(WarehauserFilterSet):
@@ -158,6 +164,8 @@ class ProductFilter(WarehauserFilterSet):
 # EVENT filters
 
 FILTER_FIELDS_EVENT_COMMON = {
+    'is_batched': ['exact',],
+    'proc_name': ['exact', 'isnull',]
 }
 
 class EventDefFilter(WarehauserFilterSet):
@@ -180,6 +188,8 @@ class EventFilter(WarehauserFilterSet):
             **FILTER_FIELDS_EVENT_COMMON,
             'warehause': ['exact',],
             'user': ['exact', 'isnull',],
+            'proc_start': ['exact', 'isnull', 'lt', 'lte', 'gt', 'gte',],
+            'proc_end': ['exact', 'isnull', 'lt', 'lte', 'gt', 'gte',],
         }
 
     def __init__(self, *args, **kwargs):

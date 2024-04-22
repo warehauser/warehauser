@@ -1,4 +1,4 @@
 Warehauser Installation Guide
 =============================
 
-Warehauser is an open source project hosted at `https://www.github.com/stingermissile/warehauser/ <https://www.github.com/stingermissile/warehauser/>`__.
+Warehauser is an open source project hosted at `https://www.github.com/warehauser/warehauser/ <https://www.github.com/warehauser/warehauser/>`__.

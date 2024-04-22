@@ -1,4 +1,4 @@
-# Copyright 2024 stingermissile @ github.com
+# Copyright 2024 warehauser @ github.com
 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,11 +16,10 @@
 
 import importlib
 import logging
+import uuid
 
-from db_mutex import DBMutexError, DBMutexTimeoutError
 from db_mutex.db_mutex import db_mutex
 
-from django.apps import apps
 from django.db import models
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -29,41 +28,76 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 
 from .callbacks import ModelCallback, WarehauseCallback, ProductCallback, EventCallback
-from .status import WAREHAUSEDEF_STATUS_CODES, WAREHAUSE_STATUS_CODES, PRODUCTDEF_STATUS_CODES, PRODUCT_STATUS_CODES, EVENTDEF_STATUS_CODES, EVENT_STATUS_CODES, STATUS_DESTROY, STATUS_CLOSED, STATUS_PROCESSING, STATUS_ON_HOLD, STATUS_OPEN
+from .status import *
 from .utils import WarehauserError, WarehauserErrorCodes
 
-CHARFIELD_MAX_LENGTH = settings.CHARFIELD_MAX_LENGTH
+try:
+    CHARFIELD_MAX_LENGTH = settings.CHARFIELD_MAX_LENGTH
+except Exception as e:
+    CHARFIELD_MAX_LENGTH = 1024
 
-# Create your models here.
+class WarehauserAbstractModel(models.Model):
+    """
+    Abstract parent class for all warehauser core app models.
 
-class AbstractModel(models.Model):
-    external_id = models.CharField(max_length=CHARFIELD_MAX_LENGTH, null=True, blank=False,)
-    created_at  = models.DateTimeField(auto_now_add=True, null=False, blank=False,)
-    updated_at  = models.DateTimeField(auto_now_add=False, null=True, blank=False,)
-    options     = models.JSONField(null=True, blank=False,)
+    Attributes:
+        external_id (string):   convenience placeholder for external system id for this model object. Not used by any warehauser code.
+        created_at  (datetime): date and time this model object was first saved to the database. Auto generated and not editable.
+        updated_at  (datetime): date and time this model object was last saved to the database. Auto generated at save time.
+        options     (json):     optional dictionary of key value pairs of arbitrary data.
+        barcode     (string):   barcode string that identifies this model object. If there are more than one barcode, it is best practice to add those to the options attribute (above).
+        descr       (string):   human readable description field naming this model object. Default is None.
+        is_virtual  (bool):     True if this model object should have status set to DESTROY after first use is complete. Default is False.
+
+        callback    (ModelCallback): optional delegate object used to make various pre and post checks of model object function calls.
+    """
+    id          = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    external_id = models.CharField(max_length=CHARFIELD_MAX_LENGTH, null=True, blank=True,)
+    created_at  = models.DateTimeField(auto_now_add=True, null=False, blank=False, editable=False,)
+    updated_at  = models.DateTimeField(auto_now_add=False, null=True, blank=True,)
+    options     = models.JSONField(null=True, blank=True,)
     barcode     = models.CharField(max_length=CHARFIELD_MAX_LENGTH, null=False, blank=False,)
-    descr       = models.CharField(max_length=CHARFIELD_MAX_LENGTH, null=True, blank=False, default=None,)
+    descr       = models.CharField(max_length=CHARFIELD_MAX_LENGTH, null=True, blank=True, default=None,)
     is_virtual  = models.BooleanField(null=False, blank=False, default=False,)
 
-    def lock(self):
-        if self.id is None:
-            raise WarehauserError(msg=f'Model object is not saved.', code=WarehauserErrorCodes.MODEL_NOT_SAVED)
-        return db_mutex(f'{self.__class__.__name__.lower()}:{self.id}')
+    _callback   = None
 
-    def get_status(self):
-        status = self.status
-        for w in self.get_parents(include_self=False):
-            if w.status < status:
-                status = w.status
-        return status
+    def __init__(self, *args, **kwargs):
+        callback = kwargs.pop('callback', None)  # Get the 'callback' argument if provided
+        super().__init__(*args, **kwargs)  # Call the parent class constructor
+        
+        # Set the callback if provided
+        if callback is not None:
+            self.callback = callback
 
-    def get_top_parent(self):
-        result = self
-        while result.parent is not None:
-            result = result.parent
-        return result
+    @property
+    def callback(self):
+        return self._callback
+
+    @callback.setter
+    def callback(self, callback):
+        if callback is not None and not isinstance(callback, ModelCallback):
+            raise AttributeError(_('Expected an instance of') + ' ModelCallback')
+
+        self._callback = callback
+
+    @callback.deleter
+    def callback(self):
+        try:
+            del self._callback
+        except Exception as e:
+            pass
 
     def get_parents(self, include_self=False):
+        """
+        Get a list of unique model objects that are parents to self.
+
+        Args:
+            include_self (bool): True if include self in returned list.
+        
+        Returns:
+            list: a list of model objects related to self through parent relations.
+        """
         relatives = set()
 
         if include_self:
@@ -81,104 +115,137 @@ class AbstractModel(models.Model):
 
         return list(relatives)
 
-    def get_children(self, include_self=False):
-        relatives = set()
+    def get_status(self):
+        """
+        Get the status of this model object restricted by the status of all parents.
 
-        if include_self:
-            relatives.add(self)
-
-        if self.id is None:
-            return relatives
-
-        def _traverse_down(obj):
-            nonlocal relatives
-
-            children = obj.children.all()
-            for child in children:
-                if relatives.add(child):
-                    _traverse_down(obj=child)
-
-        _traverse_down(self)
-
-        return list(relatives)
-
-    # recursively get all parent and children.
-    def get_relatives(self, include_self=False):
-        return list(set(self.get_parents(include_self) + self.get_children(False)))
+        Returns:
+            int: status code.
+        """
+        status = self.status
+        for w in self.get_parents(include_self=False):
+            if w.status < status:
+                status = w.status
+        return status
 
     def set_option(self, key, value):
+        """
+        Set an option in this model object's options field. This function will gracefully handle cases where
+        options is not yet initialized, and remove keys when value is None.
+
+        Args:
+            key   (string): the key for this value. If None then there will be no change to this model object.
+            value (string): the value to be stored in this model object's options field associated with the key. If None then the key will be deleted from options if it exists.
+        """
+        if key is None:
+            return
         if value is None:
             try:
                 del self.options[key]
-            except:
+            except Exception as ignr:
                 pass
         else:
             if self.options is None:
                 self.options = dict()
             self.options[key] = value
-
         pass
 
-    def append_option(self, key, value):
-        if self.options is None:
-            self.options = dict()
+    def clean_fields(self, exclude:list=None):
+        """
+        Check field data is safe to save to the database/ backend. This operation is delegated to the callback for this model object.
 
-        if key not in self.options:
-            self.options[key] = list()
+        Args:
+            exclude (list): the array of strings of names of fields to not clean.
+        """
+        if self._callback is None:
+            return
 
-        self.options[key].append(value)
-        pass
-
-    def log(self, level, msg, extra = None):
-        logging.log(level=level, msg=msg, extra=extra)
-        pass
-
-    def clean_fields(self, fields):
+        for field in [field for field in self._meta.fields if field.name not in exclude]:
+            # Generate method name for field
+            method_name = f'clean_{field.name}'
+            # Check if method exists and call it
+            if hasattr(self.callback, method_name):
+                getattr(self.callback, method_name)(self)
         pass
 
     def save(self, *args, **kwargs):
-        self.clean_fields(None)
+        """
+        Overridden from super().save(). If this model object has been saved the updated_at field is updated to the current date and time.
+        """
+        self.clean_fields(exclude=None)
 
         if self.id:
             self.updated_at = timezone.now()
 
         super().save(*args, **kwargs)
-        logging.info(f'Saved {self.__str__()}')
+
+    def mutex(self):
+        """
+        Obtain a thread safe mutex object unique to this model object.
+
+        Returns:
+            db_mutex: the lock object. Automatically released when out of scope.
+
+        Raises:
+            WarehauserError: if this model object has not been saved.
+        
+        Example:
+            ```
+            try:
+                with model.mutex():
+                    # Your thread unsafe code here...
+            except DBMutexError as e:
+                raise WarehauserError(_('Unable to secure mutex.'), WarehauserErrorCodes.MUTEX_ERROR, {'self': model, 'error': e})
+            except DBMutexTimeoutError as e:
+                raise WarehauserError(_('Unable to secure mutex.'), WarehauserErrorCodes.MUTEX_TIMEOUT_ERROR, {'self': model, 'error': e})
+            ```
+        """
+        if self.id is None:
+            raise WarehauserError(msg=_('Model object is not saved.'), code=WarehauserErrorCodes.MODEL_NOT_SAVED)
+        return db_mutex(f'{self.__module__}.{self.__class__.__name__.lower()}:{self.id}')
+
+    def log(self, level, msg, extra=None):
+        """
+        Log a message specific to this model object.
+
+        Args:
+            level (int):    one of logging.CRITICAL|DEBUG|INFO|ERROR.
+            msg   (string): message string to log.
+            extra (dict):   optional dictionary of extra information to log. Default is None.
+        """
+        logging.log(level=level, msg=msg, extra=extra)
 
     def __str__(self):
-        if self.id:  # Check if the object has been saved to the database
-            id = self.id
-        else:
-            id = '<None>'
-
+        res = f'{self.__module__}.{self.__class__.__name__}'
         if self.barcode:
-            barcode = f"\"{self.barcode}\""
-        else:
-            barcode = '<None>'
-
-        return f"{self.__module__}.{self.__class__.__name__}(id={id}, barcode={barcode})"
+            res = f'{res} {self.barcode}'
+        if self.id:
+            res = f'{res} ({self.id})'
+        return res
 
     class Meta:
         abstract = True
         ordering = ['updated_at', 'created_at',]
 
-# Base Model class for all Def models
-class AbstractDefModel(AbstractModel):
-    def merge_dfn_defaults(self, data):
+class WarehauserAbstractDefinitionModel(WarehauserAbstractModel):
+    """
+    Abstract parent class for all warehauser core app definition models.
+    """
+    def _merge_dfn_defaults(self, data):
         validated = dict()
 
         for field in self._meta.fields:
             validated[field.name] = getattr(self, field.name)
 
         if data:
-            # Update default values with request validated
+            # Update default values with request validated data
             for key, value in data.items():
-                # If the value is a dict/JSONField, perform a deep copy
                 if value is None:
                     try:
                         del validated[key]
                     except:
                         pass
+                # If the value is a dict/JSONField, perform a deep copy
                 elif isinstance(value, dict):
                     if validated[key] is None or not isinstance(validated[key], dict):
                         validated[key] = value
@@ -205,45 +272,38 @@ class AbstractDefModel(AbstractModel):
         except KeyError as e:
             pass
 
-        # validated['dfn_id'] = self.id
         validated['dfn'] = self
 
         return validated
 
+    def _create_instance(self, clazz, data:dict, callback:ModelCallback):
+        if self.callback:
+            self.callback.pre_create_instance(dfn=self, data=data)
+
+        err: Exception = None
+        try:
+            data = self._merge_dfn_defaults(data)
+            if isinstance(callback, ModelCallback):
+                data['callback'] = callback
+            model:WarehauserAbstractModel = clazz(**data)
+        except Exception as e:
+            err = e
+        finally:
+            if self.callback:
+                self.callback.post_create_instance(dfn=self, data=data, model=model, err=err)
+
+        if err:
+            raise err
+
+        return model
+
     class Meta:
         abstract = True
 
-# Base Model class for all instance models
-class AbstractInstModel(AbstractModel):
-    _callback: ModelCallback = None
-
-    @property
-    def callback(self):
-        return self._callback
-
-    @callback.setter
-    def callback(self, value):
-        self._callback = value
-
-    @callback.deleter
-    def callback(self):
-        del self._callback
-
-    def clean_fields(self, fields):
-        if self._callback is None:
-            return
-
-        if fields is None:
-            fields = self._meta.fields
-
-        for field in fields:
-            # Generate method name for field
-            method_name = f'clean_{field.name}'
-            # Check if method exists and call it
-            if hasattr(self.callback, method_name):
-                getattr(self.callback, method_name)(self)
-        pass
-
+class WarehauserAbstractInstanceModel(WarehauserAbstractModel):
+    """
+    Abstract parent class for all warehauser core app instance models.
+    """
     class Meta:
         abstract = True
 
@@ -251,51 +311,72 @@ class AbstractInstModel(AbstractModel):
 # WAREHAUSE Models
 
 class WarehauseFields(models.Model):
-    # This field is True if this WarehauseDef can store product. If False, then this WarehauseDef can only store product in
-    # children (see parent above) WarehauseDefs.
+    """
+    Abstract model to declare common fields used by both WarehauseDef and Warehause models.
+
+    Attributes:
+        is_storage    (bool):  True if this Warehause is allowed to directly store Products. If False then Products in this Warehause must be stored in a child Warehause with is_storage equal to True.
+        is_mobile     (bool):  True if this Warehause can physically move from one parent to another.
+        is_permissive (bool):  True if this Warehause allows multiple ProductDefs to be stored at the same time. If True, is_storage needs to be True as well otherwise this makes no sense.
+        max_weight    (float): maximum weight in arbitrary units this warehause is allowed to store. None means not limited by weight capacity.
+        max_height    (float): maximum height in arbitrary units this warehause is allowed to store. None means not limited by height capacity.
+        max_width     (float): maximum width in arbitrary units this warehause is allowed to store. None means not limited by width capacity.
+        max_length    (float): maximum length in arbitrary units this warehause is allowed to store. None means not limited by length capacity.
+        tare_weight   (float): unlaiden weight in arbitrary units of this Warehause. None means not measured/ ignored.
+        tare_height   (float): unlaiden height in arbitrary units of this Warehause. None means not measured/ ignored.
+        tare_width    (float): unlaiden width in arbitrary units of this Warehause. None means not measured/ ignored.
+        tare_length   (float): unlaiden length in arbitrary units of this Warehause. None means not measured/ ignored.
+    """
     is_storage  = models.BooleanField(null=False, blank=False, default=True,)
-
-    # True if this WarehauseDef is a mobile warehause such as a forklift or conveyor belt, or employee picker
     is_mobile   = models.BooleanField(null=False, blank=False, default=False,)
-
-    # True if this warehause accepts Product chains (multiple different product kinds at once)
     is_permissive = models.BooleanField(null=False, blank=False, default=False,)
 
-    # maximum total dimensions of stored or carried Product(s) allowed (arbitrary units)
-    max_weight  = models.FloatField(null=True, blank=False,)
-    max_height  = models.FloatField(null=True, blank=False,)
-    max_width   = models.FloatField(null=True, blank=False,)
-    max_length  = models.FloatField(null=True, blank=False,)
+    max_weight  = models.FloatField(null=True, blank=True,)
+    max_height  = models.FloatField(null=True, blank=True,)
+    max_width   = models.FloatField(null=True, blank=True,)
+    max_length  = models.FloatField(null=True, blank=True,)
 
-    # Tare (or empty) dimensions of this Warehause
-    tare_weight = models.FloatField(null=True, blank=False,)
-    tare_height = models.FloatField(null=True, blank=False,)
-    tare_width  = models.FloatField(null=True, blank=False,)
-    tare_length = models.FloatField(null=True, blank=False,)
+    tare_weight = models.FloatField(null=True, blank=True,)
+    tare_height = models.FloatField(null=True, blank=True,)
+    tare_width  = models.FloatField(null=True, blank=True,)
+    tare_length = models.FloatField(null=True, blank=True,)
 
     class Meta:
         abstract = True
 
-class WarehauseDef(AbstractDefModel, WarehauseFields):
-    parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=False,)
+class WarehauseDef(WarehauserAbstractDefinitionModel, WarehauseFields):
+    """
+    Definition model for Warehauses. Always create Warehause objects through the appropriate WarehauseDef create_instance() method. Note that barcode field has a unique constraint added to this model, so there should be at most one WarehauseDef per barcode.
+
+    Attributes:
+        parent (WarehauseDef): the parent WarehauseDef or None if no parent. Used to conceptually arrange WarehauseDefs into a nesting hierarchy, ignored otherwise.
+        status (int):          the status of this WarehauseDef with available choices of core.status.WAREHAUSEDEF_STATUS_CODES.
+
+    Example:
+        ```
+        dfnid = # id of your desired WarehauseDef
+        data = dict() # If you want all default values then this can be None
+        # define override data for your Warehause that you want instead of the WarehauseDef defaults. e.g. data['max_weight'] = 10.0
+        dfn = WarehuaseDef.objects.get(id=dfnid)
+        model = dfn.create_instance(data=data)
+        ```
+    """
+    parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=True,)
     status      = models.IntegerField(choices=WAREHAUSEDEF_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
 
-    def create_instance(self, data:dict = None, callback = None):
-        if callback is None:
-            callback = WarehauseCallback
+    def create_instance(self, data:dict=None, callback=None):
+        """
+        Create an instance of this definition.
 
-        callback.pre_create_instance(dfn=self, data=data)
+        Args:
+            data     (dict, optional): a key value pair dictionary of desired overridden data values for the new instance.
+            callback (WarehauseCallback, optional): a callback delegate class that will be used by this instance model. If None then the standard WarehauseCallback class is used.
+        """
+        if not isinstance(callback, WarehauseCallback):
+            callback = WarehauseCallback()
+        return super()._create_instance(clazz=Warehause, data=data, callback=callback)
 
-        data = self.merge_dfn_defaults(data)
-        model:Warehause = apps.get_model('core', 'Warehause')(**data)
-
-        model._callback = callback
-
-        callback.post_create_instance(dfn=self, data=data, model=model)
-
-        return model
-
-    class Meta(AbstractDefModel.Meta):
+    class Meta(WarehauserAbstractDefinitionModel.Meta):
         abstract = False
         constraints = [
             models.UniqueConstraint(fields=['barcode'], name='constraint_unique_warehauserdef_barcode')
@@ -303,25 +384,34 @@ class WarehauseDef(AbstractDefModel, WarehauseFields):
         verbose_name = 'warehausedef'
         verbose_name_plural = 'warehausedefs'
 
-class Warehause(AbstractInstModel, WarehauseFields):
-    parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=False,)
+class Warehause(WarehauserAbstractInstanceModel, WarehauseFields):
+    """
+    Warehause instance class.
+
+    Attributes:
+        parent    (Warehause):    parent Warehause or None if no parent.
+        status    (int):          status of this Warehause with available choices of core.status.WAREHAUSE_STATUS_CODES.
+        dfn       (WarehauseDef): WarehauseDef used to create this Warehause object.
+        user      (User):         warehauser User that has custody of this Warehause.
+        stock_min (float):        minimum amount of Product that is required in this Warehause. If the quantity decreases past this value then request a replenishment. None if product_def is None.
+        stock_max (float):        maximum amount of Product that is allowed in this Warehause. None if product_def is None.
+    """
+    parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=True,)
     status      = models.IntegerField(choices=WAREHAUSE_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
-    dfn         = models.ForeignKey('WarehauseDef', on_delete=models.CASCADE, related_name='instances', null=False, blank=False,)
+    dfn         = models.ForeignKey('WarehauseDef', on_delete=models.CASCADE, related_name='instances', null=False, blank=False, editable=False,)
 
-    user        = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='warehause', null=True, blank=False, default=None,)
+    user        = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='warehause', null=True, blank=True, default=None,)
 
-    # Minimum amount of Product that is required in this Warehause. If the quantity decreases past this value then request a replenishment. None if product_def is None.
-    stock_min   = models.FloatField(null=True, blank=False,)
-    # Maximum amount of Product that is allowed in this Warehause. None if product_def is None.
-    stock_max   = models.FloatField(null=True, blank=False,)
-
-    @property
-    def callback(self):
-        if self._callback:
-            return self._callback
-        return WarehauseCallback
+    stock_min   = models.FloatField(null=True, blank=True,)
+    stock_max   = models.FloatField(null=True, blank=True,)
 
     def usage(self):
+        """
+        Get a report of the current usage statistics for this Warehause.
+
+        Returns:
+            dict: the usage report for this Warehause.
+        """
         res = {
             'stock':      self.stock.all(),
             'stock_min':  self.stock_min,
@@ -348,6 +438,12 @@ class Warehause(AbstractInstModel, WarehauseFields):
         return res
 
     def get_mapped_productdefs(self):
+        """
+        Get a set of ProductDefs that are mapped to this Warehause object and all its parents. If empty then this Warehause is considered to be allowed to store any Product if is_storage flag is True.
+
+        Returns:
+            set: the non None set of ProductDef objects assigned to this Warehause or all parents of this Warehause.
+        """
         # Initialize an empty set to store all mapped ProductDef instances
         mapped_productdefs = set()
         parents = self.get_parents(include_self=True)
@@ -356,82 +452,94 @@ class Warehause(AbstractInstModel, WarehauseFields):
             mapped_productdefs.add(pdefs)
         return mapped_productdefs
 
-    def get_stock(self, dfn):
+    def get_stock(self, dfn=None, all=False):
+        """
+        Get the non depleted stock for with Warehause of a dfn type.
+
+        Args:
+            dfn (ProductDef, optional): the type of Product to search for.
+            all (bool, optional):       False (default) if you only want the first non depleted stock. Otherwise return all non depleted stock.
+        
+        Returns:
+            QuerySet: the QuerySet of the non depleted Product objects matching the search criteria.
+        """
+        stock = self.stock.all()  # Get all stock objects related to this Warehause
+
         if dfn is None:
-            try:
-                return self.stock.filter(quantity=float(-1.0)).first()
-            except:
-                return None
+            # Filter out depleted stock if dfn is not provided
+            stock = stock.exclude(quantity=float(-1.0)).order_by('dfn', 'created_at')
+        else:
+            # Filter by both dfn and non-depleted stock if dfn is provided
+            stock = stock.filter(dfn=dfn).exclude(quantity=float(-1.0)).order_by('created_at')
 
-        try:
-            return self.stock.filter(dfn=dfn).first()
-        except:
-            return None
-
-    def reserve(self, dfn, quantity = float(1.0)):
-        product: Product = self.get_stock(dfn=dfn)
-
-        self.callback().pre_reserve(warehause=self, dfn=dfn, quantity=quantity, product=product)
-        product.reserve(quantity=quantity)
-        self.callback().post_reserve(warehause=self, dfn=dfn, quantity=quantity, product=product)
-
-        return product
-
-    def unreserve(self, dfn, quantity = float(1.0)):
-        product: Product = self.get_stock(dfn=dfn)
-
-        self.callback().pre_unreserve(warehause=self, dfn=dfn, quantity=quantity, product=product)
-        product.unreserve(quantity=quantity)
-        self.callback().post_unreserve(warehause=self, dfn=dfn, quantity=quantity, product=product)
-
-        return product
+        if all:
+            return stock
+        else:
+            return stock.first()
 
     def receive(self, product):
-        product: Product = product
-        self.callback().pre_receive(warehause=self, product=product)
+        """
+        Receive a product unto this Warehause.
 
-        stock: Product = None
+        Args:
+            product (Product):  product to receive.
+        """
+        product:Product = product
+        if self.callback:
+            self.callback.pre_receive(model=self, product=product)
 
-        # If the product is indeterminate then if this warehause (self) contains
-        # an indeterminate stock then return the existing indeterminate stock,
-        # else attach product
+        err = None
+
         try:
-            stock = self.get_stock(dfn=product.dfn)
-            stock.join(product=product, save=True)
-        except:
-            stock = product
-            stock.warehause = self
+            stock:Product = self.get_stock(dfn=product.dfn)
+            if stock:
+                stock.join(product=product)
+            else:
+                product.warehause = self
+                stock = product
+        except Exception as e:
+            err = e
+        finally:
+            if self.callback:
+                self.callback.post_receive(model=self, product=product, stock=stock, err=err)
 
-        self.callback().post_receive(warehause=self, product=product, stock=stock)
-
-        return stock
-
-    def dispatch(self, dfn, quantity = float(1.0), unreserve = False):
-        stock: Product = self.get_stock(dfn=dfn)
-        self.callback().pre_dispatch(warehause=self, dfn=dfn, quantity=quantity, stock=stock)
-
-        product = stock.split(quantity=quantity, save=(not unreserve))
-
-        if unreserve:
-            stock.unreserve(quantity=quantity)
-            stock.save()
-
-        self.callback().post_dispatch(warehause=self, dfn=dfn, quantity=quantity, stock=stock, product=product)
-
-        return product
-
-    def transfer(self, to_warehause, dfn, quantity = float(1.0)):
-        to_warehause: Warehause = to_warehause
-        self.callback().pre_transfer(to_warehause=to_warehause, dfn=dfn, quantity=quantity)
-
-        product: Product = self.dispatch(dfn=dfn, quantity=quantity)
-        stock: Product = to_warehause.receive(product=product)
-
-        self.callback().post_transfer(to_warehause=to_warehause, dfn=dfn, quantity=quantity, stock=stock)
+        if err:
+            raise err
 
         return stock
 
-    class Meta(AbstractInstModel.Meta):
+    def dispatch(self, dfn, quantity=float(1.0)):
+        """
+        Dispatch a quantity of product of a given definition.
+
+        Args:
+            dfn      (ProductDef): definition of the Product to dispatch.
+            quantity (float):      quantity of product to dispatch in arbitrary units.
+        """
+        stock:Product = self.get_stock(dfn=dfn)
+
+        if self.callback:
+            self.callback.pre_dispatch(model=self, dfn=dfn, quantity=quantity, stock=stock)
+
+        err = None
+
+        try:
+            product = stock.split(quantity=quantity)
+        except Exception as e:
+            err = e
+        finally:
+            if self.callback:
+                self.callback.post_dispatch(model=self, dfn=dfn, quantity=quantity, stock=stock, product=product, err=err)
+
+        if err:
+            raise err
+
+        if product == stock:
+            return product, None
+
+        return product, stock
+
+    class Meta(WarehauserAbstractInstanceModel.Meta):
         abstract = False
         verbose_name = 'warehause'
         verbose_name_plural = 'warehauses'
@@ -440,74 +548,65 @@ class Warehause(AbstractInstModel, WarehauseFields):
 # PRODUCT Models
 
 class ProductFields(models.Model):
-    # counting code defines how to count product instances
-    # values and meanings could be:
-    #  1: instance counting
-    #  2: weight unit counting (units being pounds or grams etc)
-    #  3: volume unit counting (units such as gallons or litres or cubic feet or cubic meters etc)
+    """
+    Abstract model to declare common fields used by both ProductDef and Product models.
+
+    Attributes:
+        code_count (int):   counting code defines how to count product instances. Values and meanings could be:
+                                1: instance counting
+                                2: weight unit counting (units being pounds or grams etc)
+                                3: volume unit counting (units such as gallons or litres or cubic feet or cubic meters etc)
+        atomic     (float): if this is a bundle of units, then atomic is the total number of measuring units contained per instance otherwise None/null
+        is_fragile (bool):  True if this product is considered fragile to handle, False otherwise. Default is False.
+        is_up      (bool):  True if this product must be stored in a particular orientation. ("This way up".) Default is False.
+        is_expires (bool):  True if this product has a shelf life. All bundles of (assoc) product definitions should have share the same value for is_expires. Default is False.
+        weight     (float): weight of a single unit of product in arbitrary units. If None (null) it denotes the weight is not measured or has an irregular dimension and is measured individually.
+        height     (float): height of a single unit of product in arbitrary units. If None (null) it denotes the height is not measured or has an irregular dimension and is measured individually.
+        width      (float): width of a single unit of product in arbitrary units. If None (null) it denotes the width is not measured or has an irregular dimension and is measured individually.
+        length     (float): length of a single unit of product in arbitrary units. If None (null) it denotes the length is not measured or has an irregular dimension and is measured individually.
+    """
     code_count  = models.IntegerField(null=False, blank=False,)
-
-    # if this is a bundle of units, then atomic is the total number of measuring units contained per instance otherwise None/null
-    atomic      = models.FloatField(null=True, blank=False, default=None,)
-
-    # Flag True if this product is considered fragile to handle, False otherwise
+    atomic      = models.FloatField(null=True, blank=True, default=None,)
     is_fragile  = models.BooleanField(null=False, blank=False, default=False,)
-
-    # Flag True if this product must be stored in a particular orientation. ("This way up".)
     is_up       = models.BooleanField(null=False, blank=False, default=False,)
-
-    # Flag True if this product has a shelf life. All bundles of (assoc) product definitions should have share the same value for is_expires
     is_expires  = models.BooleanField(null=False, default=False,)
-
-    # dimensions and measurements (arbitrary units)
-    # if a dimension is None (null) it denotes the product has
-    # an irregular dimension and is measured individually
-    weight      = models.FloatField(null=True, blank=False,)
-    height      = models.FloatField(null=True, blank=False,)
-    width       = models.FloatField(null=True, blank=False,)
-    length      = models.FloatField(null=True, blank=False,)
+    weight      = models.FloatField(null=True, blank=True,)
+    height      = models.FloatField(null=True, blank=True,)
+    width       = models.FloatField(null=True, blank=True,)
+    length      = models.FloatField(null=True, blank=True,)
 
     class Meta:
         abstract = True
 
-class ProductDef(AbstractDefModel, ProductFields):
-    parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=False,)
-    status      = models.IntegerField(choices=PRODUCTDEF_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
+class ProductDef(WarehauserAbstractDefinitionModel, ProductFields):
+    """
+    Definition model for Products. Always create Product objects through the appropriate ProductDef create_instance() method. Note that barcode field has a unique constraint added to this model, so there should be at most one ProductDef per barcode.
 
-    # a list of appropriate Warehauses this ProductDef can be stored
-    # if none are listed then store at any Warehause that returns is_storage True
-    # all Warehauses listed mean this ProductDef can be stored at that Warehause and all children Warehauses that return
-    # is_storage True
+    Attributes:
+        parent     (ProductDef):      the parent ProductDef or None if no parent. Used to conceptually arrange ProductDefs into a nesting hierarchy, ignored otherwise.
+        status     (int):             the status of this ProductDef with available choices of core.status.PRODUCT_STATUS_CODES.
+        warehauses (list(Warehause)): a list of appropriate Warehauses this ProductDef can be stored. If none are listed then store at any Warehause that returns is_storage True. All Warehauses listed mean this ProductDef can be stored at that
+                                      Warehause and all children Warehauses that return is_storage True
+
+    Example:
+        ```
+        dfnid = # id of your desired ProductDef
+        data = dict() # If you want all default values then this can be None
+        # define override data for your Product that you want instead of the ProductDef defaults. e.g. data['length'] = 10.0
+        dfn = ProductDef.objects.get(id=dfnid)
+        model = dfn.create_instance(data=data)
+        ```
+    """
+    parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=True,)
+    status      = models.IntegerField(choices=PRODUCTDEF_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
     warehauses  = models.ManyToManyField(Warehause)
 
-    def create_instance(self, data:dict = None, callback = None):
-        if callback is None:
-            callback = ProductCallback
+    def create_instance(self, data:dict=None, callback=None):
+        if not isinstance(callback, ProductCallback):
+            callback = ProductCallback()
+        return super()._create_instance(clazz=Product, data=data, callback=callback)
 
-        callback.pre_create_instance(dfn=self, data=data)
-
-        data = self.merge_dfn_defaults(data)
-        model:Product = apps.get_model('core', 'Product')(**data)
-
-        model._callback = callback
-
-        callback.post_create_instance(dfn=self, data=data, model=model)
-
-        return model
-
-    def get_warehauses(self):
-        warehauses = set()
-
-        def _get_parent_warehauses(dfn):
-            nonlocal warehauses
-            warehauses |= set(dfn.warehauses.all())
-            if dfn.parent:
-                _get_parent_warehauses(dfn.parent)
-
-        _get_parent_warehauses(self)
-        return {warehause for warehause in warehauses if warehause is not None}
-
-    class Meta(AbstractDefModel.Meta):
+    class Meta(WarehauserAbstractDefinitionModel.Meta):
         abstract = False
         constraints = [
             models.UniqueConstraint(fields=['barcode'], name='constraint_unique_productdef_barcode')
@@ -515,27 +614,36 @@ class ProductDef(AbstractDefModel, ProductFields):
         verbose_name = 'productdef'
         verbose_name_plural = 'productdefs'
 
-class Product(AbstractInstModel, ProductFields):
-    parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=False,)
-    status      = models.IntegerField(choices=PRODUCT_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
-    dfn         = models.ForeignKey('ProductDef', on_delete=models.CASCADE, related_name='instances', null=False, blank=False,)
+class Product(WarehauserAbstractInstanceModel, ProductFields):
+    """
+    Product instance class.
 
-    warehause   = models.ForeignKey('Warehause', on_delete=models.CASCADE, related_name='stock', null=True, blank=False,)
+    Attributes:
+        parent     (Product):    parent Product or None if no parent. Used to conceptually arrange Products into a nesting hierarchy, ignored otherwise.
+        status     (int):        status of this Product with available choices of core.status.PRODUCT_STATUS_CODES.
+        dfn        (ProductDef): ProductDef used to create this Product object.
+        warehause  (Warehause):  location this product is currently stored in.
+        quantity   (float):      quantity of product in arbitrary units.
+        reserved   (float):      quantity of product reserved by an event or process in arbitrary units.
+        expires    (Date):       date this product expires. If None then this product has infinite shelf life. Default None.
+        is_damaged (bool):       True if this product is damaged. Default False.
+    """
+    parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=True,)
+    status      = models.IntegerField(choices=PRODUCT_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
+    dfn         = models.ForeignKey('ProductDef', on_delete=models.CASCADE, related_name='instances', null=False, blank=False, editable=False,)
+
+    warehause   = models.ForeignKey('Warehause', on_delete=models.CASCADE, related_name='stock', null=True, blank=True,)
 
     quantity    = models.FloatField(null=False, blank=False, default=1.0,)
     reserved    = models.FloatField(null=False, blank=False, default=0.0,)
 
-    expires     = models.DateField(null=True, blank=False,)
+    expires     = models.DateField(null=True, blank=True, default=None,)
     is_damaged  = models.BooleanField(null=False, blank=False, default=False,)
 
-    @property
-    def callback(self):
-        if self._callback:
-            return self._callback
-        return ProductCallback
-
-    # Calculate and return the dimensions occupied by this product.
     def measure(self):
+        """
+        Calculate and return the dimensions occupied by this product.
+        """
         return {
             'weight':   float(self.weight * self.quantity) if self.weight is not None else float(0.0),
             'height':   float(self.height * self.quantity) if self.height is not None else float(0.0),
@@ -544,117 +652,182 @@ class Product(AbstractInstModel, ProductFields):
             'quantity': float(self.quantity) if self.quantity is not None else float(0.0),
         }
 
-    def reserve(self, quantity = float(1.0)):
-        self.callback().pre_reserve(self, quantity)
+    def reserve(self, quantity=float(1.0)):
+        """
+        Reserve a quantity of this product. Note this should most likely be done with self.mutex() acquired.
 
+        Args:
+            quantity (float, optional): quantity of product to reserve. Default is float(1.0).
+        
+        Returns:
+            float: quantity of product actually reserved.
+        
+        Example:
+            ```
+            reserve = float(1.0)
+            try:
+                with product.mutex():
+                    # Put thread unsafe code here...
+                    reserve = product.reserve(quantity=reserve)
+            except Exception as e:
+                # Handle exception here...
+            ```
+        """
+        if self.callback is not None:
+            self.callback.pre_reserve(model=self, quantity=quantity)
+
+        err = None
         try:
-            with self.lock():
-                unreserved = self.quantity - self.reserved
-                if quantity > unreserved:
-                    raise WarehauserError('warehause does not have enough unreserved stock.', WarehauserErrorCodes.WAREHAUSE_STOCK_TOO_LOW, {'product': self, 'quantity': self.quantity, 'reserved': self.reserved})
+            unreserved = self.quantity - self.reserved
+            if quantity > unreserved:
+                quantity = unreserved
 
-                self.reserved = self.reserved + quantity
-                self.save()
-        except DBMutexError as e:
-            raise WarehauserError('Unable to secure mutex for product.', WarehauserErrorCodes.MUTEX_ERROR, {'self': self, 'error': e})
-        except DBMutexTimeoutError as e:
-            raise WarehauserError('Unable to secure mutex for stock.', WarehauserErrorCodes.MUTEX_TIMEOUT_ERROR, {'self': self, 'error': e})
+            self.reserved = self.reserved + quantity
+        except Exception as e:
+            err = e
+        finally:
+            if self.callback is not None:
+                self.callback.post_reserve(model=self, quantity=quantity, err=err)
 
-        self.callback().post_reserve(self, quantity)
+        if err:
+            raise err
 
-        pass
+        return quantity
 
-    def unreserve(self, quantity = None):
-        self.callback().pre_unreserve(self, quantity)
+    def unreserve(self, quantity:float=None):
+        """
+        Unreserve a quantity of this product. Note this should most likely be done with self.mutex() acquired.
 
+        Args:
+            quantity (float, optional): quantity of product to reserve. None means unreserve all. Default is None.
+        
+        Returns:
+            float: quantity of product actually reserved.
+        
+        Example:
+            ```
+            unreserve = float(1.0)
+            try:
+                with product.mutex():
+                    # Put thread unsafe code here...
+                    unreserve = product.unreserve(unreserve)
+            except Exception as e:
+                # Handle exception here...
+            ```
+        """
+        if self.callback is not None:
+            self.callback.pre_unreserve(model=self, quantity=quantity)
+
+        err = None
         try:
-            with self.lock():
-                if quantity is None:
-                    self.reserved = float(0.0)
-                else:
-                    self.reserved = max(float(0.0), self.reserved - quantity)
-                self.save()
-        except DBMutexError as e:
-            raise WarehauserError('Unable to secure mutex for stock.', WarehauserErrorCodes.MUTEX_ERROR, {'self': self, 'error': e})
-        except DBMutexTimeoutError as e:
-            raise WarehauserError('Unable to secure mutex for stock.', WarehauserErrorCodes.MUTEX_TIMEOUT_ERROR, {'self': self, 'error': e})
-
-        self.callback().post_unreserve(self, quantity)
-
-        pass
-
-    def join(self, product, save = False):
-        self.callback().pre_join(self, product)
-
-        self.quantity = float(self.quantity + product.quantity)
-        product.quantity = float(0.0)
-
-        self.log(   level=logging.INFO, msg='Transfered from product to self.', extra={'from': product})
-        product.log(level=logging.INFO, msg='Transfered from self to product.', extra={'to': self})
-
-        self.callback().post_join(self, product)
-
-        if save:
-            self.save()
-
-        pass
-
-    def split(self, dfn = None, quantity = float(1.0), save = False):
-        self.callback().pre_split(self, dfn, quantity)
-
-        if quantity > self.quantity:
-            raise WarehauserError('Not enough current quantity to complete the split.', WarehauserErrorCodes.WAREHAUSE_STOCK_TOO_LOW, {'self': self})
-
-        self.quantity = float(self.quantity - quantity)
-
-        data = model_to_dict(self)
-
-        try:
-            del data['id']
-        except KeyError:
-            pass
-        try:
-            del data['created_at']
-        except KeyError:
-            pass
-        try:
-            del data['updated_at']
-        except KeyError:
-            pass
-        try:
-            del data['warehause']
-        except KeyError:
-            pass
-
-        data['quantity'] = quantity
-
-        if isinstance(data['dfn'], int):
-            data['dfn'] = ProductDef.objects.get(id=data['dfn'])
-
-        if dfn:
-            data['dfn'] = dfn
-            data['barcode'] = dfn.barcode
-            data['descr'] = dfn.descr
-
-        product = Product(**data)
-
-        product.log(level=logging.INFO, msg='Split product.', extra={'from': self})
-
-        if self.quantity == float(0.0):
-            if self.is_virtual:
-                self.status = STATUS_DESTROY
+            if quantity is None or quantity > self.reserved:
+                quantity = self.reserved
+                self.reserved = float(0.0)
             else:
-                self.status = STATUS_CLOSED
-            self.warehause = None
+                self.reserved = max(float(0.0), self.reserved - quantity)
+        except Exception as e:
+            err = e
+        finally:
+            if self.callback is not None:
+                self.callback.post_unreserve(model=self, quantity=quantity, err=err)
 
-        self.callback().post_split(self, dfn, quantity, product)
+        if err:
+            raise err
 
-        if save:
-            self.save()
+        return quantity
+
+    def join(self, product):
+        """
+        Join two products of the same definition together.
+        
+        Args:
+            product (Product): the other product to mix in with self.
+        """
+        if self.callback is not None:
+            self.callback.pre_join(model=self, product=product)
+
+        err:Exception = None
+        try:
+            self.quantity = self.quantity + product.quantity
+            product.quantity = float(0.0)
+        except Exception as e:
+            err = e
+        finally:
+            if self.callback is not None:
+                self.callback.post_join(model=self, product=product, err=err)
+
+        if err:
+            raise err
+
+        pass
+
+    def split(self, quantity=float(1.0)):
+        """
+        Remove a quantity of product out of this instance and return a new identical product object of the same quantity. 
+
+        Args:
+            quantity (float, optional): quantity to remove. Default is float(1.0)
+        
+        Returns:
+            Product: the new product of required quantity.
+        """
+        if self.callback is not None:
+            self.callback.pre_split(model=self, quantity=quantity)
+
+        err:Exception = None
+        try:
+            if quantity > self.quantity:
+                raise WarehauserError(msg=_('Not enough current quantity to complete the split.'), code=WarehauserErrorCodes.WAREHAUSE_STOCK_TOO_LOW, extra={'self': self})
+            elif quantity == self.quantity:
+                product = self
+                product.warehause = None
+                return product
+
+            self.quantity = float(self.quantity - quantity)
+
+            data = model_to_dict(self)
+
+            try:
+                del data['id']
+            except KeyError:
+                pass
+            try:
+                del data['created_at']
+            except KeyError:
+                pass
+            try:
+                del data['updated_at']
+            except KeyError:
+                pass
+            try:
+                del data['warehause']
+            except KeyError:
+                pass
+
+            data['quantity'] = quantity
+
+            product = Product(**data)
+
+            product.log(level=logging.INFO, msg='Split product.', extra={'from': self})
+
+            if self.quantity == float(0.0):
+                if self.is_virtual:
+                    self.status = STATUS_DESTROY
+                else:
+                    self.status = STATUS_CLOSED
+                self.warehause = None
+        except Exception as e:
+            err = e
+        finally:
+            if self.callback is not None:
+                self.callback.post_split(model=self, quantity=quantity, result=product, err=err)
+
+        if err:
+            raise err
 
         return product
 
-    class Meta(AbstractInstModel.Meta):
+    class Meta(WarehauserAbstractInstanceModel.Meta):
         abstract = False
         verbose_name = 'product'
         verbose_name_plural = 'products'
@@ -663,32 +836,45 @@ class Product(AbstractInstModel, ProductFields):
 # EVENT Models
 
 class EventFields(models.Model):
+    """
+    Abstract model to declare common fields used by both EventDef and Event models.
+
+    Attributes:
+        is_batched (bool):  True if this event is processed by the batch processor, else processed on creation. Default is False.
+        proc_name  (str):   process name (name of module.function) that this event will process or None if this event has no process.
+    """
     is_batched  = models.BooleanField(null=False, blank=False, default=False,)
-    proc_name   = models.CharField(max_length=CHARFIELD_MAX_LENGTH, null=True, blank=False,)
+    proc_name   = models.CharField(max_length=CHARFIELD_MAX_LENGTH, null=True, blank=True, editable=False,)
 
     class Meta:
         abstract = True
 
-class EventDef(AbstractDefModel, EventFields):
-    parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=False,)
+class EventDef(WarehauserAbstractDefinitionModel, EventFields):
+    """
+    Definition model for Events. Always create Event objects through the appropriate EventDef create_instance() method. Note that barcode field has a unique constraint added to this model, so there should be at most one EventDef per barcode.
+
+    Attributes:
+        parent (EventDef): the parent EventDef or None if no parent. Used to conceptually arrange EventDefs into a nesting hierarchy, ignored otherwise.
+        status (int):      the status of this EventDef with available choices of core.status.EVENTDEF_STATUS_CODES.
+
+    Example:
+        ```
+        dfnid = # id of your desired EventDef
+        data = dict() # If you want all default values then this can be None
+        # define override data for your Event that you want instead of the EventDef defaults. e.g. data['is_virtual'] = True
+        dfn = EventDef.objects.get(id=dfnid)
+        model = dfn.create_instance(data=data)
+        ```
+    """
+    parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=True,)
     status      = models.IntegerField(choices=EVENTDEF_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
 
-    def create_instance(self, data:dict = None, callback = None):
-        if callback is None:
-            callback = EventCallback
+    def create_instance(self, data:dict = None, callback:ModelCallback = None):
+        if not isinstance(callback, EventCallback):
+            callback = EventCallback()
+        return super()._create_instance(clazz=Event, data=data, callback=callback)
 
-        callback.pre_create_instance(dfn=self, data=data)
-
-        data = self.merge_dfn_defaults(data)
-        model:Event = apps.get_model('core', 'Event')(**data)
-
-        model._callback = callback
-
-        callback.post_create_instance(dfn=self, data=data, model=model)
-
-        return model
-
-    class Meta(AbstractDefModel.Meta):
+    class Meta(WarehauserAbstractDefinitionModel.Meta):
         abstract = False
         constraints = [
             models.UniqueConstraint(fields=['barcode'], name='constraint_unique_eventdef_barcode')
@@ -696,47 +882,46 @@ class EventDef(AbstractDefModel, EventFields):
         verbose_name = 'eventdef'
         verbose_name_plural = 'eventdefs'
 
-class Event(AbstractInstModel, EventFields):
-    parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=False,)
+class Event(WarehauserAbstractInstanceModel, EventFields):
+    """
+    Event instance class.
+
+    Attributes:
+        parent     (Event):     parent Event or None if no parent. Used to conceptually arrange Events into a nesting hierarchy, ignored otherwise.
+        status     (int):       status of this Event with available choices of core.status.EVENT_STATUS_CODES.
+        dfn        (EventDef):  EventDef used to create this Event object.
+        warehause  (Warehause): location this event is currently assigned to.
+        user       (User):      user this event is assigned to.
+        proc_start (DateTime):  timestamp this event started processing.
+        proc_end   (DateTime):  timestamp this event ended processing.
+    """
+    parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=True,)
     status      = models.IntegerField(choices=EVENT_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
-    dfn         = models.ForeignKey('EventDef', on_delete=models.CASCADE, related_name='instances', null=False, blank=False,)
+    dfn         = models.ForeignKey('EventDef', on_delete=models.CASCADE, related_name='instances', null=False, blank=False, editable=False,)
 
-    warehause   = models.ForeignKey('Warehause', on_delete=models.CASCADE, related_name='events', null=True, blank=False,)
-    user        = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='events', null=True, blank=False, default=None,)
+    warehause   = models.ForeignKey('Warehause', on_delete=models.CASCADE, related_name='events', null=True, blank=True,)
+    user        = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='events', null=False, blank=False, editable=False,)
 
-    proc_start  = models.DateTimeField(auto_now_add=False, null=True, blank=False,)
-    proc_end    = models.DateTimeField(auto_now_add=False, null=True, blank=False,)
-
-    @property
-    def callback(self):
-        if self._callback:
-            return self._callback
-        return EventCallback
+    proc_start  = models.DateTimeField(auto_now_add=False, null=True, blank=True, editable=False,)
+    proc_end    = models.DateTimeField(auto_now_add=False, null=True, blank=True, editable=False,)
 
     def process(self):
-        self.callback().pre_process(event=self)
-
-        if self.proc_name is None:
-            return None
-
         base_module = 'core.tasks'
         proc_name = str(self.proc_name)
 
-        try:
-            try:
-                if '.' in proc_name:
-                    module_name, function_name = proc_name.rsplit('.', 1)
-                    module = importlib.import_module(f'{base_module}.{module_name}')
-                    proc_func = getattr(module, function_name)
-                else:
-                    module = importlib.import_module(f'{base_module}')
-                    proc_func = getattr(module, proc_name)
-            except:
-                err = f"Unable to load function '{base_module}.{self.proc_name}'."
-                self.register_process_results(STATUS_CLOSED, {'error': err})
+        if self.callback is not None:
+            self.callback.pre_process(event=self)
 
-                self.save()
-                return self
+        err: Exception = None
+        try:
+            if self.proc_name is None:
+                return None
+
+            if '.' in proc_name:
+                base_module, proc_name = proc_name.rsplit('.', 1)
+
+            module = importlib.import_module(base_module)
+            proc_func = getattr(module, proc_name)
 
             self.proc_start = timezone.now()
             self.status = STATUS_PROCESSING
@@ -746,22 +931,19 @@ class Event(AbstractInstModel, EventFields):
                 proc_func(self)
             finally:
                 self.proc_end = timezone.now()
-
-            if self.status == STATUS_DESTROY:
-                try:
-                    self.delete()
-                except:
-                    pass
-                logging.error(msg=f'Event [{self}] is deleted.')
-                return None
-            else:
                 self.save()
+        except Exception as e:
+            err = e
         finally:
-            self.callback().post_process(event=self)
+            if self.callback is not None:
+                self.callback.post_process(event=self, err=err)
+
+        if err:
+            raise err
 
         return self
 
-    class Meta(AbstractInstModel.Meta):
+    class Meta(WarehauserAbstractInstanceModel.Meta):
         abstract = False
         verbose_name = 'event'
         verbose_name_plural = 'events'
@@ -769,3 +951,5 @@ class Event(AbstractInstModel, EventFields):
 # Through models for custom ManyToManyFields
 
 # Utility models
+
+# Signals

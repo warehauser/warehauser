@@ -1,4 +1,4 @@
-# Copyright 2024 stingermissile @ github.com
+# Copyright 2024 warehauser @ github.com
 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,16 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from .models import *
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = get_user_model()
+        fields = ['id', 'username', 'password',]
+        extra_kwargs = {'password': {'write_only': True}}
+
+    def create(self, validated_data):
+        user = self.Meta.model.objects.create_user(**validated_data)
+        return user
 
 def to_related_representation(instance, representation, related_fields):
     for field_name in related_fields:

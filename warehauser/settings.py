@@ -1,4 +1,4 @@
-# Copyright 2024 stingermissile @ github.com
+# Copyright 2024 warehauser @ github.com
 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -41,15 +41,21 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env('SECRET_KEY')
+SECRET_KEY = env('DJANGO_SECRET_KEY') or os.environ.get('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
 
-# ALLOWED_HOSTS = []
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '10.0.0.36',]
+EMAIL_HOST=env('EMAIL_HOST')
+EMAIL_HOST_USER=env('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD=env('EMAIL_HOST_PASSWORD')
+EMAIL_PORT=env('EMAIL_PORT')
+EMAIL_USE_TLS=env('EMAIL_USE_TLS')
+EMAIL_BACKEND=env('EMAIL_BACKEND')
+SEND_MAIL_FROM_ADDRESS=env('SEND_MAIL_FROM_ADDRESS')
 
-CHARFIELD_MAX_LENGTH = 1024
+# ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -67,7 +73,9 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',
     'django_extensions',
     'db_mutex',
+    'guardian',
     'core',
+    'corsheaders',
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
@@ -81,6 +89,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'warehauser.urls'
@@ -121,9 +130,6 @@ REST_FRAMEWORK = {
        'rest_framework.authentication.TokenAuthentication',
        'rest_framework.authentication.SessionAuthentication',
    ),
-#    'DEFAULT_PERMISSION_CLASSES': (
-#         'rest_framework.permissions.IsAdminUser'
-#    ),
 }
 
 # Database
@@ -163,6 +169,7 @@ AUTHENTICATION_BACKENDS = (
     # 'userena.backends.UserenaAuthenticationBackend',
     # 'guardian.backends.ObjectPermissionBackend',
     'django.contrib.auth.backends.ModelBackend',
+    'guardian.backends.ObjectPermissionBackend',
 )
 
 # Internationalization
@@ -185,6 +192,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'auth.User'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
+
+LOGIN_URL = 'auth_login'
 
 # Logging settings
 
@@ -218,3 +227,6 @@ LOGGING = {
         },
     },
 }
+
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWS_CREDENTIALS = True
