@@ -16,9 +16,10 @@
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
@@ -44,9 +45,7 @@ from .models import *
 from .permissions import *
 from .serializers import *
 
-from .utils import is_valid_email, generate_otp_code
-
-# Security code.
+from .utils import is_valid_email_address, generate_otp_code
 
 # Create your views here.
 
@@ -54,138 +53,257 @@ from .utils import is_valid_email, generate_otp_code
 def home_view(request):
     return render(request, "core/index.html")
 
-def auth_login_view(request):
-    if request.method == 'POST':
-        form = WarehauserAuthLoginForm(request, data=request.POST)
-        if form.is_valid():
-            username = form.cleaned_data.get('username')
-            password = form.cleaned_data.get('password')
-            if is_valid_email(username):
-                user = authenticate(request, email=username, password=password)
-            else:
-                user = authenticate(request, username=username, password=password)
+# Authentication views
 
-            if user is not None:
-                login(request, user)
-                # Redirect to a success page or any other view
-                next_url = request.POST.get('next')
-                if next_url:
-                    return redirect(next_url)
-                else:
-                    return redirect('home')  # Redirect to home if 'next' is not set
+@anonymous_required
+def auth_login_view(request):
+    autofocus_field = None
+    select_text = False
+
+    if request.method.lower() == 'post':
+        form = WarehauserAuthLoginForm(request, data=request.POST)
+
+        is_valid = form.is_valid()
+        if is_valid:
+            login(request, form.get_user())
+
+            # Redirect to a success page or any other view
+            next_url = request.POST.get('next')
+            if next_url:
+                return redirect(next_url)
             else:
-                # Authentication failed
-                form.add_error(None, 'Invalid username or password.')
+                return redirect('home')  # Redirect to home if 'next' is not set
+        else:
+            messages.error(request, 'Invalid username or password.')
+            first_visible_field = form.visible_fields()[0] if form.visible_fields() else None
+            if first_visible_field and first_visible_field.field.widget.input_type != 'select' and first_visible_field.value():
+                autofocus_field = first_visible_field.auto_id  # Autofocus the field by its auto_id
+                select_text = True  # Set select_text to True to select all text in the field
     else:
         form = WarehauserAuthLoginForm(request)
 
-    return render(request, 'auth/login.html', {'form': form})
+    template = 'core/form.html'
+    form.id = 'login-form'
+
+    context = {
+        'form': form,
+        'autofocus_field': autofocus_field,
+        'select_text': select_text,
+        'title': _('Login'),
+        'illustration': 'icon ion-ios-locked-outline',
+        'buttons': [
+            {'title': _('Login'), 'id': 'submit', 'value': 'login', 'type': 'submit'},
+            {'title': _('Forgot Password'), 'id': 'forgot', 'type': 'href', 'url': 'auth_forgot_password_view', 'class': 'btn btn-secondary col-12'}
+        ],
+    }
+
+    return render(request, template, context)
 
 def auth_logout_view(request):
     auth_logout(request=request)
-    return redirect('auth_login')
+    return redirect('auth_login_view')
 
 @login_required
 def auth_user_profile_view(request):
     return render(request=request, template_name='auth/user_profile.html')
 
+
+
+
+
+
 @login_required
 def auth_change_password_view(request):
-    if request.method == 'POST':
-        form = WarehauserAuthChangePasswordForm(data=request.POST)
-        if form.is_valid():
-            pass
-    else:
-        form = WarehauserAuthChangePasswordForm(request)
+    user = request.user
 
-    return render(request, 'auth/reset_password.html', {'form': form})
+    if request.method == 'POST':
+        form = WarehauserPasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            data = {
+                'send_mail': {
+                    'changed_password': make_password(form.cleaned_data.get('old_password')),
+                    'otp': generate_otp_code(),
+                    'dt': f'{timezone.now()}'
+                }
+            }
+
+            try:
+                with db_mutex(f'core_useraux'):
+                    try:
+                        aux = UserAux.objects.get(user=user)
+                        aux.options.update(data)
+                    except:
+                        aux = UserAux.objects.create(user=user, options=data)
+
+                    aux.save()
+            except Exception as e:
+                raise e
+
+            user = form.save()
+            update_session_auth_hash(request, user)
+            return redirect('auth_user_profile_view')
+        else:
+            print('views.auth_change_password_view not valid!')
+    else:
+        form = WarehauserPasswordChangeForm(request.user)
+
+    template = 'core/form.html'
+    form.id = 'login-form'
+
+    context = {
+        'form': form,
+        'title': _('Change Password'),
+        'illustration': 'icon ion-ios-locked-outline',
+        'buttons': [
+            {'title': _('Change Password'), 'id': 'submit', 'value': 'login', 'type': 'submit'},
+        ],
+    }
+
+    return render(request, template, context)
+
+
+
+
+    # user = request.user
+    # if request.method.lower() == 'post':
+    #     print('request method is post')
+    #     form = WarehauserAuthChangePasswordForm(data=request.POST)
+    #     if form.is_valid():
+    #         print('form is valid')
+    #         if form.is_valid():
+    #             password = form.cleaned_data.get('password')
+    #             if authenticate(request=request, username=user.username, password=password) is False:
+    #                 print('check 1')
+    #                 form.add_error(None, 'Current password is incorrect.')
+    #             else:
+    #                 password1 = form.cleaned_data.get('password1')
+    #                 password2 = form.cleaned_data.get('password2')
+    #                 if password1 == password2 is False:
+    #                     print('check 2')
+    #                     form.add_error(None, 'New password and confirm password do not match.')
+    #                 else:
+    #                     print('checks done!')
+    #                     user.set_password(password1)
+    #                     user.save()
+
+    #                     return redirect(to='auth_user_profile_view')
+    # else:
+    #     form = WarehauserAuthChangePasswordForm()
+
+    # return render(request, 'auth/change_password.html', {'form': form})
 
 @anonymous_required
 def auth_forgot_password_view(request):
-    if request.method == 'POST':
-        form = WarehauserAuthForgotPasswordForm(data=request.POST)
-        if form.is_valid():
-            email = form.cleaned_data.get('email')
-            password1 = form.cleaned_data.get('password1')
-            password2 = form.cleaned_data.get('password2')
-            if is_valid_email(email) is False:
-                form.add_error(None, 'Email is not of a valid format.')
-            elif password1 != password2:
-                form.add_error(None, 'Passwords do not match.')
-            else:
-                # Store password in session and send confirmation email...
-                otp = generate_otp_code(length=6)
-    # <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    # <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    # <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    if request.method.lower() == 'post':
+        pass
 
-                content = f"""
-<!doctype html>
-<html lang="en-us">
-  <head>
-    <title>Forgot Password - Warehauser : Your Warehouse Done Smoothly</title>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <link rel="stylesheet" href="/static/core/css/warehauser.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ionicons/2.0.1/css/ionicons.min.css">
-  </head>
-  <body>
-    <div class="wrapper">
-      <!-- <div class="background-dark"> -->
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-          <div class="container">
-            <a class="navbar-brand" href="/">Warehauser</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-              <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarSupportedContent">
-              <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                
-              </ul>
-              <ul class="navbar-nav">
-                
-                <li class="nav-item">
-                  <a class="nav-link" href="/auth/login">Login</a>
-                </li>
-                
-              </ul>
-            </div>
-          </div>
-        </nav>
-        <div id="content" class="main" name="content-box">
-        <form>
-            <div class="illustration"><i class="icon ion-ios-locked-outline"></i></div>
-            <div class="form-row"><input class="form-control" type="text" name="username" id="username" placeholder="Username" autofocus></div>
-            <div class="form-row"><input class="form-control" type="password" name="password" id="password" placeholder="Password"></div>
-        </form>
-        </div>
-      <!-- </div> -->
-    </div>
-    <footer id="footer" class="bg-dark text-center">
-      <div class"text-center p-3" style="background-color: rgba(0,0,0,0.2);">
-        <a class="text-light" href="https://www.warehauser.org/" style="text-decoration: none;">Powered by warehauser.org</a>
-      </div>
-    </footer>
-    
-    <!-- Bootstrap 5 JS and dependencies -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    <script src="/static/core/js/warehauser.js"></script>
-    
-  </body>
-</html>
-{otp}
-"""
-                send_mail(subject='Warehauser Password Reset Request',
-                          message=content,
-                          from_email=settings.SEND_MAIL_FROM_ADDRESS,
-                          recipient_list=[email,],
-                          fail_silently=False)
-    else:
-        form = WarehauserAuthForgotPasswordForm(request)
-
+    form = WarehauserAuthForgotPasswordForm(request)
     return render(request, 'auth/reset_password.html', {'form': form})
+
+@anonymous_required
+def auth_otp_challenge_view(request):
+    pass
+
+
+
+
+from django.http import HttpResponse
+def auth_revoke_view(request):
+    return HttpResponse("Hello World")
+
+
+
+
+
+
+# @login_required
+# def auth_change_password_view(request):
+
+# def auth_forgot_password_view(request):
+#     if request.method == 'POST':
+#         form = WarehauserAuthForgotPasswordForm(data=request.POST)
+#         if form.is_valid():
+#             email = form.cleaned_data.get('email')
+#             password1 = form.cleaned_data.get('password1')
+#             password2 = form.cleaned_data.get('password2')
+#             if is_valid_email_address(email) is False:
+#                 form.add_error(None, 'Email is not of a valid format.')
+#             elif password1 != password2:
+#                 form.add_error(None, 'Passwords do not match.')
+#             else:
+#                 # Store password in session and send confirmation email...
+#                 otp = generate_otp_code(length=6)
+#     # <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+#     # <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+#     # <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+#                 content = f"""
+# <!doctype html>
+# <html lang="en-us">
+#   <head>
+#     <title>Forgot Password - Warehauser : Your Warehouse Done Smoothly</title>
+#     <meta charset="utf-8" />
+#     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+#     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+#     <link rel="stylesheet" href="/static/core/css/warehauser.css" />
+#     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ionicons/2.0.1/css/ionicons.min.css">
+#   </head>
+#   <body>
+#     <div class="wrapper">
+#       <!-- <div class="background-dark"> -->
+#         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+#           <div class="container">
+#             <a class="navbar-brand" href="/">Warehauser</a>
+#             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+#               <span class="navbar-toggler-icon"></span>
+#             </button>
+#             <div class="collapse navbar-collapse" id="navbarSupportedContent">
+#               <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                
+#               </ul>
+#               <ul class="navbar-nav">
+                
+#                 <li class="nav-item">
+#                   <a class="nav-link" href="/auth/login">Login</a>
+#                 </li>
+                
+#               </ul>
+#             </div>
+#           </div>
+#         </nav>
+#         <div id="content" class="main" name="content-box">
+#         <form>
+#             <div class="illustration"><i class="icon ion-ios-locked-outline"></i></div>
+#             <div class="form-row"><input class="form-control" type="text" name="username" id="username" placeholder="Username" autofocus></div>
+#             <div class="form-row"><input class="form-control" type="password" name="password" id="password" placeholder="Password"></div>
+#         </form>
+#         </div>
+#       <!-- </div> -->
+#     </div>
+#     <footer id="footer" class="bg-dark text-center">
+#       <div class"text-center p-3" style="background-color: rgba(0,0,0,0.2);">
+#         <a class="text-light" href="https://www.warehauser.org/" style="text-decoration: none;">Powered by warehauser.org</a>
+#       </div>
+#     </footer>
+    
+#     <!-- Bootstrap 5 JS and dependencies -->
+#     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+#     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+#     <script src="/static/core/js/warehauser.js"></script>
+    
+#   </body>
+# </html>
+# {otp}
+# """
+#                 send_mail(subject='Warehauser Password Reset Request',
+#                           message=content,
+#                           from_email=settings.SEND_MAIL_FROM_ADDRESS,
+#                           recipient_list=[email,],
+#                           fail_silently=False)
+#     else:
+#         form = WarehauserAuthForgotPasswordForm(request)
+
+#     return render(request, 'auth/reset_password.html', {'form': form})
 
 
 # Model view sets

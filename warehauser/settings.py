@@ -24,35 +24,33 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
-import environ
 import os
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-env = environ.Env(
-    # set casting, default value
-    DEBUG=(bool, False)
-)
+load_dotenv()
 
-environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+DEBUG = os.environ.get('DEBUG').lower() == 'true'
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env('DJANGO_SECRET_KEY') or os.environ.get('DJANGO_SECRET_KEY')
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY') or os.environ.get('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env('DEBUG')
+DEBUG = os.environ.get('DEBUG')
 
-EMAIL_HOST=env('EMAIL_HOST')
-EMAIL_HOST_USER=env('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD=env('EMAIL_HOST_PASSWORD')
-EMAIL_PORT=env('EMAIL_PORT')
-EMAIL_USE_TLS=env('EMAIL_USE_TLS')
-EMAIL_BACKEND=env('EMAIL_BACKEND')
-SEND_MAIL_FROM_ADDRESS=env('SEND_MAIL_FROM_ADDRESS')
+EMAIL_HOST=os.environ.get('EMAIL_HOST')
+EMAIL_HOST_USER=os.environ.get('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD=os.environ.get('EMAIL_HOST_PASSWORD')
+EMAIL_PORT=os.environ.get('EMAIL_PORT')
+EMAIL_USE_TLS=os.environ.get('EMAIL_USE_TLS').lower() == 'true'
+EMAIL_BACKEND=os.environ.get('EMAIL_BACKEND')
+EMAIL_FROM_ADDRESS=os.environ.get('EMAIL_FROM_ADDRESS')
+EMAIL_WAREHAUSER_HOST=os.environ.get('EMAIL_WAREHAUSER_HOST')
 
 # ALLOWED_HOSTS = []
 ALLOWED_HOSTS = ['*']
@@ -137,12 +135,12 @@ REST_FRAMEWORK = {
 
 DATABASES = {
     'default': {
-        'ENGINE': env('DB_ENGINE'),
-        'NAME': env('DB_NAME'),
-        'USER': env('DB_USER'),
-        'PASSWORD': env('DB_PASSWORD'),
-        'HOST': env('DB_HOST'),
-        'PORT': env('DB_PORT'),
+        'ENGINE': os.environ.get('DB_ENGINE'),
+        'NAME': os.environ.get('DB_NAME'),
+        'USER': os.environ.get('DB_USER'),
+        'PASSWORD': os.environ.get('DB_PASSWORD'),
+        'HOST': os.environ.get('DB_HOST'),
+        'PORT': os.environ.get('DB_PORT'),
     }
 }
 
@@ -167,8 +165,8 @@ AUTH_PASSWORD_VALIDATORS = [
 
 AUTHENTICATION_BACKENDS = (
     # 'userena.backends.UserenaAuthenticationBackend',
-    # 'guardian.backends.ObjectPermissionBackend',
-    'django.contrib.auth.backends.ModelBackend',
+    # 'django.contrib.auth.backends.ModelBackend',
+    'core.backends.WarehauserEmailOrUsernameAuthBackend',
     'guardian.backends.ObjectPermissionBackend',
 )
 
@@ -200,31 +198,54 @@ LOGIN_URL = 'auth_login'
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'filters': {
+        'stdout_filter': {
+            '()': 'core.loggers.WarehauserLoggingNonErrorFilter'
+        }
+    },
     'formatters': {
-        'standard': {
-            'format': '[%(asctime)s] [%(levelname)s]: %(message)s\n      [Path]: %(pathname)s:%(lineno)d',
-            'datefmt': '%Y-%m-%d %H:%M:%S',
+        'default': {
+            'format': '%(levelname)s: %(message)s',
+            'datefmt': '%Y-%m-%dT%H:%M:%S%z',
+        },
+        'file': {
+            '()': 'core.loggers.WarehauserLoggingJSONFormatter',
+            'fmt_keys': {
+                'level': 'levelname',
+                'message': 'message',
+                'timestamp': 'timestamp',
+                'logger': 'name',
+                'module': 'module',
+                'function': 'funcName',
+                'line': 'lineno',
+                'thread_name': 'threadName'
+            }
         }
     },
     'handlers': {
-        'console': {
-            'level': 'DEBUG',
+        'stdout': {
             'class': 'logging.StreamHandler',
-            'formatter': 'standard',
+            'formatter': 'default',
+            'stream': 'ext://sys.stdout',
+            'filters': ['stdout_filter',],
         },
-        'logfiles': {
+        'stderr': {
+            'class': 'logging.StreamHandler',
+            'level': 'WARNING',
+            'formatter': 'default',
+            'stream': 'ext://sys.stderr',
+        },
+        'logfile': {
+            'class': 'logging.handlers.RotatingFileHandler',
             'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs', 'warehauser.log'),
-            'formatter': 'standard',
+            'formatter': 'file',
+            'filename': os.path.join(BASE_DIR, 'logs', 'warehauser.jsonl'),
+            'maxBytes': 1048576,
+            'backupCount': 3,
         },
     },
     'loggers': {
-        '': {  # Root logger
-            'handlers': ['console', 'logfiles'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
+        'root': {'level': 'DEBUG', 'handlers': ['stdout', 'stderr', 'logfile',]}
     },
 }
 

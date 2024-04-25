@@ -37,6 +37,7 @@ cron = [
     schedule.every().day.at("17:00").do(lambda: tasks.GenerateReportsThread().start()),
     schedule.every(1).minutes.do(lambda: tasks.EventQueueThread().start()),
     schedule.every(1).minutes.do(lambda: tasks.GarbageCollectorThread().start()),
+    schedule.every(10).seconds.do(lambda: tasks.EmailThread().start()),
 ]
 
 def main():

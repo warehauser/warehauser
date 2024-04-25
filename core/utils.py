@@ -19,15 +19,45 @@ import re
 import random
 import string
 
-def generate_otp_code(length=6):
+from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.hashers import make_password, check_password
+from django.core.exceptions import ValidationError
+
+def validate_password(password:str) -> bool:
+    """
+    Check if a password meets the strength requirements specified in Django's
+    AUTH_PASSWORD_VALIDATORS setting.
+
+    Parameters:
+    - password (str): The password to be checked for strength.
+
+    Returns:
+    - bool: True if the password meets the strength requirements, False otherwise.
+    """
+    try:
+        # This function will raise a ValidationError if the password doesn't meet the validators
+        validate_password(password)
+        return True  # Password is valid according to the validators
+    except ValidationError as e:
+        # Password is invalid according to the validators
+        # You can handle the error here or just return False
+        return False
+
+def generate_otp_code() -> str:
     """
     Generate a random OTP code (security code to verify password reset requests).
     """
     characters = string.ascii_letters + string.digits
-    return ''.join(random.choice(characters) for _ in range(length))
+    return ''.join(random.choice(characters) for _ in range(6)).upper()
 
-# Define a function for validating an email address
-def is_valid_email(email:str):
+def is_valid_email_address(email:str) -> bool:
+    """
+    Check if an email address is of a valid format.
+    Args:
+        email str: email address to check.
+    Returns:
+        bool: True if email is valid, False otherwise.
+    """
     # Make a regular expression for validating an email address
     valid_email_regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
 

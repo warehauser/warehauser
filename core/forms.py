@@ -16,31 +16,39 @@
 
 from django import forms
 from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import AuthenticationForm, ReadOnlyPasswordHashField, PasswordResetForm
+from django.contrib.auth.forms import AuthenticationForm, ReadOnlyPasswordHashField, PasswordResetForm, PasswordChangeForm
 from django.utils.translation import gettext as _
 
 class WarehauserAuthLoginForm(AuthenticationForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Customize form fields here if needed
-        self.fields['username'].widget.attrs.update({'class': 'form-control', 'placeholder': _('Username')})
-        self.fields['password'].widget.attrs.update({'class': 'form-control', 'placeholder': _('Password')})
+        self.fields['username'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': _('Username'),
+            'autocomplete': 'off',  # Disable autocomplete for username field
+        })
+        self.fields['password'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': _('Password'),
+            'autocomplete': 'off',  # Disable autocomplete for password field
+        })
 
 class WarehauserAuthForgotPasswordForm(PasswordResetForm):
     email = forms.EmailField(
         label=_("Email"),
         max_length=254,
-        widget=forms.EmailInput(attrs={'autocomplete': 'email'}),
+        widget=forms.EmailInput(attrs={'autocomplete': 'off'}),
     )
     password1 = forms.CharField(
         label=_("New password"),
         strip=False,
-        widget=forms.PasswordInput(attrs={'autocomplete': 'new-password'}),
+        widget=forms.PasswordInput(attrs={'autocomplete': 'off'}),
     )
     password2 = forms.CharField(
         label=_("Confirm new password"),
         strip=False,
-        widget=forms.PasswordInput(attrs={'autocomplete': 'new-password'}),
+        widget=forms.PasswordInput(attrs={'autocomplete': 'off'}),
     )
 
     def __init__(self, *args, **kwargs):
@@ -56,15 +64,46 @@ class WarehauserAuthForgotPasswordForm(PasswordResetForm):
             raise forms.ValidationError(_("The two password fields didn't match."))
         return password2
 
-class WarehauserAuthChangePasswordForm(PasswordResetForm):
-    pass
+class WarehauserPasswordChangeForm(PasswordChangeForm):
+    error_messages = {
+        'password_incorrect': _("Incorrect current password."),
+        'password_mismatch': _("The password and confirm password fields did not match."),
+    }
 
-class WarehauserAuthUserForm(forms.ModelForm):
-    class Meta:
-        model = get_user_model()
-        fields = ['username', 'first_name', 'last_name', 'email', 'is_active',]
+    old_password = forms.CharField(
+        label=_("Old password"),
+        strip=False,
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'id': 'old_password', 'placeholder': _('Current Password'), 'autofocus': True, 'autocomplete': 'off'}),
+    )
+    new_password1 = forms.CharField(
+        label=_("New password"),
+        strip=False,
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'id': 'new_password1', 'placeholder': _('Password'), 'autocomplete': 'off'}),
+    )
+    new_password2 = forms.CharField(
+        label=_("Confirm new password"),
+        strip=False,
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'id': 'new_password2', 'placeholder': _('Confirm Password'), 'autocomplete': 'off'}),
+    )
 
-    password = ReadOnlyPasswordHashField(label=_("Password"), help_text=_("Raw passwords are not stored, so there is no way to see this user's password, but you can change the password using <a href=\"password/\">this form</a>."))
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-    def clean_password(self):
-        return self.initial["password"]
+    def clean_old_password(self):
+        old_password = self.cleaned_data.get('old_password')
+        if not self.user.check_password(old_password):
+            raise forms.ValidationError(
+                self.error_messages['password_incorrect'],
+                code='password_incorrect',
+            )
+        return old_password
+
+    def clean_new_password2(self):
+        new_password1 = self.cleaned_data.get('new_password1')
+        new_password2 = self.cleaned_data.get('new_password2')
+        if new_password1 and new_password2 and new_password1 != new_password2:
+            raise forms.ValidationError(
+                self.error_messages['password_mismatch'],
+                code='password_mismatch',
+            )
+        return new_password2

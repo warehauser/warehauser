@@ -19,10 +19,14 @@ import threading
 
 from db_mutex import DBMutexError, DBMutexTimeoutError
 from db_mutex.db_mutex import db_mutex
+from urllib.parse import urljoin
 
+from django.db.models import ProtectedError, Q
+from django.utils import timezone
 from django.utils.translation import gettext as _
+from django.urls import reverse
 
-from django.db.models import ProtectedError
+from datetime import timedelta
 
 from core.models import *
 from core.views  import *
@@ -40,8 +44,29 @@ class WarehauserThread(threading.Thread):
         pass
 
 class ArchiverThread(WarehauserThread):
+    def _archive_useraux(self):
+        key = 'send_mail'
+        delta = timezone.now() - timedelta(hours=24)
+
+        objects = UserAux.objects.filter(
+            Q(options__has_key='send_mail') &
+            Q(options__send_mail__has_key='dt') &
+            Q(options__send_mail__dt__lt=f'{delta}') &
+            Q(options__send_mail__has_key='emailthread')
+        )
+
+        for useraux in objects:
+            del useraux.options[key]
+            useraux.save()
+
     def process(self):
-        pass
+        try:
+            with db_mutex(f'archiver'):
+                self._archive_useraux()
+        except DBMutexError as e:
+            raise WarehauserError(_('Unable to secure mutex for eventqueue.'), WarehauserErrorCodes.MUTEX_ERROR, {_('error'): e})
+        except DBMutexTimeoutError as e:
+            raise WarehauserError(_('Unable to secure mutex for eventqueue.'), WarehauserErrorCodes.MUTEX_TIMEOUT_ERROR, {_('error'): e})
 
 class GenerateReportsThread(WarehauserThread):
     def process(self):
@@ -97,3 +122,51 @@ class GarbageCollectorThread(WarehauserThread):
             raise WarehauserError(_('Unable to secure mutex for garbagecollector.'), WarehauserErrorCodes.MUTEX_ERROR, {_('error'): e})
         except DBMutexTimeoutError as e:
             raise WarehauserError(_('Unable to secure mutex for garbagecollector.'), WarehauserErrorCodes.MUTEX_TIMEOUT_ERROR, {_('error'): e})
+
+class EmailThread(WarehauserThread):
+    def _send_password_change_emails(self):
+        key = 'send_mail'
+
+        objects = UserAux.objects.filter(Q(options__has_key=key))
+        for useraux in objects:
+            if 'emailthread' in useraux.options[key].keys():
+                continue
+
+            logging.info(msg=f'Processing {useraux.user.username} email sending.')
+
+            useraux.options[key]['emailthread'] = 1
+            useraux.save()
+
+            to_address = useraux.user.email
+            otp = useraux.options[key]['otp']
+            server_address = settings.EMAIL_WAREHAUSER_HOST
+            revoke_url = reverse('auth_revoke_view', kwargs={'otp': otp, 'user': useraux.user.id})
+            complete_url = urljoin(server_address, revoke_url)
+
+            message = f"""
+Hi {useraux.user.get_username()},
+
+Your Warehauser account password has been successfully changed. If this was done in error then click on this link:
+
+    {complete_url}
+
+Otherwise, happy warehausing!
+
+Regards,
+The Warehause Admin Team
+"""
+
+            send_mail(subject='Warehauser password change successful',
+                    message=message,
+                    from_email='noreply@warehauser.org',
+                    recipient_list=[to_address],
+                    fail_silently=False)
+
+    def process(self):
+        try:
+            with db_mutex(f'emailthread'):
+                self._send_password_change_emails()
+        except DBMutexError as e:
+            return
+        except Exception as e:
+            raise e

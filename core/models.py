@@ -52,12 +52,12 @@ class WarehauserAbstractModel(models.Model):
         callback    (ModelCallback): optional delegate object used to make various pre and post checks of model object function calls.
     """
     id          = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    descr       = models.CharField(max_length=CHARFIELD_MAX_LENGTH, null=True, blank=True, default=None,)
     external_id = models.CharField(max_length=CHARFIELD_MAX_LENGTH, null=True, blank=True,)
     created_at  = models.DateTimeField(auto_now_add=True, null=False, blank=False, editable=False,)
     updated_at  = models.DateTimeField(auto_now_add=False, null=True, blank=True,)
     options     = models.JSONField(null=True, blank=True,)
     barcode     = models.CharField(max_length=CHARFIELD_MAX_LENGTH, null=False, blank=False,)
-    descr       = models.CharField(max_length=CHARFIELD_MAX_LENGTH, null=True, blank=True, default=None,)
     is_virtual  = models.BooleanField(null=False, blank=False, default=False,)
 
     _callback   = None
@@ -215,13 +215,14 @@ class WarehauserAbstractModel(models.Model):
         """
         logging.log(level=level, msg=msg, extra=extra)
 
-    def __str__(self):
-        res = f'{self.__module__}.{self.__class__.__name__}'
-        if self.barcode:
-            res = f'{res} {self.barcode}'
-        if self.id:
-            res = f'{res} ({self.id})'
-        return res
+    def __eq__(self, other) -> bool:
+        return self.__dict__ == other.__dict__
+
+    def __str__(self) -> str:
+        return self.descr
+
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}(id={self.id}, descr=\'{self.descr}\')'
 
     class Meta:
         abstract = True
@@ -640,16 +641,48 @@ class Product(WarehauserAbstractInstanceModel, ProductFields):
     expires     = models.DateField(null=True, blank=True, default=None,)
     is_damaged  = models.BooleanField(null=False, blank=False, default=False,)
 
+    def total_weight(self) -> float:
+        """
+        Get the total weight of this Product object.
+        Returns:
+            float:  weight * quantity if self.weight is not None else 0.0.
+        """
+        return float(self.weight * self.quantity) if self.weight is not None else float(0.0)
+
+    def total_height(self) -> float:
+        """
+        Get the total height of this Product object.
+        Returns:
+            float:  height * quantity if self.height is not None else 0.0.
+        """
+        return float(self.height * self.quantity) if self.height is not None else float(0.0)
+
+    def total_width(self) -> float:
+        """
+        Get the total width of this Product object.
+        Returns:
+            float:  width * quantity if self.width is not None else 0.0.
+        """
+        return float(self.width * self.quantity) if self.width is not None else float(0.0)
+
+    def total_length(self) -> float:
+        """
+        Get the total length of this Product object.
+        Returns:
+            float:  length * quantity if self.length is not None else 0.0.
+        """
+        return float(self.length * self.quantity) if self.length is not None else float(0.0)
+
     def measure(self):
         """
         Calculate and return the dimensions occupied by this product.
         """
         return {
-            'weight':   float(self.weight * self.quantity) if self.weight is not None else float(0.0),
-            'height':   float(self.height * self.quantity) if self.height is not None else float(0.0),
-            'width':    float(self.width  * self.quantity) if self.width is not None else float(0.0),
-            'length':   float(self.length * self.quantity) if self.length is not None else float(0.0),
-            'quantity': float(self.quantity) if self.quantity is not None else float(0.0),
+            'weight':   self.total_weight(),
+            'height':   self.total_height(),
+            'width':    self.total_width(),
+            'length':   self.total_length(),
+            'quantity': float(self.quantity),
         }
 
     def reserve(self, quantity=float(1.0)):
@@ -951,5 +984,22 @@ class Event(WarehauserAbstractInstanceModel, EventFields):
 # Through models for custom ManyToManyFields
 
 # Utility models
+
+class UserAux(models.Model):
+    """
+    Internal use only. Used to manage users such as manage forgotten password requests.
+    """
+    user     = models.OneToOneField(get_user_model(), related_name='userAux', on_delete=models.CASCADE, null=False, blank=False, editable=False,)
+    options  = models.JSONField(null=False, blank=False,)
+
+    class Meta:
+        verbose_name = 'useraux'
+        verbose_name_plural = 'useraux'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user'],
+                name='unique_user_in_user_aux'
+            )
+        ]
 
 # Signals

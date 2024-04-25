@@ -144,10 +144,6 @@ html, body {
 }
 
 #login-form {
-  max-width:320px;
-}
-
-#forgot-form {
   min-width:320px;
   max-width:400px;
 }
@@ -155,4 +151,14 @@ html, body {
 #user-profile {
   min-width:400px;
   max-width:auto;
+}
+
+.main .dark-box .alert-error {
+  color: red;
+  font-style: italic;
+}
+
+.main .dark-box .alert {
+  font-size: 0.8rem;
+  --bs-alert-margin-bottom: 0;
 }
