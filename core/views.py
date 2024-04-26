@@ -24,7 +24,9 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
 from django.db.models import JSONField
+from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
+from django.templatetags.static import static
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
@@ -43,15 +45,24 @@ from .filters import *
 from .forms import *
 from .models import *
 from .permissions import *
+from .templatetags.renderers import field_renderer_default, field_renderer_otp
 from .serializers import *
 
-from .utils import is_valid_email_address, generate_otp_code
+from .utils import generate_otp_code
+
+BASE_TITLE = f'Warehauser - {_("Your warehouse run smoothly")}'
+
+def generate_page_title(title:str) -> str:
+    return (f'{_(title)} - {BASE_TITLE}')
 
 # Create your views here.
 
 @login_required
 def home_view(request):
-    return render(request, "core/index.html")
+    context = {
+        'title': BASE_TITLE
+    }
+    return render(request, "core/index.html", context=context)
 
 # Authentication views
 
@@ -86,8 +97,12 @@ def auth_login_view(request):
     form.id = 'login-form'
 
     context = {
+        'title': generate_page_title(_('Log In')),
         'form': form,
         'autofocus_field': autofocus_field,
+        'renderers': {
+            'field_renderer_default': field_renderer_default,
+        },
         'select_text': select_text,
         'title': _('Login'),
         'illustration': 'icon ion-ios-locked-outline',
@@ -107,11 +122,6 @@ def auth_logout_view(request):
 def auth_user_profile_view(request):
     return render(request=request, template_name='auth/user_profile.html')
 
-
-
-
-
-
 @login_required
 def auth_change_password_view(request):
     user = request.user
@@ -120,20 +130,21 @@ def auth_change_password_view(request):
         form = WarehauserPasswordChangeForm(request.user, request.POST)
         if form.is_valid():
             data = {
-                'send_mail': {
-                    'changed_password': make_password(form.cleaned_data.get('old_password')),
-                    'otp': generate_otp_code(),
-                    'dt': f'{timezone.now()}'
-                }
+                'otp': {generate_otp_code(): {
+                    'status': 0,
+                    'type': 'change_password',
+                    'dt': f'{timezone.now()}',
+                    'data': {'old_password': make_password(form.cleaned_data.get('old_password')),},
+                },},
             }
 
             try:
                 with db_mutex(f'core_useraux'):
-                    try:
-                        aux = UserAux.objects.get(user=user)
-                        aux.options.update(data)
-                    except:
+                    aux = UserAux.objects.get(user=user)
+                    if aux is None:
                         aux = UserAux.objects.create(user=user, options=data)
+                    else:
+                        aux.options.update(data)
 
                     aux.save()
             except Exception as e:
@@ -142,8 +153,8 @@ def auth_change_password_view(request):
             user = form.save()
             update_session_auth_hash(request, user)
             return redirect('auth_user_profile_view')
-        else:
-            print('views.auth_change_password_view not valid!')
+        # else:
+        #     print('views.auth_change_password_view not valid!')
     else:
         form = WarehauserPasswordChangeForm(request.user)
 
@@ -152,6 +163,9 @@ def auth_change_password_view(request):
 
     context = {
         'form': form,
+        # 'renderers': {
+        #     'field_renderer_default': field_renderer_default,
+        # },
         'title': _('Change Password'),
         'illustration': 'icon ion-ios-locked-outline',
         'buttons': [
@@ -161,37 +175,6 @@ def auth_change_password_view(request):
 
     return render(request, template, context)
 
-
-
-
-    # user = request.user
-    # if request.method.lower() == 'post':
-    #     print('request method is post')
-    #     form = WarehauserAuthChangePasswordForm(data=request.POST)
-    #     if form.is_valid():
-    #         print('form is valid')
-    #         if form.is_valid():
-    #             password = form.cleaned_data.get('password')
-    #             if authenticate(request=request, username=user.username, password=password) is False:
-    #                 print('check 1')
-    #                 form.add_error(None, 'Current password is incorrect.')
-    #             else:
-    #                 password1 = form.cleaned_data.get('password1')
-    #                 password2 = form.cleaned_data.get('password2')
-    #                 if password1 == password2 is False:
-    #                     print('check 2')
-    #                     form.add_error(None, 'New password and confirm password do not match.')
-    #                 else:
-    #                     print('checks done!')
-    #                     user.set_password(password1)
-    #                     user.save()
-
-    #                     return redirect(to='auth_user_profile_view')
-    # else:
-    #     form = WarehauserAuthChangePasswordForm()
-
-    # return render(request, 'auth/change_password.html', {'form': form})
-
 @anonymous_required
 def auth_forgot_password_view(request):
     if request.method.lower() == 'post':
@@ -200,111 +183,137 @@ def auth_forgot_password_view(request):
     form = WarehauserAuthForgotPasswordForm(request)
     return render(request, 'auth/reset_password.html', {'form': form})
 
-@anonymous_required
-def auth_otp_challenge_view(request):
-    pass
+def auth_otp_revoke_view(request, user:int, otp:str=None):
+    user_obj = get_user_model().objects.get(id=user)
+    if user_obj is not None:
+        useraux = UserAux.objects.get(user=user_obj)
+        options = useraux.options['otp'] if 'otp' in useraux.options else dict()
+
+        if otp is None:
+            if request.method.lower() == 'post':
+                form = WarehauserOTPChallengeForm(request.POST)
+                if form.is_valid():
+                    # Process the form data if valid
+                    otp = form.get_otp_combined()
+
+        if otp is not None and otp in options:
+            opts = options[otp]
+            match opts['type']:
+                case 'change_password':
+                    # The user wants to revoke a change of password.
+                    data = opts['data']
+                    user.password = data
+                    user.save()
+
+                    del useraux.options['otp'][otp]
+                    useraux.save()
+
+                    template = 'core/message.html'
+                    context = {
+                        'title': _('Success'),
+                        'illustration': 'icon ion-ios-locked-outline',
+                        'message': 'Your old password has been restored.',
+                        'buttons': [
+                            {'title': _('Ok'), 'id': 'ok', 'type': 'href', 'url': 'home', 'class': 'btn btn-primary col-12'}
+                        ],
+                    }
+                    return render(request, template, context)
+                case _:
+                    form.add_error('Invalid attempt.')
+        else:
+            form = WarehauserOTPChallengeForm()
+
+        form.id = 'otp-form'
+        template = 'core/form.html'
+        context = {
+            'form': form,
+            'renderers': {
+                'field_renderer_default': field_renderer_default,
+                'field_renderer_otp': field_renderer_otp,
+            },
+            'title': _('Revoke Action'),
+            'title_class': 'form-title',
+            'preamble': 'Enter code:',
+            'illustration': 'icon ion-ios-locked-outline',
+            'buttons': [
+                {'title': _('Submit'), 'id': 'submit', 'value': 'submit', 'type': 'submit'},
+            ],
+        }
+        return render(request, template, context)
+    return redirect('home')
+
+def auth_otp_accept_view(request, user:int, otp:str=None):
+    return redirect('home')
 
 
 
+from .templatetags.renderers import *
 
-from django.http import HttpResponse
-def auth_revoke_view(request):
-    return HttpResponse("Hello World")
+def base_html() -> dict:
+    return {
+        'renderers': {
+            # 'form': form_renderer,
+        },
+        'default': {
+            'doctype': '<!doctype html>',
+        },
+        'content': [{
+                'name': 'html', 'attributes': {'lang': settings.LANGUAGE_CODE, 'version': '1.0',},
+                'content': [{
+                    'name': 'head',
+                    'content': [{
+                        'name': 'title',
+                        'content': [{
+                            'type': 'text',
+                            'text': generate_page_title('Home'),
+                        },],},
+                        {'name': 'meta', 'attributes': {'charset': 'utf-8',},},
+                        {'name': 'meta', 'attributes': {'name': 'viewport', 'content': 'width=device-width, initial-scale=1, shrink-to-fit=no',},},
+                        {'name': 'link', 'attributes': {'rel': 'icon', 'href': '/static/core/images/favicon.ico', 'type': 'image/x-icon',},},
+                        {'name': 'link', 'attributes': {'rel': 'shorticon icon', 'href': '/static/core/images/favicon.ico', 'type': 'image/x-icon',},},
+                    ],
+                },
+                {
+                    'name': 'body',
+                    'content': [
+                        {
+                            'type': 'html',
+                            'html': '<h1>Hello World!</h1>'
+                        },
+                    ],
+                },],
+            },],
+        }
 
+def find_child_tag(head:dict, tag:str, nth:int = 0) -> dict:
+    if 'name' not in head and 'content' in head:
+        return find_child_tag(head=head['content'], tag=tag, nth=nth)
 
+    found_count = 0
+    for element in head:
+        if element.get('name') == tag:
+            if found_count == nth:
+                return element
+            found_count += 1
+        if 'content' in element:
+            nested_result = find_child_tag(element['content'], tag, nth)
+            if nested_result is not None:
+                return nested_result
+    return None
 
+def append_child_tag(head:dict, tag:dict):
+    head['content'].append(tag)
 
+def test_view(request):
+    form = WarehauserOTPChallengeForm()
+    template = 'core/page.html'
+    context = base_html()
 
+    # add some code here.
+    body = find_child_tag(context, 'body')
+    append_child_tag(head=body, tag={'name': 'a', 'attributes': {'href': 'https://www.google.com.au/'}, 'content':[{'type': 'text', 'text': 'Google HERE!',}]})
 
-# @login_required
-# def auth_change_password_view(request):
-
-# def auth_forgot_password_view(request):
-#     if request.method == 'POST':
-#         form = WarehauserAuthForgotPasswordForm(data=request.POST)
-#         if form.is_valid():
-#             email = form.cleaned_data.get('email')
-#             password1 = form.cleaned_data.get('password1')
-#             password2 = form.cleaned_data.get('password2')
-#             if is_valid_email_address(email) is False:
-#                 form.add_error(None, 'Email is not of a valid format.')
-#             elif password1 != password2:
-#                 form.add_error(None, 'Passwords do not match.')
-#             else:
-#                 # Store password in session and send confirmation email...
-#                 otp = generate_otp_code(length=6)
-#     # <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-#     # <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-#     # <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-#                 content = f"""
-# <!doctype html>
-# <html lang="en-us">
-#   <head>
-#     <title>Forgot Password - Warehauser : Your Warehouse Done Smoothly</title>
-#     <meta charset="utf-8" />
-#     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-#     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-#     <link rel="stylesheet" href="/static/core/css/warehauser.css" />
-#     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ionicons/2.0.1/css/ionicons.min.css">
-#   </head>
-#   <body>
-#     <div class="wrapper">
-#       <!-- <div class="background-dark"> -->
-#         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-#           <div class="container">
-#             <a class="navbar-brand" href="/">Warehauser</a>
-#             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-#               <span class="navbar-toggler-icon"></span>
-#             </button>
-#             <div class="collapse navbar-collapse" id="navbarSupportedContent">
-#               <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                
-#               </ul>
-#               <ul class="navbar-nav">
-                
-#                 <li class="nav-item">
-#                   <a class="nav-link" href="/auth/login">Login</a>
-#                 </li>
-                
-#               </ul>
-#             </div>
-#           </div>
-#         </nav>
-#         <div id="content" class="main" name="content-box">
-#         <form>
-#             <div class="illustration"><i class="icon ion-ios-locked-outline"></i></div>
-#             <div class="form-row"><input class="form-control" type="text" name="username" id="username" placeholder="Username" autofocus></div>
-#             <div class="form-row"><input class="form-control" type="password" name="password" id="password" placeholder="Password"></div>
-#         </form>
-#         </div>
-#       <!-- </div> -->
-#     </div>
-#     <footer id="footer" class="bg-dark text-center">
-#       <div class"text-center p-3" style="background-color: rgba(0,0,0,0.2);">
-#         <a class="text-light" href="https://www.warehauser.org/" style="text-decoration: none;">Powered by warehauser.org</a>
-#       </div>
-#     </footer>
-    
-#     <!-- Bootstrap 5 JS and dependencies -->
-#     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-#     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-#     <script src="/static/core/js/warehauser.js"></script>
-    
-#   </body>
-# </html>
-# {otp}
-# """
-#                 send_mail(subject='Warehauser Password Reset Request',
-#                           message=content,
-#                           from_email=settings.SEND_MAIL_FROM_ADDRESS,
-#                           recipient_list=[email,],
-#                           fail_silently=False)
-#     else:
-#         form = WarehauserAuthForgotPasswordForm(request)
-
-#     return render(request, 'auth/reset_password.html', {'form': form})
-
+    return render(request=request, template_name=template, context=context)
 
 # Model view sets
 

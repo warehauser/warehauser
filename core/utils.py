@@ -119,3 +119,11 @@ def dict_recursive_update(d1, d2):
 
 def dict_compare(d1, d2):
     return (dict_recursive_sort(d1.items()) == dict_recursive_sort(d2.items()))
+
+def dict_get_or_default(d:dict, k:str, v:any=None) -> any:
+    return d[k] if k in d else v
+
+def dict_copy_and_update(d:dict, u:dict) -> dict:
+    result = d.copy() if d is not None else dict()
+    result.update(u if u is not None else dict())
+    return result

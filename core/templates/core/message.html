@@ -1,0 +1,21 @@
+{% extends 'core/base.html' %}
+{% load renderers %}
+{% block header %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ionicons/2.0.1/css/ionicons.min.css">
+{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="dark-box">
+            <h2 class="visually-hidden">{{ title }}</h2>
+            {% if illustration %}
+            <div class="illustration"><i class="{{ illustration }}"></i></div>
+            {% endif %}
+            {% if message %}
+            <div class="form-row">{{ message }}</div>
+            {% endif %}
+            {% render_buttons buttons %}
+        </div>
+    </div>
+</div>
+{% endblock %}

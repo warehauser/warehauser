@@ -1,0 +1,15 @@
+<div class="form-row flex">
+    <div class="form-group center">
+{% for field in fields %}
+        {% if show_form_field_labels %}
+        {{ field.label_tag }}
+        {% endif %}
+        {{ field }}
+        {% for error in field.errors %}
+        <div class="alert alert-error">
+            {{ error }}
+        </div>
+        {% endfor %}
+{% endfor %}
+    </div>
+</div>

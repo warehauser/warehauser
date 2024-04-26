@@ -18,6 +18,9 @@ import sys
 import os
 import schedule
 import time
+
+os.environ['SCRIPT_SCHEDULER'] = 'True'
+
 import django
 
 # Add the directory containing your Django project to the Python path

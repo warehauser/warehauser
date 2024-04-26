@@ -1,32 +1,22 @@
 {% extends 'core/base.html' %}
-
+{% load renderers %}
 {% block header %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ionicons/2.0.1/css/ionicons.min.css">
 {% endblock %}
-
 {% block content %}
 <div class="container mt-5">
     <div class="row justify-content-center">
         <form class="dark-box" id="{{ form.id }}" method="post">
-            <h2 class="visually-hidden">{{ title }}</h2>
             {% if illustration %}
             <div class="illustration"><i class="{{ illustration }}"></i></div>
             {% endif %}
+            {% if title %}<h3 class="{% if title_class %}{{ title_class }}{% else %}visually-hidden{% endif %}">{{ title }}</h3>{% endif %}
+            {% if preamble %}
+            <div class="{% if preamble_class %}{{ preamble_class }}{% else %}form-row preamble{% endif %}">{{ preamble }}</div>
+            {% endif %}
             {% csrf_token %}
-            {% for field in form.visible_fields %}
-            <div class="form-row">
-                <div class="form-group">
-                    {% if show_form_field_labels %}
-                    {{ field.label_tag }}
-                    {% endif %}
-                    {{ field }}
-                    {% for error in field.errors %}
-                    <div class="alert alert-error">
-                        {{ error }}
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
+            {% for layout in form.layout %}
+            {% render_fields layout.renderer layout.fields %}
             {% endfor %}
             {% for field in form.hidden_fields %}
             {{ field }}
@@ -38,19 +28,7 @@
             </div>
             {% endfor %}
             {% endif %}
-            <div class="form-row">
-                {% for button in buttons %}
-                {% if button.type == 'href' %}
-                <div class="form-row"><a href="{% url button.url %}" class="{% if button.class %}{{ button.class }}{% else %}btn col-12{% endif %}">
-                    {{ button.title }}
-                </a></div>
-                {% else %}
-                <div class="form-row"><button type="{{ button.type }}" {% if button.id %}id="{{ button.id }}" {% endif %} {% if button.value %}id="{{ button.value }}" {% endif %}class="{% if button.class %}{{ button.class }}{% else %}btn btn-primary col-12{% endif %}">
-                    {{ button.title }}
-                </button></div>
-                {% endif %}
-                {% endfor %}
-            </div>
+            {% render_buttons buttons %}
             {% if footer %}
             <div class="form-row">
                 {{ footer | safe }}
@@ -61,15 +39,19 @@
 </div>
 {% endblock %}
 {% block postfooter %}
-{% if autofocus_field %}
 <script>
-    window.onload = function() {
-            var autofocusElement = document.getElementById("{{ autofocus_field }}");
+    $(document).ready(function() {
+        var autofocusElement = $("input[autofocus]:first");
+
+        // Check if autofocusElement exists before proceeding
+        if (autofocusElement.length > 0) {
             autofocusElement.focus();
-{% if select_text %}
-            autofocusElement.select();
-{% endif %}
-    };
+
+            // Check if the element has the select method before calling it
+            if ($.isFunction(autofocusElement.get(0).select)) {
+                autofocusElement.select();
+            }
+        }
+    });
 </script>
-{% endif %}
 {% endblock %}

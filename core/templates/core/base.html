@@ -1,7 +1,7 @@
 {% load static %}{% load rest_framework %}{% load crispy_forms_tags %}{% url 'api-root' as api_root %}<!doctype html>
 <html lang="en-us">
   <head>
-    <title>{% block title %}{% endblock %}Warehauser : Your Warehouse Done Smoothly</title>
+    <title>{{ title }}</title>
     <meta charset="utf-8" />
     <link rel="icon" href="{% static 'core/images/favicon.ico' %}" type="image/x-icon">
     <link rel="shortcut icon" href="{% static 'core/images/favicon.ico' %}" type="image/x-icon">

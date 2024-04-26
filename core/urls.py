@@ -34,7 +34,11 @@ urlpatterns = [
     path('auth/forgot_password/', views.auth_forgot_password_view, name='auth_forgot_password_view'),
     path('auth/change_password/', views.auth_change_password_view, name='auth_change_password_view'),
     path('auth/profile/', views.auth_user_profile_view, name='auth_user_profile_view'),
-    path('auth/revoke/<int:user>/<str:otp>/', views.auth_revoke_view, name='auth_revoke_view'),
+    path('auth/revoke/<int:user>/<str:otp>/', views.auth_otp_revoke_view, name='auth_otp_revoke_view'),
+    path('auth/revoke/<int:user>/', views.auth_otp_revoke_view, name='auth_otp_revoke_manual_view'),
+    path('auth/accept/<int:user>/<str:otp>/', views.auth_otp_accept_view, name='auth_otp_accept_view'),
+    path('auth/accept/<int:user>/', views.auth_otp_accept_view, name='auth_otp_accept_manual_view'),
     path('api/', include(router.urls)),
     path('', views.home_view, name='home'),
+    path('test/', views.test_view, name='test'),
 ]

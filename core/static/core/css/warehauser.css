@@ -94,6 +94,12 @@ html, body {
   color:#2980ef;
 }
 
+.main .dark-box .form-row.flex {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .main .dark-box .form-control {
   background:none;
   border:none;
@@ -103,6 +109,22 @@ html, body {
   outline:none;
   color:inherit;
 }
+
+.main .dark-box .otp {
+  display: inline;
+  width: 2rem;
+  text-align: center;
+  background-color: #2e3843;
+  border-bottom: none;
+  caret-color: #fff;
+  margin-right: 0.25rem;
+  border-radius: 5px;
+}
+
+.main .dark-box .otp:last-child {
+  margin-right: 0rem;
+}
+
 
 .main .dark-box .btn-primary {
   background:#214a80;
@@ -161,4 +183,9 @@ html, body {
 .main .dark-box .alert {
   font-size: 0.8rem;
   --bs-alert-margin-bottom: 0;
+}
+
+.main .dark-box .form-title {
+  text-align: center;
+  margin-bottom: 1rem;
 }

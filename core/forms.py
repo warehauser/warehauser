@@ -15,11 +15,21 @@
 # forms.py
 
 from django import forms
+from django.core.validators import RegexValidator
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, ReadOnlyPasswordHashField, PasswordResetForm, PasswordChangeForm
 from django.utils.translation import gettext as _
 
-class WarehauserAuthLoginForm(AuthenticationForm):
+class WarehauserFormMixin:
+    def layout(self:forms.Form, *args, **kwargs):
+        """
+        Define the layout of form fields.
+        Override this method in subclasses to customize field layout.
+        Returns a list of lists where each inner list represents a row of fields.
+        """
+        return [{'renderer': 'field_renderer_default', 'fields': [self.visible_fields()]},]
+
+class WarehauserAuthLoginForm(AuthenticationForm, WarehauserFormMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Customize form fields here if needed
@@ -34,7 +44,7 @@ class WarehauserAuthLoginForm(AuthenticationForm):
             'autocomplete': 'off',  # Disable autocomplete for password field
         })
 
-class WarehauserAuthForgotPasswordForm(PasswordResetForm):
+class WarehauserAuthForgotPasswordForm(PasswordResetForm, WarehauserFormMixin):
     email = forms.EmailField(
         label=_("Email"),
         max_length=254,
@@ -64,7 +74,7 @@ class WarehauserAuthForgotPasswordForm(PasswordResetForm):
             raise forms.ValidationError(_("The two password fields didn't match."))
         return password2
 
-class WarehauserPasswordChangeForm(PasswordChangeForm):
+class WarehauserPasswordChangeForm(PasswordChangeForm, WarehauserFormMixin):
     error_messages = {
         'password_incorrect': _("Incorrect current password."),
         'password_mismatch': _("The password and confirm password fields did not match."),
@@ -107,3 +117,32 @@ class WarehauserPasswordChangeForm(PasswordChangeForm):
                 code='password_mismatch',
             )
         return new_password2
+
+otp_validator = RegexValidator(r'^[A-Za-z0-9]$', 'OTP must be a single alphanumeric character.')
+
+class WarehauserOTPChallengeForm(forms.Form, WarehauserFormMixin):
+    otp1 = forms.CharField(max_length=1, validators=[otp_validator], widget=forms.TextInput(attrs={'class': 'form-control otp', 'id': 'otp1', 'autocomplete': 'off', 'autofocus': True,}))
+    otp2 = forms.CharField(max_length=1, validators=[otp_validator], widget=forms.TextInput(attrs={'class': 'form-control otp', 'id': 'otp2', 'autocomplete': 'off'}))
+    otp3 = forms.CharField(max_length=1, validators=[otp_validator], widget=forms.TextInput(attrs={'class': 'form-control otp', 'id': 'otp3', 'autocomplete': 'off'}))
+    otp4 = forms.CharField(max_length=1, validators=[otp_validator], widget=forms.TextInput(attrs={'class': 'form-control otp', 'id': 'otp4', 'autocomplete': 'off'}))
+    otp5 = forms.CharField(max_length=1, validators=[otp_validator], widget=forms.TextInput(attrs={'class': 'form-control otp', 'id': 'otp5', 'autocomplete': 'off'}))
+    otp6 = forms.CharField(max_length=1, validators=[otp_validator], widget=forms.TextInput(attrs={'class': 'form-control otp', 'id': 'otp6', 'autocomplete': 'off'}))
+
+    def clean(self):
+        cleaned_data = super().clean()
+        otp_combined = self.get_otp_combined()
+        if len(otp_combined) != 6:
+            raise forms.ValidationError('Invalid attempt.')
+        return cleaned_data
+
+    def get_otp_combined(self):
+        otp_combined = ''.join(self.cleaned_data.get(f'otp{i}', '') for i in range(1, 7))
+        return otp_combined
+
+    def layout(self, *args, **kwargs):
+        """
+        Define the layout of form fields for WarehauserOTPChallengeForm.
+        Overrides the layout method from the base class.
+        Returns a list of dicts each with a renderer class and a list of fields.
+        """
+        return [{'renderer': 'field_renderer_otp', 'fields': [self['otp1'], self['otp2'], self['otp3'], self['otp4'], self['otp5'], self['otp6']]}]

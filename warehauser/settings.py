@@ -103,6 +103,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.renderer_methods',
             ],
         },
     },
@@ -195,13 +196,19 @@ LOGIN_URL = 'auth_login'
 
 # Logging settings
 
+SCRIPT_SCHEDULER = os.environ.get('SCRIPT_SCHEDULER', '') == 'True'
+if SCRIPT_SCHEDULER:
+    log_file_name = os.path.join(BASE_DIR, 'logs', 'scheduler.jsonl')
+else:
+    log_file_name = os.path.join(BASE_DIR, 'logs', 'warehauser.jsonl')
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'filters': {
         'stdout_filter': {
-            '()': 'core.loggers.WarehauserLoggingNonErrorFilter'
-        }
+            '()': 'core.loggers.WarehauserLoggingNonErrorFilter',
+        },
     },
     'formatters': {
         'default': {
@@ -218,9 +225,9 @@ LOGGING = {
                 'module': 'module',
                 'function': 'funcName',
                 'line': 'lineno',
-                'thread_name': 'threadName'
-            }
-        }
+                'thread_name': 'threadName',
+            },
+        },
     },
     'handlers': {
         'stdout': {
@@ -239,13 +246,13 @@ LOGGING = {
             'class': 'logging.handlers.RotatingFileHandler',
             'level': 'DEBUG',
             'formatter': 'file',
-            'filename': os.path.join(BASE_DIR, 'logs', 'warehauser.jsonl'),
-            'maxBytes': 1048576,
-            'backupCount': 3,
+            'filename': log_file_name,
+            'maxBytes': 10485760,
+            'backupCount': 7,
         },
     },
     'loggers': {
-        'root': {'level': 'DEBUG', 'handlers': ['stdout', 'stderr', 'logfile',]}
+        'root': {'level': 'DEBUG', 'handlers': ['stdout', 'stderr', 'logfile',],},
     },
 }
 
