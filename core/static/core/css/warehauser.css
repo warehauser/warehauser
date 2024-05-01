@@ -94,6 +94,71 @@ html, body {
   color:#2980ef;
 }
 
+.main .dark-box .input-box {
+  position: relative;
+}
+
+.main .dark-box .input-box input {
+  padding: 15px 20px;
+  outline: none;
+  width: 100%;
+  background: transparent;
+  border-radius: 5px;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.25);
+  font-size: 1em;
+}
+
+.main .dark-box .input-box span {
+  position: absolute;
+  left: 0;
+  /* top: 0; */
+  padding: 15px 20px;
+  pointer-events: none;
+  font-size: 1em;
+  transition: 0.5s;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.25);
+  letter-spacing: 0.1em;
+}
+
+.main .dark-box .input-box input:focus ~ span,
+.main .dark-box .input-box input:valid ~ span {
+  color: #1d2b3a;
+  font-size: 0.75em;
+  transform: translateX(20px) translateY(-7px);
+  padding: 0 5px;
+  background: #00dfc4;
+  border-radius: 2px;
+}
+
+.main .dark-box .input-box .hide-password,
+.main .dark-box .input-box .show-password {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 20px;
+  width: 30px;
+  height: 30px;
+  color: #00dfc4;
+  background-size: cover;
+}
+
+.main .dark-box .input-box .show-password {
+  display: none;
+  background: url('/static/core/images/eye-off-outline.svg');
+}
+
+.main .dark-box .input-box .hide-password {
+  display: none;
+  background: url('/static/core/images/eye-outline.svg');
+}
+
+
+
+
+
+
 .main .dark-box .form-row.flex {
   display: flex;
   flex-direction: column;
@@ -112,11 +177,12 @@ html, body {
 
 .main .dark-box .otp {
   display: inline;
-  width: 2rem;
+  width: 2.35rem;
+  text-transform: uppercase;
   text-align: center;
   background-color: #2e3843;
   border-bottom: none;
-  caret-color: #fff;
+  caret-color: transparent;
   margin-right: 0.25rem;
   border-radius: 5px;
 }
@@ -125,6 +191,9 @@ html, body {
   margin-right: 0rem;
 }
 
+.main .dark-box .otp:focus {
+  background-color: #4e5863;
+}
 
 .main .dark-box .btn-primary {
   background:#214a80;
@@ -163,6 +232,11 @@ html, body {
 
 .main .dark-box .form-row {
   margin-bottom: 1rem;
+}
+
+#otp-form {
+  min-width:310px;
+  max-width:350px;
 }
 
 #login-form {

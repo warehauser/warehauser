@@ -14,6 +14,11 @@
 
 # views.py
 
+import json
+
+from datetime import datetime, timedelta
+from typing import Any, List
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login, update_session_auth_hash
@@ -45,7 +50,7 @@ from .filters import *
 from .forms import *
 from .models import *
 from .permissions import *
-from .templatetags.renderers import field_renderer_default, field_renderer_otp
+from .templatetags.renderers import field_renderer_default, field_renderer_otp, render_fields
 from .serializers import *
 
 from .utils import generate_otp_code
@@ -54,6 +59,16 @@ BASE_TITLE = f'Warehauser - {_("Your warehouse run smoothly")}'
 
 def generate_page_title(title:str) -> str:
     return (f'{_(title)} - {BASE_TITLE}')
+
+def generate_button_attributes(attrs:dict) -> dict:
+    dfts = {
+        'type': 'submit',
+        'class': 'btn btn-primary col-12',
+    }
+
+    dfts.update(attrs)
+
+    return dfts
 
 # Create your views here.
 
@@ -107,8 +122,8 @@ def auth_login_view(request):
         'title': _('Login'),
         'illustration': 'icon ion-ios-locked-outline',
         'buttons': [
-            {'title': _('Login'), 'id': 'submit', 'value': 'login', 'type': 'submit'},
-            {'title': _('Forgot Password'), 'id': 'forgot', 'type': 'href', 'url': 'auth_forgot_password_view', 'class': 'btn btn-secondary col-12'}
+            {'title': _('Login'), 'attrs': generate_button_attributes({'id': 'submit', 'value': 'login', 'type': 'submit',})},
+            {'title': _('Forgot Password'), 'type': 'href', 'attrs': generate_button_attributes({'id': 'forgot', 'href': 'auth_forgot_password_view', 'class': 'btn btn-secondary col-12',})},
         ],
     }
 
@@ -126,26 +141,34 @@ def auth_user_profile_view(request):
 def auth_change_password_view(request):
     user = request.user
 
-    if request.method == 'POST':
+    if request.method.lower() == 'post':
         form = WarehauserPasswordChangeForm(request.user, request.POST)
         if form.is_valid():
             data = {
-                'otp': {generate_otp_code(): {
-                    'status': 0,
-                    'type': 'change_password',
-                    'dt': f'{timezone.now()}',
-                    'data': {'old_password': make_password(form.cleaned_data.get('old_password')),},
-                },},
+                'otp': {
+                    'codes': {
+                        generate_otp_code(): {
+                            'status': 0,
+                            'type': 'passwd',
+                            'dt': f'{timezone.localtime(timezone.now())}',
+                            'data': {
+                                'old_password': make_password(form.cleaned_data.get('old_password')),
+                            },
+                        },
+                    },
+                },
             }
 
             try:
                 with db_mutex(f'core_useraux'):
-                    aux = UserAux.objects.get(user=user)
-                    if aux is None:
-                        aux = UserAux.objects.create(user=user, options=data)
-                    else:
+                    try:
+                        aux = UserAux.objects.get(user=user)
                         aux.options.update(data)
+                    except Exception as e:
+                        aux = UserAux.objects.create(user=user, options=data)
 
+                    if 'attempts' not in aux.options['otp']:
+                        aux.options['otp']['attempts'] = list()
                     aux.save()
             except Exception as e:
                 raise e
@@ -153,8 +176,6 @@ def auth_change_password_view(request):
             user = form.save()
             update_session_auth_hash(request, user)
             return redirect('auth_user_profile_view')
-        # else:
-        #     print('views.auth_change_password_view not valid!')
     else:
         form = WarehauserPasswordChangeForm(request.user)
 
@@ -163,13 +184,13 @@ def auth_change_password_view(request):
 
     context = {
         'form': form,
-        # 'renderers': {
-        #     'field_renderer_default': field_renderer_default,
-        # },
+        'renderers': {
+            'field_renderer_default': field_renderer_default,
+        },
         'title': _('Change Password'),
         'illustration': 'icon ion-ios-locked-outline',
         'buttons': [
-            {'title': _('Change Password'), 'id': 'submit', 'value': 'login', 'type': 'submit'},
+            {'title': _('Change Password'), 'attrs': generate_button_attributes({'id': 'submit', 'value': 'login', 'type': 'submit',})},
         ],
     }
 
@@ -183,137 +204,124 @@ def auth_forgot_password_view(request):
     form = WarehauserAuthForgotPasswordForm(request)
     return render(request, 'auth/reset_password.html', {'form': form})
 
-def auth_otp_revoke_view(request, user:int, otp:str=None):
-    user_obj = get_user_model().objects.get(id=user)
-    if user_obj is not None:
-        useraux = UserAux.objects.get(user=user_obj)
-        options = useraux.options['otp'] if 'otp' in useraux.options else dict()
-
-        if otp is None:
-            if request.method.lower() == 'post':
-                form = WarehauserOTPChallengeForm(request.POST)
-                if form.is_valid():
-                    # Process the form data if valid
-                    otp = form.get_otp_combined()
-
-        if otp is not None and otp in options:
-            opts = options[otp]
-            match opts['type']:
-                case 'change_password':
-                    # The user wants to revoke a change of password.
-                    data = opts['data']
-                    user.password = data
-                    user.save()
-
-                    del useraux.options['otp'][otp]
-                    useraux.save()
-
-                    template = 'core/message.html'
-                    context = {
-                        'title': _('Success'),
-                        'illustration': 'icon ion-ios-locked-outline',
-                        'message': 'Your old password has been restored.',
-                        'buttons': [
-                            {'title': _('Ok'), 'id': 'ok', 'type': 'href', 'url': 'home', 'class': 'btn btn-primary col-12'}
-                        ],
-                    }
-                    return render(request, template, context)
-                case _:
-                    form.add_error('Invalid attempt.')
-        else:
-            form = WarehauserOTPChallengeForm()
-
-        form.id = 'otp-form'
-        template = 'core/form.html'
-        context = {
-            'form': form,
-            'renderers': {
-                'field_renderer_default': field_renderer_default,
-                'field_renderer_otp': field_renderer_otp,
-            },
-            'title': _('Revoke Action'),
-            'title_class': 'form-title',
-            'preamble': 'Enter code:',
-            'illustration': 'icon ion-ios-locked-outline',
-            'buttons': [
-                {'title': _('Submit'), 'id': 'submit', 'value': 'submit', 'type': 'submit'},
-            ],
-        }
-        return render(request, template, context)
-    return redirect('home')
-
-def auth_otp_accept_view(request, user:int, otp:str=None):
-    return redirect('home')
-
-
-
-from .templatetags.renderers import *
-
-def base_html() -> dict:
-    return {
-        'renderers': {
-            # 'form': form_renderer,
-        },
-        'default': {
-            'doctype': '<!doctype html>',
-        },
-        'content': [{
-                'name': 'html', 'attributes': {'lang': settings.LANGUAGE_CODE, 'version': '1.0',},
-                'content': [{
-                    'name': 'head',
-                    'content': [{
-                        'name': 'title',
-                        'content': [{
-                            'type': 'text',
-                            'text': generate_page_title('Home'),
-                        },],},
-                        {'name': 'meta', 'attributes': {'charset': 'utf-8',},},
-                        {'name': 'meta', 'attributes': {'name': 'viewport', 'content': 'width=device-width, initial-scale=1, shrink-to-fit=no',},},
-                        {'name': 'link', 'attributes': {'rel': 'icon', 'href': '/static/core/images/favicon.ico', 'type': 'image/x-icon',},},
-                        {'name': 'link', 'attributes': {'rel': 'shorticon icon', 'href': '/static/core/images/favicon.ico', 'type': 'image/x-icon',},},
-                    ],
-                },
-                {
-                    'name': 'body',
-                    'content': [
-                        {
-                            'type': 'html',
-                            'html': '<h1>Hello World!</h1>'
-                        },
-                    ],
-                },],
-            },],
-        }
-
-def find_child_tag(head:dict, tag:str, nth:int = 0) -> dict:
-    if 'name' not in head and 'content' in head:
-        return find_child_tag(head=head['content'], tag=tag, nth=nth)
-
-    found_count = 0
-    for element in head:
-        if element.get('name') == tag:
-            if found_count == nth:
-                return element
-            found_count += 1
-        if 'content' in element:
-            nested_result = find_child_tag(element['content'], tag, nth)
-            if nested_result is not None:
-                return nested_result
-    return None
-
-def append_child_tag(head:dict, tag:dict):
-    head['content'].append(tag)
-
-def test_view(request):
+def _auth_otp_form(request:Any, title:str, err:str = None) -> HttpResponse:
     form = WarehauserOTPChallengeForm()
-    template = 'core/page.html'
-    context = base_html()
+    form.id = 'otp-form'
 
-    # add some code here.
-    body = find_child_tag(context, 'body')
-    append_child_tag(head=body, tag={'name': 'a', 'attributes': {'href': 'https://www.google.com.au/'}, 'content':[{'type': 'text', 'text': 'Google HERE!',}]})
+    template = 'core/form.html'
+    context = {
+        'form': form,
+        'renderers': {
+            'field_renderer_otp': field_renderer_otp,
+        },
+        'title': title,
+        'title_class': 'form-title',
+        'preamble': 'Enter code:',
+        'illustration': 'icon ion-ios-locked-outline',
+        'buttons': [
+            {'title': _('Verify'), 'attrs': generate_button_attributes({'id': 'submit', 'value': 'submit', 'type': 'submit', 'disabled': 'true',})},
+        ],
+    }
 
-    return render(request=request, template_name=template, context=context)
+    if err:
+        context['messages'] = [err]
+
+    return render(request, template, context)
+
+def _auth_opt_register_attempt(useraux:UserAux, action:str) -> None:
+    now = timezone.localtime(timezone.now())
+    attempt = {'dt': str(now), 'action': action}
+
+    if 'otp' not in useraux.options:
+        useraux.options['otp'] = dict()
+    if 'attempts' not in useraux.options['otp']:
+        useraux.options['otp']['attempts'] = list()
+
+    useraux.options['otp']['attempts'].append(attempt)
+    useraux.save()
+
+def _auth_otp_attempt(request:Any, action:str, type:str, useraux:UserAux, otp:str) -> HttpResponse:
+    options = useraux.options
+
+    # Check the attempts have not locked the otp...
+    minutes = 1
+    now = timezone.localtime(timezone.now())
+    time_limit = now - timedelta(minutes=minutes)
+
+    attempts = options['otp']['attempts']
+    count = 0
+
+    for att in attempts.copy():
+        # Convert att['dt'] string to datetime object
+        dt = datetime.strptime(att['dt'], '%Y-%m-%d %H:%M:%S.%f%z')
+
+        if dt < time_limit:
+            attempts.remove(att) # Remove expired attempt
+            continue
+
+        if att['action'] == action:
+            count = count + 1
+
+    if count > 2:
+        _auth_opt_register_attempt(useraux=useraux, action=action)
+        return _auth_otp_form(request=request, title=_(f'{action.title()} Action'), err=f'Too many attempts. Wait {minutes} minutes before retrying.')
+
+    time_limit = now - timedelta(days=1)
+
+    if otp in options['otp']['codes']:
+        otp_info = options['otp']['codes'][otp]
+
+        # If the otp request is stale, delete it and resend the form without errors...
+        dt = datetime.strptime(otp_info['dt'], '%Y-%m-%d %H:%M:%S.%f%z')
+        if dt < time_limit:
+            del options['otp']['codes'][otp]
+            useraux.save()
+            return _auth_otp_form(request=request, title=_(f'{action.title()} Action'))
+
+        match f'{type}':
+            case 'passwd':
+                if action == 'revoke':
+                    useraux.user.password = otp_info['data']['old_password']
+                    useraux.user.save()
+
+        del options['otp']['codes'][otp]
+        useraux.save()
+
+        return redirect(reverse('home'))
+
+    attempts.append({'dt': str(now), 'action': action})
+    useraux.save()
+
+    return _auth_otp_form(request=request, title=_(f'{action.title()} Action'))
+
+def _auth_otp_view(request:Any, action:str, user:int, otp:str=None) -> HttpResponse:
+    title = _(f'{action.title()} Action')
+    try:
+        user_obj = get_user_model().objects.get(id=user)
+    except Exception as e:
+        return _auth_otp_form(request=request, title=title)
+
+    try:
+        useraux = UserAux.objects.get(user=user_obj)
+    except Exception as e:
+        _auth_opt_register_attempt(useraux=UserAux.objects.create(user=user_obj, options=dict({'otp': {'codes': {}, 'attempts': []}})), action=action)
+        return _auth_otp_form(request=request, title=title)
+
+    if otp is None:
+        if request.method.lower() == 'post':
+            form = WarehauserOTPChallengeForm(request.POST)
+            if form.is_valid():
+                return _auth_otp_attempt(request=request, action=action, type='passwd', useraux=useraux, otp=form.get_otp_combined())
+        return _auth_otp_form(request=request, title=title)
+    else:
+        return _auth_otp_attempt(request=request, action=action, type='passwd', useraux=useraux, otp=otp)
+
+def auth_otp_revoke_view(request:Any, user:int, otp:str=None) -> HttpResponse:
+    return _auth_otp_view(request=request, action='revoke', user=user, otp=otp)
+
+def auth_otp_accept_view(request:Any, user:int, otp:str=None) -> HttpResponse:
+    return _auth_otp_view(request=request, action='accept', user=user, otp=otp)
+
 
 # Model view sets
 

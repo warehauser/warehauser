@@ -123,28 +123,32 @@ class GarbageCollectorThread(WarehauserThread):
         except DBMutexTimeoutError as e:
             raise WarehauserError(_('Unable to secure mutex for garbagecollector.'), WarehauserErrorCodes.MUTEX_TIMEOUT_ERROR, {_('error'): e})
 
+import json
 class EmailThread(WarehauserThread):
     def _send_password_change_emails(self):
-        key = 'send_mail'
+        auxs = UserAux.objects.filter(
+            Q(options__contains={'otp': {'codes': {}}}) &  # Check for existence of 'otp' and 'codes' keys
+            ~Q(options__otp__codes={})  # Exclude empty 'codes' dictionary
+        )
 
-        objects = UserAux.objects.filter(Q(options__has_key=key))
-        for useraux in objects:
-            if 'emailthread' in useraux.options[key].keys():
-                continue
+        for aux in auxs:
+            # print(json.dumps(aux.options['otp']['codes'], indent=3))
+            for otp, data in aux.options['otp']['codes'].items():
+                if int(data['status']) > 0:
+                    continue
 
-            logging.info(msg=f'Processing {useraux.user.username} email sending.')
+                logging.info(msg=f'Processing {aux.user.username} email sending.')
 
-            useraux.options[key]['emailthread'] = 1
-            useraux.save()
+                data['status'] = 1
+                aux.save()
 
-            to_address = useraux.user.email
-            otp = useraux.options[key]['otp']
-            server_address = settings.EMAIL_WAREHAUSER_HOST
-            revoke_url = reverse('auth_revoke_view', kwargs={'otp': otp, 'user': useraux.user.id})
-            complete_url = urljoin(server_address, revoke_url)
+                to_address = aux.user.email
+                server_address = settings.EMAIL_WAREHAUSER_HOST
+                revoke_url = reverse('auth_otp_revoke_view', kwargs={'user': aux.user.id, 'otp': otp,})
+                complete_url = urljoin(server_address, revoke_url)
 
-            message = f"""
-Hi {useraux.user.get_username()},
+                message = f"""
+Hi {aux.user.get_username()},
 
 Your Warehauser account password has been successfully changed. If this was done in error then click on this link:
 
@@ -156,11 +160,11 @@ Regards,
 The Warehause Admin Team
 """
 
-            send_mail(subject='Warehauser password change successful',
-                    message=message,
-                    from_email='noreply@warehauser.org',
-                    recipient_list=[to_address],
-                    fail_silently=False)
+                send_mail(subject='Warehauser password change successful',
+                        message=message,
+                        from_email='noreply@warehauser.org',
+                        recipient_list=[to_address],
+                        fail_silently=False)
 
     def process(self):
         try:

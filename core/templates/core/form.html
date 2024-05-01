@@ -40,18 +40,87 @@
 {% endblock %}
 {% block postfooter %}
 <script>
-    $(document).ready(function() {
-        var autofocusElement = $("input[autofocus]:first");
 
-        // Check if autofocusElement exists before proceeding
-        if (autofocusElement.length > 0) {
-            autofocusElement.focus();
+const optInputs = document.querySelectorAll('.form-control.otp')
+const otpSubmitButton = document.querySelector('#submit')
 
-            // Check if the element has the select method before calling it
-            if ($.isFunction(autofocusElement.get(0).select)) {
-                autofocusElement.select();
+let currentElement = document.activeElement
+
+function is_key_ok(e) {
+    var k = e.keyCode || e.which;
+        var ok = k >= 65 && k <= 90 || // a-z
+            k >= 96 && k <= 105 || // A-Z
+            k == 13 || // enter
+            k == 8 || // backspaces
+            (!e.shiftKey && k >= 48 && k <= 57); // only 0-9 (ignore SHIFT options)
+
+        if(!ok || (e.ctrlKey && e.altKey)) {
+            return false;
+        }
+
+        return true;
+}
+
+optInputs.forEach(input => {
+    let status = 0
+
+    input.onfocus = (e) => {
+        if(currentElement) {
+            currentElement.focus();
+            e.preventDefault();
+        }
+    }
+
+    input.onkeydown = (e) => {
+        if(!is_key_ok(e)) {
+            e.preventDefault();
+            return;
+        }
+    }
+
+    input.onkeyup = (e) => {
+        if(!is_key_ok(e)) {
+            e.preventDefault();
+            return;
+        }
+
+        const nextElement = input.nextElementSibling
+        const prevElement = input.previousElementSibling
+
+        currentElement = e.target
+
+        if(e.keyCode === 8) {
+            if(status === 2) {
+                currentElement.value = ''
+                status = 1
+                otpSubmitButton.setAttribute('disabled', true)
+            } else if(prevElement) {
+                currentElement = prevElement
+                prevElement.value = ''
+                prevElement.focus()
+                status = 1
+                otpSubmitButton.setAttribute('disabled', true)
+            } else {
+                status = 0
+            }
+        } else {
+            const reg = /^[0-9a-zA-Z]+$/
+            if(!reg.test(currentElement.value)) {
+                currentElement.value = currentElement.value.replace(/\D/g, '')
+            } else {
+                currentElement.value = currentElement.value.toUpperCase()
+                if(currentElement) {
+                    if(nextElement) {
+                        currentElement = nextElement
+                        nextElement.focus()
+                    } else {
+                        otpSubmitButton.removeAttribute('disabled')
+                        status = 2
+                    }
+                }
             }
         }
-    });
+    }
+})
 </script>
 {% endblock %}

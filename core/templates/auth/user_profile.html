@@ -7,7 +7,7 @@
 {% block content %}
         <div class="dark-box" id="user-profile">
             <h2 class="visually-hidden">User Profile</h2>
-            <div class="illustration"><img src="{% static 'core/images/logo.svg' %}" alt="Warehauser" style="height: 150px;"/></div>
+            <div class="illustration"><i class="icon ion-ios-locked-outline"></i></div>
             <div class="row mt-3 justify-content-center">
                 <div class="col-md-3">
                     <div class="mb-6">
@@ -20,6 +20,7 @@
                     </div>
                 </div>
             </div>
+
             <div class="row mt-3">
                 <div class="col-md-3">
                     <div class="mb-6">
@@ -28,11 +29,50 @@
                 </div>
                 <div class="col-md-9">
                     <div class="mb-6">
-                        <span>{{ user.email }}</span>
+                        <span><a href="mailto:{{user.email}}?subject=Message from Warehauser">{{ user.email }}</a></span>
                     </div>
                 </div>
             </div>
-        
+
+            <div class="row mt-3">
+                <div class="col-md-3">
+                    <div class="mb-6">
+                        <span class="fw-bold">Active:</span>
+                    </div>
+                </div>
+                <div class="col-md-9">
+                    <div class="mb-6">
+                        <span>{{ user.is_active }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-md-3">
+                    <div class="mb-6">
+                        <span class="fw-bold">Superuser:</span>
+                    </div>
+                </div>
+                <div class="col-md-9">
+                    <div class="mb-6">
+                        <span>{{ user.is_superuser }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-md-3">
+                    <div class="mb-6">
+                        <span class="fw-bold">Staff:</span>
+                    </div>
+                </div>
+                <div class="col-md-9">
+                    <div class="mb-6">
+                        <span>{{ user.is_staff }}</span>
+                    </div>
+                </div>
+            </div>
+
             <div class="row mt-3">
                 <div class="col-md-12">
                     <div class="d-grid gap-2 mb-3">
@@ -41,15 +81,5 @@
                     <!-- Add more buttons or actions here -->
                 </div>
             </div>
-                    <!--
-                I want to create a series of sections formatted with:
-                
-                    1. A heading (Such as "User Profile"
-                    2. 2 columns for key value pairs of user information such as (left value: "Username", right value: current user's username (user.username))
-                
-                I also wnat a way to have a button that will span both columns which will <a href="somelink"> for instance a "Reset Password" button.
-
-                How do I best do that with bootstrap5 standard classes and elements?
-            -->
         </div>
 {% endblock %}

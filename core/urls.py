@@ -40,5 +40,4 @@ urlpatterns = [
     path('auth/accept/<int:user>/', views.auth_otp_accept_view, name='auth_otp_accept_manual_view'),
     path('api/', include(router.urls)),
     path('', views.home_view, name='home'),
-    path('test/', views.test_view, name='test'),
 ]

@@ -20,29 +20,40 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, ReadOnlyPasswordHashField, PasswordResetForm, PasswordChangeForm
 from django.utils.translation import gettext as _
 
+from django.utils.html import format_html
+
+class CustomPasswordInput(forms.PasswordInput):
+    def render(self, name, value, attrs=None, renderer=None):
+        output = super().render(name, value, attrs)
+        return format_html(f'<div class="input-box">{output}<span>{name}</span><div id="toggle_{name}" class="show-password" onclick="javascript:toggle_password("{name}")></div></div>')
+
 class WarehauserFormMixin:
-    def layout(self:forms.Form, *args, **kwargs):
+    def layout(self, *args, **kwargs):
         """
         Define the layout of form fields.
         Override this method in subclasses to customize field layout.
         Returns a list of lists where each inner list represents a row of fields.
         """
-        return [{'renderer': 'field_renderer_default', 'fields': [self.visible_fields()]},]
+        return [{'renderer': 'field_renderer_default', 'fields': self.visible_fields()},]
 
 class WarehauserAuthLoginForm(AuthenticationForm, WarehauserFormMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
         # Customize form fields here if needed
         self.fields['username'].widget.attrs.update({
             'class': 'form-control',
             'placeholder': _('Username'),
-            'autocomplete': 'off',  # Disable autocomplete for username field
+            'autocomplete': 'off',
         })
-        self.fields['password'].widget.attrs.update({
+
+        widget = CustomPasswordInput()
+        widget.attrs.update({
             'class': 'form-control',
-            'placeholder': _('Password'),
-            'autocomplete': 'off',  # Disable autocomplete for password field
+            # 'placeholder': _('Password'),
+            'autocomplete': 'off',
         })
+        self.fields['password'].widget = widget
 
 class WarehauserAuthForgotPasswordForm(PasswordResetForm, WarehauserFormMixin):
     email = forms.EmailField(
@@ -145,4 +156,4 @@ class WarehauserOTPChallengeForm(forms.Form, WarehauserFormMixin):
         Overrides the layout method from the base class.
         Returns a list of dicts each with a renderer class and a list of fields.
         """
-        return [{'renderer': 'field_renderer_otp', 'fields': [self['otp1'], self['otp2'], self['otp3'], self['otp4'], self['otp5'], self['otp6']]}]
+        return [{'renderer': 'field_renderer_otp', 'fields': self.visible_fields()}]

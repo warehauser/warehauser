@@ -192,7 +192,7 @@ AUTH_USER_MODEL = 'auth.User'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
-LOGIN_URL = 'auth_login'
+LOGIN_URL = 'auth_login_view'
 
 # Logging settings
 

@@ -22,6 +22,5 @@ def renderer_methods(request):
         'field_renderer_default': field_renderer_default,
         'field_renderer_otp': field_renderer_otp,
         'render_fields': render_fields,
-        'render_context': render_context,
         # Add other renderer methods as needed
     }

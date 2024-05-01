@@ -1,15 +1,5 @@
 {% if buttons %}
 <div class="form-row">
-    {% for button in buttons %}
-    {% if button.type == 'href' %}
-    <div class="form-row"><a href="{% url button.url %}" class="{% if button.class %}{{ button.class }}{% else %}btn col-12{% endif %}">
-        {{ button.title }}
-    </a></div>
-    {% else %}
-    <div class="form-row"><button type="{{ button.type }}" {% if button.id %}id="{{ button.id }}" {% endif %} {% if button.value %}id="{{ button.value }}" {% endif %}class="{% if button.class %}{{ button.class }}{% else %}btn btn-primary col-12{% endif %}">
-        {{ button.title }}
-    </button></div>
-    {% endif %}
-    {% endfor %}
+    {{ buttons }}
 </div>
 {% endif %}
