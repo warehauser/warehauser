@@ -32,21 +32,6 @@
     font-family: 'Poppins', sans-serif;
 }
 
-/* Scrollbars */
-/* 
-html {
-    overflow: scroll;
-    overflow-x: hidden;
-}
-
-::-webkit-scrollbar {
-    width: 0px;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #FF0000;
-} */
-
 body
 {
     display: flex;
@@ -270,9 +255,16 @@ a:not(.btn)
     color: var(--color-icons);
 }
 
-.postmark
+a.disabled-link
 {
-    margin-top: 2em !important;
+    cursor: default;
+    color: var(--color-disabled);
+    pointer-events: none;
+    text-decoration: none;
+}
+
+.center
+{
     text-align: center;
 }
 
@@ -433,13 +425,13 @@ a:not(.btn)
     transform: translate(-50%,-50%) scale(1);
 }
 
+.opaque
+{
+    opacity: 0;
+}
 
-
-
-
-
-
-@keyframes shake {
+@keyframes keyframes-shake
+{
     0% { transform: translateX(0); }
     25% { transform: translateX(-5px); }
     50% { transform: translateX(5px); }
@@ -447,14 +439,42 @@ a:not(.btn)
     100% { transform: translateX(0); }
 }
 
-.shake-animation {
-    animation-name: shake;
+.shake-animation
+{
+    animation-name: keyframes-shake;
     animation-duration: 0.3s;
     animation-iteration-count: 2;
 }
 
-.icon-login-animation {
+@keyframes keyframes-login {
+    0% {
+        transform: translate(0, 0) scale(1);
+    }
+    100% {
+        transform: translate(var(--target-rect-left), var(--target-rect-top)) scale(var(--icon-scale-factor));
+    }
+}
+
+.icon-login-animation
+{
+    animation-name: keyframes-login;
+    transform-origin: top left;
+    animation-duration: 1s;
     animation-iteration-count: 1;
-    transform-origin: top right;
-    transition: transform 1s ease-in-out;
+}
+
+@keyframes keyframes-user-info {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+.user-info-animation
+{
+    animation-name: keyframes-user-info;
+    animation-duration: 0.3s;
+    animation-iteration-count: 1;
 }

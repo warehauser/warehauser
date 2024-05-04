@@ -26,7 +26,7 @@ register = template.Library()
 
 @register.simple_tag
 def render_buttons(buttons):
-    html = '<div class="form-row">'
+    html = '<div class="row form-row mb-5">'
     for button in buttons:
         if button['type'] == 'href' if 'type' in button else False:
             html = html + '<a'
@@ -76,13 +76,6 @@ def render_form(context, form) -> str:
 
         <div class="row justify-content-center my-5">'''
 
-
-
-
-
-
-
-
     html = html + f'''<input type="hidden" name="csrfmiddlewaretoken" value="{context['csrf_token']}">'''
     html = html + render_fields(context=context, form=form['form'])
 
@@ -91,7 +84,7 @@ def render_form(context, form) -> str:
 
     if 'postmark' in form:
         postmark = form['postmark']
-        html = html + f'<div class="postmark">{postmark}</div>'
+        html = html + f'<div class="row form-row center">{postmark}</div>'
 
     html = html + '</div></form>'
     return mark_safe(html)
