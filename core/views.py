@@ -29,10 +29,11 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
 from django.db.models import JSONField
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.templatetags.static import static
 from django.utils import timezone
+from django.utils.safestring import mark_safe
 from django.utils.translation import gettext as _
 
 from django_filters.rest_framework import DjangoFilterBackend
@@ -50,7 +51,7 @@ from .filters import *
 from .forms import *
 from .models import *
 from .permissions import *
-from .templatetags.renderers import field_renderer_default, field_renderer_otp, render_fields
+from .templatetags.renderers import render_fields
 from .serializers import *
 
 from .utils import generate_otp_code
@@ -83,6 +84,41 @@ def home_view(request):
 
 @anonymous_required
 def auth_login_view(request):
+    if request.method.lower() == 'post':
+        form = WarehauserAuthLoginForm(request, data=request.POST)
+
+        is_valid = form.is_valid()
+        if is_valid:
+            login(request, form.get_user())
+            return JsonResponse({}, status=200)
+        else:
+            return JsonResponse({}, status=401)
+
+    template = 'core/form.html'
+    forgot_url = reverse('auth_forgot_password_view')
+    context = {
+        'title': generate_page_title(_('Log In')),
+        'onsubmit': 'submit_login_form',
+        'forms': [
+        {
+            'form': WarehauserAuthLoginForm(),
+            'id': 'login-form',
+            'header': {
+                'icon': 'lock-closed-outline',
+                'title': _('Log In'),
+                'slug': _('Welcome to ') + 'Warehauser',
+            },
+
+            'buttons': [
+                {'title': _('Login'), 'attrs': generate_button_attributes({'id': 'submit', 'value': 'login', 'type': 'submit', 'disabled': 'true', 'class': 'btn btn-primary col-12 disabled'})},
+            ],
+            'postmark': mark_safe(f'<a href="{forgot_url}">Forgot your username or password?</a>'),
+        },],
+    }
+    return render(request, template, context)
+
+@anonymous_required
+def auth_login_view_old(request):
     autofocus_field = None
     select_text = False
 
@@ -115,9 +151,9 @@ def auth_login_view(request):
         'title': generate_page_title(_('Log In')),
         'form': form,
         'autofocus_field': autofocus_field,
-        'renderers': {
-            'field_renderer_default': field_renderer_default,
-        },
+        # 'renderers': {
+        #     'field_renderer_default': field_renderer_default,
+        # },
         'select_text': select_text,
         'title': _('Login'),
         'illustration': 'icon ion-ios-locked-outline',
@@ -184,9 +220,9 @@ def auth_change_password_view(request):
 
     context = {
         'form': form,
-        'renderers': {
-            'field_renderer_default': field_renderer_default,
-        },
+        # 'renderers': {
+        #     'field_renderer_default': field_renderer_default,
+        # },
         'title': _('Change Password'),
         'illustration': 'icon ion-ios-locked-outline',
         'buttons': [
@@ -211,9 +247,9 @@ def _auth_otp_form(request:Any, title:str, err:str = None) -> HttpResponse:
     template = 'core/form.html'
     context = {
         'form': form,
-        'renderers': {
-            'field_renderer_otp': field_renderer_otp,
-        },
+        # 'renderers': {
+        #     'field_renderer_otp': field_renderer_otp,
+        # },
         'title': title,
         'title_class': 'form-title',
         'preamble': 'Enter code:',

@@ -22,40 +22,29 @@ from django.utils.translation import gettext as _
 
 from django.utils.html import format_html
 
-class CustomPasswordInput(forms.PasswordInput):
-    def render(self, name, value, attrs=None, renderer=None):
-        output = super().render(name, value, attrs)
-        return format_html(f'<div class="input-box">{output}<span>{name}</span><div id="toggle_{name}" class="show-password" onclick="javascript:toggle_password("{name}")></div></div>')
-
-class WarehauserFormMixin:
-    def layout(self, *args, **kwargs):
-        """
-        Define the layout of form fields.
-        Override this method in subclasses to customize field layout.
-        Returns a list of lists where each inner list represents a row of fields.
-        """
-        return [{'renderer': 'field_renderer_default', 'fields': self.visible_fields()},]
-
-class WarehauserAuthLoginForm(AuthenticationForm, WarehauserFormMixin):
+class WarehauserAuthLoginForm(AuthenticationForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Customize form fields here if needed
         self.fields['username'].widget.attrs.update({
-            'class': 'form-control',
-            'placeholder': _('Username'),
+            # 'class': 'form-control',
+            # 'placeholder': _('Username'),
+            'required': 'true',
             'autocomplete': 'off',
         })
 
-        widget = CustomPasswordInput()
-        widget.attrs.update({
-            'class': 'form-control',
+        self.fields['password'].widget.attrs.update({
+            # 'class': 'form-control',
             # 'placeholder': _('Password'),
+            'required': 'true',
             'autocomplete': 'off',
+            'rdata': {
+                'row_class': 'row form-row mb-5',
+            },
         })
-        self.fields['password'].widget = widget
 
-class WarehauserAuthForgotPasswordForm(PasswordResetForm, WarehauserFormMixin):
+class WarehauserAuthForgotPasswordForm(PasswordResetForm):
     email = forms.EmailField(
         label=_("Email"),
         max_length=254,
@@ -85,7 +74,7 @@ class WarehauserAuthForgotPasswordForm(PasswordResetForm, WarehauserFormMixin):
             raise forms.ValidationError(_("The two password fields didn't match."))
         return password2
 
-class WarehauserPasswordChangeForm(PasswordChangeForm, WarehauserFormMixin):
+class WarehauserPasswordChangeForm(PasswordChangeForm):
     error_messages = {
         'password_incorrect': _("Incorrect current password."),
         'password_mismatch': _("The password and confirm password fields did not match."),
@@ -131,7 +120,7 @@ class WarehauserPasswordChangeForm(PasswordChangeForm, WarehauserFormMixin):
 
 otp_validator = RegexValidator(r'^[A-Za-z0-9]$', 'OTP must be a single alphanumeric character.')
 
-class WarehauserOTPChallengeForm(forms.Form, WarehauserFormMixin):
+class WarehauserOTPChallengeForm(forms.Form):
     otp1 = forms.CharField(max_length=1, validators=[otp_validator], widget=forms.TextInput(attrs={'class': 'form-control otp', 'id': 'otp1', 'autocomplete': 'off', 'autofocus': True,}))
     otp2 = forms.CharField(max_length=1, validators=[otp_validator], widget=forms.TextInput(attrs={'class': 'form-control otp', 'id': 'otp2', 'autocomplete': 'off'}))
     otp3 = forms.CharField(max_length=1, validators=[otp_validator], widget=forms.TextInput(attrs={'class': 'form-control otp', 'id': 'otp3', 'autocomplete': 'off'}))

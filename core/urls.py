@@ -31,7 +31,7 @@ router.register(prefix=r'events',        viewset=views.EventViewSet,        base
 urlpatterns = [
     path('auth/login/', views.auth_login_view, name='auth_login_view'),
     path('auth/logout/', views.auth_logout_view, name='auth_logout_view'),
-    path('auth/forgot_password/', views.auth_forgot_password_view, name='auth_forgot_password_view'),
+    path('auth/forgot/', views.auth_forgot_password_view, name='auth_forgot_password_view'),
     path('auth/change_password/', views.auth_change_password_view, name='auth_change_password_view'),
     path('auth/profile/', views.auth_user_profile_view, name='auth_user_profile_view'),
     path('auth/revoke/<int:user>/<str:otp>/', views.auth_otp_revoke_view, name='auth_otp_revoke_view'),

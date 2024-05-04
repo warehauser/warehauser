@@ -1,126 +1,306 @@
-{% extends 'core/base.html' %}
-{% load renderers %}
-{% block header %}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ionicons/2.0.1/css/ionicons.min.css">
-{% endblock %}
-{% block content %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <form class="dark-box" id="{{ form.id }}" method="post">
-            {% if illustration %}
-            <div class="illustration"><i class="{{ illustration }}"></i></div>
-            {% endif %}
-            {% if title %}<h3 class="{% if title_class %}{{ title_class }}{% else %}visually-hidden{% endif %}">{{ title }}</h3>{% endif %}
-            {% if preamble %}
-            <div class="{% if preamble_class %}{{ preamble_class }}{% else %}form-row preamble{% endif %}">{{ preamble }}</div>
-            {% endif %}
-            {% csrf_token %}
-            {% for layout in form.layout %}
-            {% render_fields layout.renderer layout.fields %}
-            {% endfor %}
-            {% for field in form.hidden_fields %}
-            {{ field }}
-            {% endfor %}
-            {% if messages %}
-            {% for message in messages %}
-            <div class="alert alert-error">
-                {{ message }}
-            </div>
-            {% endfor %}
-            {% endif %}
-            {% render_buttons buttons %}
-            {% if footer %}
-            <div class="form-row">
-                {{ footer | safe }}
-            </div>
-            {% endif %}
-        </form>
+{% load static %}{% load renderers %}<!doctype html>
+<html lang="en" version="1.0">
+<head>
+    <meta charset="utf-8"/>
+    <title>{{ title }}</title>
+    <link rel="icon" href="{% static 'core/images/favicon.ico' %}" type="image/x-icon">
+    <link rel="shortcut icon" href="{% static 'core/images/favicon.ico' %}" type="image/x-icon">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="{% static 'core/css/warehauser.css' %}"/>
+</head>
+<body>
+    <div class="session-info">
+        <div class="user-info">
+            Welcome <a id="user-settings" href="">warehauser</a>
+        </div>
+        <span class="divider"></span>
+        <div class="lock-info">
+            <ion-icon id="lock-open-icon" name="lock-open-outline" class="session-icon"></ion-icon>
+        </div>
     </div>
-</div>
-{% endblock %}
-{% block postfooter %}
-<script>
+    <div id="content">
+        {% for form in forms %}
+        <section id="section-form-{{form.id}}">
+            <div class="container-lg">
+                    {% render_form form %}
+                    <!-- {% if messages %}
+                        {% for message in messages %}
+                        <div class="alert alert-error">
+                            {{ message }}
+                        </div>
+                        {% endfor %}
+                        {% endif %} -->
+            </div>
+        </section>
+        {% endfor %}
+    </div>
+    <script>
+window.onload = function() {
+    const body = document.body;
 
-const optInputs = document.querySelectorAll('.form-control.otp')
-const otpSubmitButton = document.querySelector('#submit')
+    let forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        init_form(form);
+    });
+};
 
-let currentElement = document.activeElement
+forms = {};
+function init_form(form) {
+    forms[form.id] = {};
 
-function is_key_ok(e) {
-    var k = e.keyCode || e.which;
-        var ok = k >= 65 && k <= 90 || // a-z
-            k >= 96 && k <= 105 || // A-Z
-            k == 13 || // enter
-            k == 8 || // backspaces
-            (!e.shiftKey && k >= 48 && k <= 57); // only 0-9 (ignore SHIFT options)
-
-        if(!ok || (e.ctrlKey && e.altKey)) {
-            return false;
-        }
-
-        return true;
-}
-
-optInputs.forEach(input => {
-    let status = 0
-
-    input.onfocus = (e) => {
-        if(currentElement) {
-            currentElement.focus();
-            e.preventDefault();
-        }
-    }
-
-    input.onkeydown = (e) => {
-        if(!is_key_ok(e)) {
-            e.preventDefault();
-            return;
-        }
-    }
-
-    input.onkeyup = (e) => {
-        if(!is_key_ok(e)) {
-            e.preventDefault();
-            return;
-        }
-
-        const nextElement = input.nextElementSibling
-        const prevElement = input.previousElementSibling
-
-        currentElement = e.target
-
-        if(e.keyCode === 8) {
-            if(status === 2) {
-                currentElement.value = ''
-                status = 1
-                otpSubmitButton.setAttribute('disabled', true)
-            } else if(prevElement) {
-                currentElement = prevElement
-                prevElement.value = ''
-                prevElement.focus()
-                status = 1
-                otpSubmitButton.setAttribute('disabled', true)
+    fields = form.querySelectorAll('input:not([type="hidden"]), textarea');
+    fields.forEach((field) => {
+        if(field.type === 'text' || field.type === 'password' || field.type === 'datetime' || field.type === 'datetime-local' || field.type === 'textarea') {
+            if(field.hasAttribute('required')) {
+                forms[form.id][field.id] = field.checkValidity();
             } else {
-                status = 0
-            }
-        } else {
-            const reg = /^[0-9a-zA-Z]+$/
-            if(!reg.test(currentElement.value)) {
-                currentElement.value = currentElement.value.replace(/\D/g, '')
-            } else {
-                currentElement.value = currentElement.value.toUpperCase()
-                if(currentElement) {
-                    if(nextElement) {
-                        currentElement = nextElement
-                        nextElement.focus()
-                    } else {
-                        otpSubmitButton.removeAttribute('disabled')
-                        status = 2
-                    }
+                if(!field.hasAttribute('placeholder')) {
+                    field.setAttribute('placeholder', '');
                 }
             }
         }
+    });
+
+    formHeader = document.getElementById('form-header-' + form.id);
+    if(formHeader) {
+        formHeader.addEventListener('animationend', () => {
+            formHeader.classList.remove('shake-animation');
+        });
     }
-})
-</script>
-{% endblock %}
+}
+
+function remove_error(input) {
+    input.parentElement.classList.remove('error');
+}
+
+let show_hide_timeouts = {}
+function show_hide(toggle, id, seconds=0) {
+    let input = document.getElementById(id);
+    if(input.type === 'password') {
+        input.setAttribute('type', 'text');
+        toggle.setAttribute('name', 'eye-off-outline');
+        input.focus()
+
+        if(seconds > 0) {
+            // Automatically reset the input type to password after specified seconds
+            show_hide_timeouts[id] = setTimeout(() => {
+                input.setAttribute('type', 'password');
+                toggle.setAttribute('name', 'eye-outline');
+                delete show_hide_timeouts[id];
+            }, seconds * 1000); // Convert seconds to milliseconds
+        }
+    } else {
+        if(show_hide_timeouts[id] !== null) {
+            clearTimeout(show_hide_timeouts[id]);
+            delete show_hide_timeouts[id];
+        }
+        input.setAttribute('type', 'password');
+        toggle.setAttribute('name', 'eye-outline');
+        input.focus()
+    }
+}
+
+function shake_form_header(form) {
+    const formHeader = document.getElementById('form-header-' + form.id);
+    formHeader.classList.add('shake-animation');
+}
+
+function show_logged_in(form)
+{
+    let header = document.getElementById('form-title-' + form.id);
+    if(header){
+        header.innerText = 'Logged In';
+    }
+
+    let icon = document.getElementById('form-header-icon-' + form.id);
+    let lock_icon = document.getElementById('lock-open-icon');
+
+    if(icon && lock_icon) {
+
+
+
+
+
+        // Options for the observer (which attributes to observe)
+        const observerOptions = {
+            attributes: true, // Observe changes to attributes
+            attributeFilter: ['style'], // Only observe changes to the style attribute
+        };
+
+        // Callback function to handle mutations
+        const handleMutations = (mutationsList, observer) => {
+            for (const mutation of mutationsList) {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                    const transformValue = icon.style.transform;
+console.log('Transform changed:', transformValue);
+                    // Handle the change as needed
+                }
+            }
+        };
+
+        // Create a new observer instance with the callback function
+        const observer = new MutationObserver(handleMutations);
+
+        // Start observing the target element with the specified options
+        observer.observe(icon, observerOptions);
+
+        // To stop observing later (e.g., when your component unmounts or is no longer needed)
+        // observer.disconnect();
+
+
+
+
+
+
+
+        icon.setAttribute('name', 'lock-open-outline');
+
+        // Function to calculate and update the icon's position
+        const updateIconPosition = () => {
+            // TRANSLATE icon TO SUPERIMPOSE OVER lock_icon
+            // let rect = icon.getBoundingClientRect();
+            // let absoluteX = window.innerWidth - (rect.left + rect.width);
+            // let absoluteY = rect.top;
+
+            // let vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+            // let rightEdge = vw / 2 - 40;
+            // let topEdge = 11 - absoluteY;
+
+            // // Apply the transform directly to the element's style
+            // icon.style.transform = `translateX(${rightEdge}px) translateY(${topEdge}px) scale(var(--icon-scale-factor))`;
+        };
+
+//         icon.addEventListener('animationend', () => {
+//             icon.classList.remove('icon-login-animation');
+//             icon.style.display = 'none';
+// console.log('animationend'); // <-- This is never called/executed
+//             window.removeEventListener('resize', updateIconPosition);
+//         });
+
+        // Event listener for window resize
+        window.addEventListener('resize', updateIconPosition);
+
+        // Initial positioning
+        icon.classList.add('icon-login-animation');
+        updateIconPosition();
+
+console.log('updated and running!');
+    }
+}
+
+async function submit_login_form(form) {
+    // disable all submit buttons
+    let submitButtons = form.querySelectorAll('button[type="submit"]');
+    submitButtons.forEach(button => {
+        button.disabled = true;
+    });
+
+    formData = new FormData();
+    fields = form.querySelectorAll('input, textarea')
+    fields.forEach((field) => {
+        field.parentElement.classList.remove('error');
+        field.disabled = true;
+
+        formData.append(field.name, field.value);
+    });
+
+    let response = await fetch(form.action, {
+        method: form.method,
+        body: formData
+    }).then((response) => {
+        if(!response.ok) {
+            // We are logged in! :-)
+            show_logged_in(form);
+        } else {
+            // We did not log in! :-(
+            shake_form_header(form);
+            // Enable all submit buttons and fields that where disabled above...
+            submitButtons.forEach(button => {
+                button.disabled = false;
+            });
+            fields.forEach(field => {
+                field.disabled = false;
+            });
+        }
+    });
+
+    return false;
+}
+
+function submit_form(form) {
+    return false;
+}
+
+function form_display_validity(form)
+{
+    let submitters = Array.from(form.querySelectorAll('button, input[type="submit"]')); // Get all buttons and submit inputs in the form
+    let formValid = forms[form.id];
+    let valid = true;
+    Object.keys(formValid).forEach((key) => {
+        valid = valid && formValid[key];
+    });
+
+    // Check if the input is valid
+    if (valid) {
+        // Handle the case where the input is valid
+        // For example, remove the error class from the input's parent element
+
+        // Enable all buttons and submit inputs
+        submitters.forEach((button) => {
+            button.removeAttribute('disabled');
+            button.classList.remove('disabled');
+        });
+    } else {
+        // Handle the case where the input is not valid
+        // For example, add an error class to the input's parent element
+
+        // Disable all submit buttons and inputs
+        submitters.forEach((button) => {
+            button.setAttribute('disabled', 'true');
+            button.classList.add('disabled');
+        });
+    }
+}
+
+function check_confirm_password(event, oid) {
+    let tel = event.target;
+    let oel = document.getElementById(oid);
+
+    let form = tel.form;
+    let valid = tel.value === oel.value;
+
+    forms[form.id][tel.id] = valid;
+    form_display_validity(form);
+
+    console.log(tel, oel, forms[form.id][tel.id]);
+}
+
+function check_validity(event) {
+    let form = event.target.form; // Get the form object that contains the input
+    let input = event.target; // Get the input element that triggered the event
+
+    forms[form.id][input.id] = input.checkValidity();
+
+    form_display_validity(form);
+}
+
+function form_input_listener(event) {
+    check_validity(event);
+}
+
+function form_submit_listener(event) {
+    event.preventDefault();
+    submit_form(event.target.form);
+}
+
+document.getElementById('login-form').addEventListener('input', form_input_listener);
+document.getElementById('login-form').addEventListener('submit', form_submit_listener);
+    </script>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <script src="{% static 'core/js/warehauser.js' %}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+</body>
+</html>
