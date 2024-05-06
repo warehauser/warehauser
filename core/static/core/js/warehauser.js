@@ -14,14 +14,36 @@ limitations under the License. */
 
 // warehauser.js
 
-window.onload = function() {
-    const body = document.body;
+async function load_content(url) {
+    // Fetch the content from the server
+    const response = await fetch(url);
+    const content = await response.text();
 
-    let forms = document.querySelectorAll('form');
-    forms.forEach(form => {
-        init_form(form);
-    });
-};
+    // Insert the content into the .content div
+    const contentDiv = document.querySelector('.content');
+    contentDiv.innerHTML = content;
+}
+
+function selectFirstAutoFocusFormFieldIfItExists(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const autoFocusElements = container.querySelectorAll('[autofocus]');
+    if (autoFocusElements.length > 0) {
+        autoFocusElements[0].focus();
+    }
+}
+
+function enter_stage_left(id) {
+    const element = document.getElementById(id);
+    element.classList.add('animation-enter-stage-left');
+    selectFirstAutoFocusFormFieldIfItExists(id);
+}
+
+function do_login_click() {
+    disable_link(document.getElementById('login-link'))
+    enter_stage_left('card-login-form')
+}
 
 forms = {};
 function init_form(form) {
@@ -102,9 +124,7 @@ function show_logged_in(form)
         let offsetTop = lock_rect.top - icon_rect.top;
 
         document.documentElement.style.setProperty('--target-rect-left', offsetLeft + 'px');
-        // document.documentElement.style.setProperty('--target-rect-right', targetElementRect.right + 'px');
         document.documentElement.style.setProperty('--target-rect-top', offsetTop + 'px');
-        // document.documentElement.style.setProperty('--target-rect-bottom', targetElementRect.bottom + 'px');
 
         icon.setAttribute('name', 'lock-open-outline');
         icon.classList.add('icon-login-animation');
@@ -132,12 +152,18 @@ function show_logged_in(form)
 }
 
 function disable_link(link) {
+    const hasFocus = document.activeElement === link;
+
     link.classList.add('disabled-link');
     link.setAttribute('tabindex', -1);
     link.setAttribute('href', 'javascript:void(0);');
     link.addEventListener('click', (event) => {
         event.preventDefault(); // Prevent the default behavior of anchor links
     });
+
+    if (hasFocus) {
+        link.blur();
+    }
 }
 
 async function submit_login_form(form) {
@@ -147,9 +173,14 @@ async function submit_login_form(form) {
         button.disabled = true;
     });
 
-    let links = form.querySelectorAll('a');
-    links.forEach((link) => {
+    let elements = form.querySelectorAll('a');
+    elements.forEach((link) => {
         disable_link(link)
+    });
+
+    elements = form.querySelectorAll('.input-text-button ion-icon');
+    elements.forEach((button) => {
+        button.classList.add('disabled');
     });
 
     formData = new FormData();

@@ -17,7 +17,7 @@
     --color-checkbox-on: var(--color-default);
     --color-checkbox-background: rgba(255, 255, 255, 0.5);
 
-    --icon-scale-factor: 0.5;
+    --icon-scale-factor: 0.4;
     --form-icon-dimension: 70px;
     --login-icon-dimension: calc(var(--form-icon-dimension) * var(--icon-scale-factor));
 
@@ -34,11 +34,56 @@
 
 body
 {
-    display: flex;
-    justify-content: center;
-    align-items: center;
     min-height: 100vh;
     background: var(--color-background);
+    overflow-x: hidden;
+}
+
+a.nav-link
+,a.navbar-brand
+{
+    /* bottom: 30px; */
+    display: flex;
+    align-items: center;
+    vertical-align: middle;
+}
+
+a.nav-link ion-icon
+,a.navbar-brand ion-icon
+{
+    position: relative;
+    top: -5px;
+    margin-left: 5px;
+}
+
+a.nav-link:hover
+,a.nav-link:focus
+,a.navbar-brand:hover
+,a.navbar-brand:focus
+{
+    outline: none;
+    text-decoration: none;
+    color: var(--color-icons);
+}
+
+header {
+}
+
+main
+{
+}
+
+.card-overlay {
+    display: flex;
+    min-height: calc(100vh - 76px - 24px);
+    justify-content: center;
+    align-items: center;
+}
+
+.card-modal {
+}
+
+footer {
 }
 
 .divider::after {
@@ -207,6 +252,10 @@ textarea
     transform: translateY(-50%);
     top: 55%;
     right: 30px;
+}
+
+.input-text-button ion-icon
+{
     cursor: pointer;
 }
 
@@ -256,10 +305,21 @@ a:not(.btn)
 }
 
 a.disabled-link
+,.input-text-button .disabled
 {
     cursor: default;
     color: var(--color-disabled);
     pointer-events: none;
+    text-decoration: none;
+}
+
+a:not(.btn):focus {
+    outline: none;
+    text-decoration: underline;
+}
+
+.navbar a,
+.navbar a:focus {
     text-decoration: none;
 }
 
@@ -425,9 +485,22 @@ a.disabled-link
     transform: translate(-50%,-50%) scale(1);
 }
 
-.opaque
-{
-    opacity: 0;
+
+
+
+
+
+
+.stage-left {
+    visibility: hidden;
+    position: relative;
+    left: -100vw;
+}
+
+.animation-enter-stage-left {
+    visibility: visible;
+    transition: left 1s ease-in-out;
+    left: 0;
 }
 
 @keyframes keyframes-shake
@@ -457,6 +530,7 @@ a.disabled-link
 
 .icon-login-animation
 {
+    z-index: 2000;
     animation-name: keyframes-login;
     transform-origin: top left;
     animation-duration: 1s;

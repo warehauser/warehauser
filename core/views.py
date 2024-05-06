@@ -73,14 +73,11 @@ def generate_button_attributes(attrs:dict) -> dict:
 
 # Create your views here.
 
-@login_required
-def home_view(request):
+def test_view(request):
     context = {
         'title': BASE_TITLE
     }
-    return render(request, "core/index.html", context=context)
-
-# Authentication views
+    return render(request, "core/test.html", context=context)
 
 @anonymous_required
 def auth_login_view(request):
@@ -98,10 +95,11 @@ def auth_login_view(request):
     forgot_url = reverse('auth_forgot_password_view')
     context = {
         'title': generate_page_title(_('Log In')),
-        'onsubmit': 'submit_login_form',
+        'content': reverse('auth_login_view'),
         'forms': [
         {
             'form': WarehauserAuthLoginForm(),
+            'onsubmit': 'submit_login_form',
             'id': 'login-form',
             'header': {
                 'icon': 'lock-closed-outline',
@@ -116,6 +114,52 @@ def auth_login_view(request):
         },],
     }
     return render(request, template, context)
+
+
+@login_required
+def home_view(request):
+    context = {
+        'title': BASE_TITLE
+    }
+    return render(request, "core/index.html", context=context)
+
+# Authentication views
+
+# @anonymous_required
+# def auth_login_view_old(request):
+#     if request.method.lower() == 'post':
+#         form = WarehauserAuthLoginForm(request, data=request.POST)
+
+#         is_valid = form.is_valid()
+#         if is_valid:
+#             login(request, form.get_user())
+#             return JsonResponse({}, status=200)
+#         else:
+#             return JsonResponse({}, status=401)
+
+#     template = 'core/form.html'
+#     forgot_url = reverse('auth_forgot_password_view')
+#     context = {
+#         'title': generate_page_title(_('Log In')),
+#         'content': reverse('auth_login_view'),
+#         'forms': [
+#         {
+#             'form': WarehauserAuthLoginForm(),
+#             'onsubmit': 'submit_login_form',
+#             'id': 'login-form',
+#             'header': {
+#                 'icon': 'lock-closed-outline',
+#                 'title': _('Log In'),
+#                 'slug': _('Welcome to ') + 'Warehauser',
+#             },
+
+#             'buttons': [
+#                 {'title': _('Login'), 'attrs': generate_button_attributes({'id': 'submit', 'value': 'login', 'type': 'submit', 'disabled': 'true', 'class': 'btn btn-primary col-12 disabled'})},
+#             ],
+#             'postmark': mark_safe(f'<a href="{forgot_url}">Forgot your username or password?</a>'),
+#         },],
+#     }
+#     return render(request, template, context)
 
 @anonymous_required
 def auth_login_view_old(request):

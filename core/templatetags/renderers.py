@@ -62,7 +62,7 @@ def render_fields(context, form) -> str:
 @register.simple_tag(takes_context=True)
 def render_form(context, form) -> str:
     id = form['id']
-    onsubmit = context['onsubmit'] if 'onsubmit' in context else 'submit_form'
+    onsubmit = form['onsubmit'] if 'onsubmit' in form else 'submit_form'
     onsubmit = f'javascript:{onsubmit}(this);return false;'
 
     html = f'''<form id="{id}" method="post" onsubmit="{onsubmit}">

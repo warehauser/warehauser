@@ -1,64 +1,42 @@
-{% load static %}{% load rest_framework %}{% load crispy_forms_tags %}{% url 'api-root' as api_root %}<!doctype html>
-<html lang="en-us">
-  <head>
+{% load static %}{% load renderers %}<!doctype html>
+<html lang="en" version="1.0">
+<head>
+    <meta charset="utf-8"/>
     <title>{{ title }}</title>
-    <meta charset="utf-8" />
     <link rel="icon" href="{% static 'core/images/favicon.ico' %}" type="image/x-icon">
     <link rel="shortcut icon" href="{% static 'core/images/favicon.ico' %}" type="image/x-icon">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    {% block header %}{% endblock %}
-    <link rel="stylesheet" href="{% static 'core/css/warehauser.css' %}" />
-  </head>
-  <body>
-    <div class="wrapper">
-      <!-- <div class="background-dark"> -->
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-          <div class="container">
-            <a class="navbar-brand" href="/">Warehauser</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-              <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarSupportedContent">
-              <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                {% if user.is_superuser %}
-                <li class="nav-item align-items-center">
-                  <a class="nav-link" href="{{ api_root }}" target="_api">API</a>
-                </li>
-                {% endif %}
-              </ul>
-              <ul class="navbar-nav">
-                <li class="nav-item align-items-center">
-                {% if user.is_authenticated %}
-                  <span class="navbar-text d-flex align-items-center">{{ _('Logged in as') }}
-                    <a class="nav-link" href="{% url 'auth_user_profile_view' %}">{{ user.username }}</a> | 
-                    <a class="nav-link" href="{% url 'auth_logout_view' %}">{{ _('Logout') }}</a>
-                  </span>
-                {% else %}
-                  <span class="navbar-text d-flex align-items-center">{{ _('Logged in as') }}
-                    <a class="nav-link" href="{% url 'auth_login_view' %}">{{ _('Login') }}</a>
-                  </span>
-                {% endif %}
-                </li>
-              </ul>
-            </div>
-          </div>
-        </nav>
-        <div id="content" class="main" name="content-box">
-        {% block content %}{% endblock %}
+    <link rel="stylesheet" href="{% static 'core/css/warehauser.css' %}"/>
+</head>
+<body>
+    <div class="session-info">
+        <div id="user-info" class="user-info opaque">
+            Welcome <a id="user-settings" href="">warehauser</a>
         </div>
-      <!-- </div> -->
+        <span id="session-info-divider" class="divider opaque"></span>
+        <div class="lock-info">
+            <ion-icon id="lock-open-icon" name="lock-open-outline" class="session-icon"></ion-icon>
+        </div>
     </div>
-    <footer id="footer" class="bg-dark text-center">
-      <div class"text-center p-3" style="background-color: rgba(0,0,0,0.2);">
-        <a class="text-light" href="https://www.warehauser.org/" style="text-decoration: none;">{{ _('Powered by') }} warehauser.org</a>
-      </div>
-    </footer>
-    {% block prefooter %}{% endblock %}
-    <!-- Bootstrap 5 JS and dependencies -->
-    <script src="{% static 'core/js/warehauser.js' %}"></script>
+    <div class="content">
+    </div>
+    <script>
+        window.onload = async function() {
+            const body = document.body;
+        
+            load_content('{{ content }}')
+        
+            let forms = document.querySelectorAll('form');
+            forms.forEach(form => {
+                init_form(form);
+            });
+        };
+    </script>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    {% block postfooter %}{% endblock %}
-  </body>
+    <script src="{% static 'core/js/warehauser.js' %}"></script>
+</body>
 </html>

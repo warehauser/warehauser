@@ -1,0 +1,103 @@
+{% load static %}{% load renderers %}<!doctype html>
+<html lang="en" version="1.0" data-bs-theme="dark">
+<head>
+    <meta charset="utf-8"/>
+    <title>{{ title }}</title>
+    <link rel="icon" href="{% static 'core/images/favicon.ico' %}" type="image/x-icon">
+    <link rel="shortcut icon" href="{% static 'core/images/favicon.ico' %}" type="image/x-icon">
+    <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="{% static 'core/css/warehauser.css' %}"/>
+</head>
+<body>
+        <header class="p-0 text-bg-dark sticky-top">
+            <div class="container-lg">
+                <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+                    <div class="container">
+                        <a class="navbar-brand" href="/">Warehauser</a>
+                        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                            <span class="navbar-toggler-icon"></span>
+                        </button>
+                        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                            {% if user.is_superuser %}
+                            <li class="nav-item align-items-center">
+                                <a class="nav-link" href="{{ api_root }}" target="_api">API</a>
+                            </li>
+                            {% endif %}
+                            </ul>
+                            <ul class="navbar-nav">
+                                <li class="nav-item align-items-center">
+    {% if user.is_authenticated %}
+                                    <span class="navbar-text d-flex align-items-center">{{ _('Welcome') }}
+                                        <a class="nav-link" href="{% url 'auth_user_profile_view' %}">{{ user.username }}</a>
+                                        <span id="session-info-divider" class="divider"></span>
+                                        <a class="nav-link" href="{% url 'auth_logout_view' %}">{{ _('Logout') }}
+                                        <ion-icon id="lock-open-icon" name="lock-open-outline" class="session-icon"></ion-icon></a>
+                                    </span>
+    {% else %}
+                                    <span class="navbar-text d-flex align-items-center">
+                                        {{ _('Welcome Guest') }}
+                                        <span id="session-info-divider" class="divider"></span>
+                                        <a id="login-link" class="nav-link" href="javascript:void(0);" onclick="javascript:do_login_click();">{{ _('Login') }}
+                                            <ion-icon id="lock-open-icon" name="lock-closed-outline" class="session-icon md hydrated" role="img"></ion-icon>
+                                        </a>
+                                    </span>
+    {% endif %}
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </nav>
+            </div>
+        </header>
+        <main>
+            <div class="card-overlay">
+                <div class="container-lg d-flex justify-content-center card-modal stage-left" id="card-login-form">
+                    <form id="login-form" method="post" onsubmit="javascript:submit_login_form(this);return false;">
+        <div id="form-header-login-form" class="text-center">
+            <ion-icon id="form-header-icon-login-form" name="lock-closed-outline" class="form-icon mt-5 md hydrated" role="img"></ion-icon>
+            <h2 id="form-title-login-form">Log In</h2>
+        </div>
+        <div class="text-center">
+            <p class="mt-5">Welcome to Warehauser</p>
+        </div>
+    
+        <div class="row justify-content-center my-5"><input type="hidden" name="csrfmiddlewaretoken" value="ygLuj7OTONiX5kRze9Dq2BJXcMJR2xB9g9C7L7Vi4tRCs34jm7fgt6IJZa4rNIIo">
+    <div class="row form-row mb-3">
+    <div class="input-box">
+        <input type="text" id="id_username" name="username" autofocus="True" autocapitalize="none" autocomplete="off" maxlength="150" required="true">
+        <span>username</span>
+        <div class="required"></div>
+    </div>
+    </div>
+                    <div class="row form-row mb-5">
+                        <div class="input-box">
+                                <input type="password" id="id_password" name="password" autocomplete="off" required="true">
+                                <span>password</span>
+                                <div class="input-text-button"><ion-icon name="eye-outline" id="id_password-toggle" onclick="show_hide(this, 'id_password', 4);" role="img" class="md hydrated"></ion-icon></div>
+                                <div class="required"></div>
+                            </div>
+                        </div>
+                        <div class="row form-row mb-5"><button type="submit" class="btn btn-primary col-12 disabled" id="submit" value="login" disabled="true">Login</button></div>
+                        <div class="row form-row center"><a href="/auth/forgot/">Forgot your username or password?</a></div>
+                    </div>
+                </form>
+                </div>
+            </div>
+
+
+
+    </main>
+    <footer class="fixed-bottom">
+        HELLO!
+    </footer>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js" integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy" crossorigin="anonymous"></script>
+    <script src="{% static 'core/js/warehauser.js' %}"></script>
+</body>
+</html>
