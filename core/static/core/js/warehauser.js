@@ -14,13 +14,18 @@ limitations under the License. */
 
 // warehauser.js
 
-async function load_content(url) {
+async function load_content(url, id) {
+    const contentDiv = document.getElementById(id);
+    if(!contentDiv) {
+        console.log('Unable to get element of id', id)
+        return;
+    }
+
     // Fetch the content from the server
     const response = await fetch(url);
     const content = await response.text();
 
     // Insert the content into the .content div
-    const contentDiv = document.querySelector('.content');
     contentDiv.innerHTML = content;
 }
 
@@ -281,5 +286,5 @@ function form_submit_listener(event) {
     submit_form(event.target.form);
 }
 
-document.getElementById('login-form').addEventListener('input', form_input_listener);
-document.getElementById('login-form').addEventListener('submit', form_submit_listener);
+// document.getElementById('login-form').addEventListener('input', form_input_listener);
+// document.getElementById('login-form').addEventListener('submit', form_submit_listener);

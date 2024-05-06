@@ -75,7 +75,17 @@ def generate_button_attributes(attrs:dict) -> dict:
 
 def test_view(request):
     context = {
-        'title': BASE_TITLE
+        'title': BASE_TITLE,
+        'cards': [
+            {
+                'id': 'card-login-form',
+                'classList': 'container-lg d-flex justify-content-center card-modal stage-left',
+                'method': 'GET',
+                'headers': {},
+                'body': {},
+                'url': reverse('auth_login_view'),
+            }
+        ],
     }
     return render(request, "core/test.html", context=context)
 

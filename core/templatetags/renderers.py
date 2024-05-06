@@ -88,3 +88,33 @@ def render_form(context, form) -> str:
 
     html = html + '</div></form>'
     return mark_safe(html)
+
+@register.simple_tag(takes_context=True)
+def render_inline_script(context) -> str:
+    html = '''
+    <script>
+window.onload = async function() {
+    const body = document.body;
+'''
+
+    if 'cards' in context:
+        html = html + '''
+    // Load cards...'''
+        for card in context['cards']:
+            id = card['id']
+            url = card['url']
+
+            html = html + f'''
+    load_content('{url}', '{id}')
+'''
+
+    html = html + '''
+    let forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        init_form(form);
+    });
+};
+    </script>
+'''
+
+    return mark_safe(html)

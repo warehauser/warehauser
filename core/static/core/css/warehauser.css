@@ -81,6 +81,7 @@ main
 }
 
 .card-modal {
+    z-index: 1000;
 }
 
 footer {
