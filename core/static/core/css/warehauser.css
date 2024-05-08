@@ -73,15 +73,25 @@ main
 {
 }
 
-.card-overlay {
-    display: flex;
-    min-height: calc(100vh - 76px - 24px);
-    justify-content: center;
-    align-items: center;
+.card {
+    position: fixed;
+    /* bottom: 100vh; */
+    left: 0;
+    width: auto;
+    border: 1px solid var(--color-disabled-highlight);
+    border-radius: 0;
+    background-color: var(--color-background);
+    /* transition: 0.2s ease-out; */
 }
 
-.card-modal {
-    z-index: 1000;
+.tooltip {
+    --bs-tooltip-bg: var(--color-background);
+    --bs-tooltip-color: var(--bs-white);
+    --bs-tooltip-arrow-width: 0px;
+    --bs-tooltip-arrow-height: 0px;
+
+    border-radius: 0px;
+    border: 1px solid var(--color-error);
 }
 
 footer {
@@ -486,24 +496,6 @@ a:not(.btn):focus {
     transform: translate(-50%,-50%) scale(1);
 }
 
-
-
-
-
-
-
-.stage-left {
-    visibility: hidden;
-    position: relative;
-    left: -100vw;
-}
-
-.animation-enter-stage-left {
-    visibility: visible;
-    transition: left 1s ease-in-out;
-    left: 0;
-}
-
 @keyframes keyframes-shake
 {
     0% { transform: translateX(0); }
@@ -531,7 +523,7 @@ a:not(.btn):focus {
 
 .icon-login-animation
 {
-    z-index: 2000;
+    /* z-index: 2000; */
     animation-name: keyframes-login;
     transform-origin: top left;
     animation-duration: 1s;
@@ -552,4 +544,9 @@ a:not(.btn):focus {
     animation-name: keyframes-user-info;
     animation-duration: 0.3s;
     animation-iteration-count: 1;
+}
+
+.animation-enter-stage-top {
+    top: 50vh;
+    transition: 0.2s ease-out;
 }

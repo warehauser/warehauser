@@ -14,6 +14,11 @@ limitations under the License. */
 
 // warehauser.js
 
+function show_card_modal(event, cardId) {
+    const cardModal = document.getElementById(cardId);
+    cardModal.style.display = 'block';
+}
+
 async function load_content(url, id) {
     const contentDiv = document.getElementById(id);
     if(!contentDiv) {
@@ -21,11 +26,9 @@ async function load_content(url, id) {
         return;
     }
 
-    // Fetch the content from the server
     const response = await fetch(url);
     const content = await response.text();
 
-    // Insert the content into the .content div
     contentDiv.innerHTML = content;
 }
 
@@ -36,18 +39,105 @@ function selectFirstAutoFocusFormFieldIfItExists(containerId) {
     const autoFocusElements = container.querySelectorAll('[autofocus]');
     if (autoFocusElements.length > 0) {
         autoFocusElements[0].focus();
+        autoFocusElements[0].select();
     }
 }
 
-function enter_stage_left(id) {
+function enter_view(id) {
+    let firstClick = true
     const element = document.getElementById(id);
-    element.classList.add('animation-enter-stage-left');
+    if(!element) {
+        return
+    }
+
+    let init = ''
+    if(element.classList.contains('top')) {
+        init = 'top'
+    } else if(element.classList.contains('left')) {
+        init = 'left'
+    } else if(element.classList.contains('right')) {
+        init = 'right'
+    }
+
+    // window.addEventListener('resize', () => {
+    //     const windowWidth = window.innerWidth;
+    //     const elementWidth = element.offsetWidth;
+    //     const leftPosition = (windowWidth - elementWidth) / 2;
+    //     element.style.left = `${leftPosition}px`;
+    // });
+
+    function dismiss_card() {
+        element.classList.add(init);
+    }
+
+    window.addEventListener('click', (event) => {
+        if (firstClick) {
+            firstClick = false;
+            return;
+        }
+
+        if (!element.contains(event.target)) {
+            dismiss_card()
+        }
+    });
+
+    window.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            dismiss_card()
+        }
+    });
+
+    element.classList.remove(init);
+    element.style = null
+
     selectFirstAutoFocusFormFieldIfItExists(id);
 }
 
-function do_login_click() {
-    disable_link(document.getElementById('login-link'))
-    enter_stage_left('card-login-form')
+function do_login_click(event) {
+    event.preventDefault()
+    enter_view('card-login-form')
+}
+
+function position_card_init(id) {
+    const card = document.getElementById(id)
+    if(!card) {
+        return
+    }
+
+    function orientate_horizontal() {
+        const rect = card.getBoundingClientRect();
+
+        const viewWidth = window.innerWidth;
+        const horizontalCenter = (viewWidth - rect.width) / 2;
+        card.style.left = horizontalCenter + 'px';
+    }
+
+    function orientate_vertical() {
+        const rect = card.getBoundingClientRect();
+
+        const viewHeight = window.innerHeight;
+        const verticalCenter = (viewHeight - rect.height) / 2;
+        card.style.top = verticalCenter + 'px';
+    }
+
+    if (card.classList.contains('top')) {
+        orientate_horizontal();
+        window.addEventListener('resize', orientate_horizontal);
+
+        // Move up and out of view...
+        card.style.bottom = '95vh'
+
+        window.addEventListener('unload', () => {
+            window.removeEventListener('resize', orientate_horizontal);
+        });
+    } else if (card.classList.contains('left') || card.classList.contains('right')) {
+        orientate_vertical();
+        window.addEventListener('resize', orientate_vertical);
+
+        window.addEventListener('unload', () => {
+            window.removeEventListener('resize', orientate_vertical);
+        });
+    }
 }
 
 forms = {};
@@ -73,6 +163,9 @@ function init_form(form) {
             formHeader.classList.remove('shake-animation');
         });
     }
+
+    form.addEventListener('input', form_input_listener);
+    form.addEventListener('submit', form_submit_listener);
 }
 
 function remove_error(input) {
@@ -285,6 +378,3 @@ function form_submit_listener(event) {
     event.preventDefault();
     submit_form(event.target.form);
 }
-
-// document.getElementById('login-form').addEventListener('input', form_input_listener);
-// document.getElementById('login-form').addEventListener('submit', form_submit_listener);

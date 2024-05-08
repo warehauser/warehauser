@@ -79,7 +79,7 @@ def test_view(request):
         'cards': [
             {
                 'id': 'card-login-form',
-                'classList': 'container-lg d-flex justify-content-center card-modal stage-left',
+                'classList': 'container-lg d-flex justify-content-center card top',
                 'method': 'GET',
                 'headers': {},
                 'body': {},
