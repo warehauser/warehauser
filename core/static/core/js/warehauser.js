@@ -14,130 +14,256 @@ limitations under the License. */
 
 // warehauser.js
 
-function show_card_modal(event, cardId) {
-    const cardModal = document.getElementById(cardId);
-    cardModal.style.display = 'block';
+function show_card_modal(event, id) {
+    let card = document.getElementById(id);
+    card.style.display = 'block';
 }
 
-async function load_content(url, id) {
-    const contentDiv = document.getElementById(id);
-    if(!contentDiv) {
-        console.log('Unable to get element of id', id)
+function animate_move_element(element, deltaX, deltaY, func = 'ease-in-out', transitionend = null, animate_time = null) {
+    element.style.setProperty('--deltaX', `${deltaX}px`)
+    element.style.setProperty('--deltaY', `${deltaY}px`)
+    element.style.setProperty('--animate-function', func)
+
+    if(transitionend !== null && transitionend !== undefined) {
+        element.addEventListener('transitionend', transitionend)
+    }
+
+    if(animate_time !== null && animate_time !== undefined) {
+        element.style.setProperty('--animate-time', `${animate_time}ms`)
+    }
+
+    element.classList.add('animate-move')
+}
+
+function animate_move_remove_styles(element) {
+    element.style.setProperty('--deltaX', '')
+    element.style.setProperty('--deltaY', '')
+    element.style.setProperty('--animate-time', '')
+    element.style.setProperty('--animate-function', '')
+}
+
+function animate_move_dismiss_end_listener(e) {
+    let element = e.target
+    element.style.visibility = 'hidden'
+    element.removeEventListener('transitionend', animate_move_dismiss_end_listener)
+}
+
+function animate_move_reveal_end_listener(e) {
+    let element = e.target
+    element.removeEventListener('transitionend', animate_move_reveal_end_listener)
+    element.classList.remove('animate-move')
+    animate_move_remove_styles(element)
+}
+
+function animate_move_element_reveal(id) {
+    let element = document.getElementById(id)
+    if (!element) {
+        return
+    }
+
+    // Ensure visibility is restored
+    element.style.visibility = 'visible'
+
+    // reverse the animate-move class direction
+    animate_move_element(element, 0, 0, 'ease-out', animate_move_reveal_end_listener)
+}
+
+function animate_move_element_dismiss_top(id) {
+    let element = document.getElementById(id)
+    if (!element) {
+        return
+    }
+
+    // Calculate the new position to move the element off screen at the top by just 1 pixel
+    let rect = element.getBoundingClientRect()
+    let positionY = 1 - rect.top - rect.height
+
+    animate_move_element(element, 0, positionY, 'ease-in', animate_move_dismiss_end_listener)
+}
+
+function animate_move_element_dismiss_left(id) {
+    let element = document.getElementById(id)
+    if (!element) {
+        return
+    }
+
+    // Calculate the new position to move the element off screen at the left by just 1 pixel
+    let rect = element.getBoundingClientRect()
+    let positionX = 1 - rect.left - rect.width
+
+    animate_move_element(element, positionX, 0, 'ease-in', animate_move_dismiss_end_listener)
+}
+
+function animate_move_element_dismiss_right(id) {
+    let element = document.getElementById(id)
+    if (!element) {
+        return
+    }
+
+    // Calculate the new position to move the element off screen at the right by just 1 pixel
+    let rect = element.getBoundingClientRect()
+    let positionX = window.innerWidth - rect.right + 1
+
+    animate_move_element(element, positionX, 0, 'ease-in', animate_move_dismiss_end_listener)
+}
+
+async function load_card(id, url) {
+    let card = document.getElementById(id);
+    if(!card) {
         return;
     }
 
-    const response = await fetch(url);
-    const content = await response.text();
+    let response = await fetch(url);
+    let content = await response.text();
 
-    contentDiv.innerHTML = content;
+    card.innerHTML = content;
 }
 
-function selectFirstAutoFocusFormFieldIfItExists(containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function make_autofocus(containerId) {
+    const container = document.getElementById(containerId)
+    if (!container) return
 
     const autoFocusElements = container.querySelectorAll('[autofocus]');
     if (autoFocusElements.length > 0) {
-        autoFocusElements[0].focus();
-        autoFocusElements[0].select();
+        autoFocusElements[0].focus()
+        autoFocusElements[0].select()
     }
 }
 
-function enter_view(id) {
-    let firstClick = true
-    const element = document.getElementById(id);
+function reveal_card(id) {
+    let first_click = true
+    let focused = false
+
+    let element = document.getElementById(id);
     if(!element) {
         return
     }
 
-    let init = ''
-    if(element.classList.contains('top')) {
-        init = 'top'
-    } else if(element.classList.contains('left')) {
-        init = 'left'
-    } else if(element.classList.contains('right')) {
-        init = 'right'
-    }
-
-    // window.addEventListener('resize', () => {
-    //     const windowWidth = window.innerWidth;
-    //     const elementWidth = element.offsetWidth;
-    //     const leftPosition = (windowWidth - elementWidth) / 2;
-    //     element.style.left = `${leftPosition}px`;
-    // });
-
     function dismiss_card() {
-        element.classList.add(init);
+        forms = document.querySelectorAll('#' + id + ' form')
+        forms.forEach((form) => {
+            disable_form(form)
+        })
+        element.classList.remove('reveal');
+        window.removeEventListener('blur', blur_el)
+        window.removeEventListener('focus', focus_el)
+        window.removeEventListener('click', click_el)
+        window.removeEventListener('keydown', keydown_el)
+
+        enable_link(document.getElementById('login-link'))
     }
 
-    window.addEventListener('click', (event) => {
-        if (firstClick) {
-            firstClick = false;
-            return;
+    function blur_el(event) {
+        // first_click = true
+        focused = false
+    }
+
+    function focus_el(event) {
+        focused = true
+    }
+
+    function click_el(event) {
+        if (first_click || focused) {
+            first_click = false
+            focused = false
+            return
         }
 
         if (!element.contains(event.target)) {
             dismiss_card()
         }
-    });
+    }
 
-    window.addEventListener('keydown', (event) => {
+    function keydown_el(event) {
         if (event.key === 'Escape') {
             dismiss_card()
         }
-    });
+    }
 
-    element.classList.remove(init);
-    element.style = null
+    element.classList.add('reveal')
 
-    selectFirstAutoFocusFormFieldIfItExists(id);
+    window.addEventListener('blur', blur_el)
+    window.addEventListener('focus', focus_el)
+    window.addEventListener('click', click_el);
+    window.addEventListener('keydown', keydown_el)
+
+    window.addEventListener('unload', () => {
+        window.removeEventListener('blur', blur_el)
+        window.removeEventListener('focus', focus_el)
+        window.removeEventListener('click', click_el)
+        window.removeEventListener('keydown', keydown_el)
+    })
+
+    element.querySelectorAll('form').forEach((form) => {
+        enable_form(form)
+    })
+
+    make_autofocus(id)
 }
 
 function do_login_click(event) {
     event.preventDefault()
-    enter_view('card-login-form')
+    let link = document.getElementById('login-link')
+    disable_link(link)
+    reveal_card('card-login-form')
 }
 
 function position_card_init(id) {
     const card = document.getElementById(id)
-    if(!card) {
+    if (!card) {
         return
     }
 
-    function orientate_horizontal() {
-        const rect = card.getBoundingClientRect();
+    const rect = card.getBoundingClientRect()
+    const header = document.getElementById('header')
+    const footer = document.getElementById('footer')
 
-        const viewWidth = window.innerWidth;
-        const horizontalCenter = (viewWidth - rect.width) / 2;
-        card.style.left = horizontalCenter + 'px';
+    function position_card() {
+        let viewWidth = window.innerWidth
+        let viewHeight = window.innerHeight
+
+        let headerHeight = header.getBoundingClientRect().height
+        let footerHeight = footer.getBoundingClientRect().height
+
+        let hideTop = 0 - rect.height - headerHeight
+        let hideLeft = 0 - rect.width
+        let hideRight = viewWidth
+
+        let horizontalCenter = (viewWidth - rect.width) / 2
+        let verticalCenter = (viewHeight - rect.height) / 2 - hideTop
+        verticalCenter = rect.height + headerHeight * 2 + 100
+
+        card.style.setProperty('--position-top', `${verticalCenter}px`)
+        card.style.setProperty('--position-left', `${horizontalCenter}px`)
+
+        card.style.setProperty('--hide-top', `${hideTop}px`)
+        card.style.setProperty('--hide-left', `${hideLeft}px`)
+        card.style.setProperty('--hide-right', `${hideRight}px`)
     }
 
-    function orientate_vertical() {
-        const rect = card.getBoundingClientRect();
+    position_card()
 
-        const viewHeight = window.innerHeight;
-        const verticalCenter = (viewHeight - rect.height) / 2;
-        card.style.top = verticalCenter + 'px';
-    }
+    window.addEventListener('resize', position_card)
 
-    if (card.classList.contains('top')) {
-        orientate_horizontal();
-        window.addEventListener('resize', orientate_horizontal);
-
-        // Move up and out of view...
-        card.style.bottom = '95vh'
-
-        window.addEventListener('unload', () => {
-            window.removeEventListener('resize', orientate_horizontal);
-        });
-    } else if (card.classList.contains('left') || card.classList.contains('right')) {
-        orientate_vertical();
-        window.addEventListener('resize', orientate_vertical);
-
-        window.addEventListener('unload', () => {
-            window.removeEventListener('resize', orientate_vertical);
-        });
-    }
+    window.addEventListener('unload', () => {
+        window.removeEventListener('resize', position_card)
+    })
 }
 
 forms = {};
@@ -166,6 +292,75 @@ function init_form(form) {
 
     form.addEventListener('input', form_input_listener);
     form.addEventListener('submit', form_submit_listener);
+}
+
+function enable_link(link) {
+    link.classList.remove('disabled-link');
+    link.removeAttribute('tabindex');
+    link.removeEventListener('click', prevent_default)
+}
+
+function enable_link_by_id(id) {
+    enable_link(document.getElementById(id))
+}
+
+function disable_link(link) {
+    const hasFocus = document.activeElement === link;
+
+    link.classList.add('disabled-link');
+    link.setAttribute('tabindex', -1);
+    link.addEventListener('click', prevent_default)
+
+    if (hasFocus) {
+        link.blur();
+    }
+}
+
+function disable_link_by_id(id) {
+    disable_link(document.getElementById(id))
+}
+
+function disable_form(form) {
+    let elements = form.querySelectorAll('#' + form.id + ' input, #' + form.id + ' select, #' + form.id + ' textarea, #' + form.id + ' button')
+    elements.forEach(function(element) {
+        element.disabled = true
+        element.parentElement.classList.remove('error')
+    })
+
+    elements = form.querySelectorAll('#' + form.id + ' a');
+    elements.forEach((link) => {
+        disable_link(link)
+    });
+
+    elements = form.querySelectorAll('#' + form.id + ' .input-text-button ion-icon')
+    elements.forEach((button) => {
+        button.classList.add('disabled');
+    });
+}
+
+function disable_form_by_id(id) {
+    disable_form(document.getElementById(id))
+}
+
+function enable_form(form) {
+    let elements = document.querySelectorAll('#' + form.id + ' input, #' + form.id + ' select, #' + form.id + ' textarea, #' + form.id + ' button')
+    elements.forEach(function(element) {
+        element.disabled = false
+    })
+
+    elements = form.querySelectorAll('#' + form.id + ' a');
+    elements.forEach((link) => {
+        enable_link(link)
+    });
+
+    elements = document.querySelectorAll('#' + form.id + ' .input-text-button ion-icon')
+    elements.forEach((button) => {
+        button.classList.remove('disabled');
+    });
+}
+
+function enable_form_by_id(id) {
+    enable_form(document.getElementById(id))
 }
 
 function remove_error(input) {
@@ -249,37 +444,17 @@ function show_logged_in(form)
     }
 }
 
-function disable_link(link) {
-    const hasFocus = document.activeElement === link;
-
-    link.classList.add('disabled-link');
-    link.setAttribute('tabindex', -1);
-    link.setAttribute('href', 'javascript:void(0);');
-    link.addEventListener('click', (event) => {
-        event.preventDefault(); // Prevent the default behavior of anchor links
-    });
-
-    if (hasFocus) {
-        link.blur();
-    }
+function prevent_default(event) {
+    event.preventDefault()
 }
 
-async function submit_login_form(form) {
-    // disable all submit buttons
-    let submitButtons = form.querySelectorAll('button[type="submit"]');
-    submitButtons.forEach((button) => {
-        button.disabled = true;
-    });
+async function submit_login_form(id) {
+    form = document.getElementById(id)
+    if(!form) {
+        return false
+    }
 
-    let elements = form.querySelectorAll('a');
-    elements.forEach((link) => {
-        disable_link(link)
-    });
-
-    elements = form.querySelectorAll('.input-text-button ion-icon');
-    elements.forEach((button) => {
-        button.classList.add('disabled');
-    });
+    disable_form_by_id(id)
 
     formData = new FormData();
     fields = form.querySelectorAll('input, textarea')
@@ -290,23 +465,20 @@ async function submit_login_form(form) {
         formData.append(field.name, field.value);
     });
 
-    let response = await fetch(form.action, {
+    let response = await fetch('/auth/login/', {
         method: form.method,
         body: formData
     }).then((response) => {
-        if(!response.ok) {
+// console.log(response)
+        if(response.ok) {
             // We are logged in! :-)
             show_logged_in(form);
         } else {
-            // We did not log in! :-(
-            shake_form_header(form);
-            // Enable all submit buttons and fields that where disabled above...
-            submitButtons.forEach(button => {
-                button.disabled = false;
-            });
-            fields.forEach(field => {
-                field.disabled = false;
-            });
+            setTimeout(() => {
+                shake_form_header(form);
+                enable_form_by_id(id)
+                make_autofocus(id)
+            }, 1500)
         }
     });
 
@@ -342,39 +514,39 @@ function form_display_validity(form)
 
         // Disable all submit buttons and inputs
         submitters.forEach((button) => {
-            button.setAttribute('disabled', 'true');
-            button.classList.add('disabled');
-        });
+            button.setAttribute('disabled', 'true')
+            button.classList.add('disabled')
+        })
     }
 }
 
 function check_confirm_password(event, oid) {
-    let tel = event.target;
-    let oel = document.getElementById(oid);
+    let tel = event.target
+    let oel = document.getElementById(oid)
 
-    let form = tel.form;
-    let valid = tel.value === oel.value;
+    let form = tel.form
+    let valid = tel.value === oel.value
 
-    forms[form.id][tel.id] = valid;
-    form_display_validity(form);
+    forms[form.id][tel.id] = valid
+    form_display_validity(form)
 
-    console.log(tel, oel, forms[form.id][tel.id]);
+    console.log(tel, oel, forms[form.id][tel.id])
 }
 
 function check_validity(event) {
-    let form = event.target.form; // Get the form object that contains the input
-    let input = event.target; // Get the input element that triggered the event
+    let form = event.target.form // Get the form object that contains the input
+    let input = event.target // Get the input element that triggered the event
 
-    forms[form.id][input.id] = input.checkValidity();
+    forms[form.id][input.id] = input.checkValidity()
 
-    form_display_validity(form);
+    form_display_validity(form)
 }
 
 function form_input_listener(event) {
-    check_validity(event);
+    check_validity(event)
 }
 
 function form_submit_listener(event) {
-    event.preventDefault();
-    submit_form(event.target.form);
+    event.preventDefault()
+    submit_form(event.target.form)
 }

@@ -34,7 +34,7 @@
 
 body
 {
-    min-height: 100vh;
+    min-height: 100svh;
     background: var(--color-background);
     overflow-x: hidden;
 }
@@ -42,7 +42,6 @@ body
 a.nav-link
 ,a.navbar-brand
 {
-    /* bottom: 30px; */
     display: flex;
     align-items: center;
     vertical-align: middle;
@@ -73,15 +72,41 @@ main
 {
 }
 
-.card {
+.card-container {
     position: fixed;
-    /* bottom: 100vh; */
+    top: 0;
     left: 0;
+}
+
+.card {
     width: auto;
     border: 1px solid var(--color-disabled-highlight);
     border-radius: 0;
     background-color: var(--color-background);
-    /* transition: 0.2s ease-out; */
+}
+
+.card.top {
+    position: fixed;
+    top: var(--hide-top);
+    left: var(--position-left);
+}
+
+.card.reveal {
+    transition-property: transform;
+    transition-duration: 200ms;
+    transition-timing-function: ease-out;
+}
+
+.card.reveal.top {
+    transform: translateY(var(--position-top));
+}
+
+.card.reveal.left {
+    transform: translateY(var(--adjust-left));
+}
+
+.card.reveal.right {
+    transform: translateY(var(--adjust-right));
 }
 
 .tooltip {
@@ -110,7 +135,7 @@ footer {
     top: 0;
     right: 0;
     display: flex;
-    align-items: center; /* Vertically center items */
+    align-items: center;
     height: var(--login-icon-dimension);
     min-width: var(--login-icon-dimension);
     margin-top: 12px;
@@ -483,7 +508,7 @@ a:not(.btn):focus {
     top: 50%;
     transform: translate(-50%,-50%) scale(0);
     border-radius: 50%;
-    transition: 0.1s ease-in-out 0s;
+    transition: 0.1s ease-in-out 0ms;
 }
 
 .label-radio input[type='radio']:checked ~ span.radio-check
@@ -508,7 +533,7 @@ a:not(.btn):focus {
 .shake-animation
 {
     animation-name: keyframes-shake;
-    animation-duration: 0.3s;
+    animation-duration: 300ms;
     animation-iteration-count: 2;
 }
 
@@ -526,7 +551,7 @@ a:not(.btn):focus {
     /* z-index: 2000; */
     animation-name: keyframes-login;
     transform-origin: top left;
-    animation-duration: 1s;
+    animation-duration: 1000ms;
     animation-iteration-count: 1;
 }
 
@@ -542,11 +567,16 @@ a:not(.btn):focus {
 .user-info-animation
 {
     animation-name: keyframes-user-info;
-    animation-duration: 0.3s;
+    animation-duration: 300ms;
     animation-iteration-count: 1;
 }
 
 .animation-enter-stage-top {
     top: 50vh;
-    transition: 0.2s ease-out;
+    transition: 200ms ease-out;
+}
+
+.animate-move {
+    transition: transform var(--animate-time) var(--animate-function);
+    transform: translate(var(--deltaX), var(--deltaY));
 }

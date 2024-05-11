@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="{% static 'core/css/warehauser.css' %}"/>
 </head>
 <body>
-    <header class="p-0 text-bg-dark sticky-top">
+    <header id="header" class="p-0 text-bg-dark sticky-top">
         <div class="container-lg">
             <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
                 <div class="container-fluid">
@@ -52,23 +52,25 @@
         </div>
     </header>
     <main>
+        <div class="card-holder">
 {% for card in cards %}
-        <div class="{% if card.classList %}{{ card.classList }}{% else %}container-lg d-flex justify-content-center card{% endif %}" id="{{ card.id }}">
-        </div>
+            <div class="{% if card.classList %}{{ card.classList }}{% else %}container-lg d-flex justify-content-center card{% endif %}" id="{{ card.id }}">
+            </div>
 {% endfor %}
-        <div class="" style="min-height:10000px;width:150px;background-color:darkolivegreen;">Hello world!</div>
+        </div>
+        <!-- <div class="" style="min-height:10000px;width:150px;background-color:darkolivegreen;">Hello world!</div> -->
     </main>
-    <footer class="fixed-bottom text-bg-dark bg-dark">
+    <footer id="footer" class="fixed-bottom text-bg-dark bg-dark">
         HELLO!
     </footer>
-    <script>
+<script>
 window.onload = async function() {
     const body = document.body;
 
 {% if cards|length > 0 %}    // Load cards...
     const fetch_promises = [];
 {% for card in cards %}
-    fetch_promises.push(load_content('{{ card.url }}', '{{ card.id }}'))
+    fetch_promises.push(load_card('{{ card.id }}', '{{ card.url }}'))
 {% endfor %}
     await Promise.all(fetch_promises);
 

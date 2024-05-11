@@ -62,8 +62,9 @@ def render_fields(context, form) -> str:
 @register.simple_tag(takes_context=True)
 def render_form(context, form) -> str:
     id = form['id']
+    id_param = f"'{id}'"
     onsubmit = form['onsubmit'] if 'onsubmit' in form else 'submit_form'
-    onsubmit = f'javascript:{onsubmit}(this);return false;'
+    onsubmit = f'javascript:{onsubmit}({id_param});return false;'
 
     html = f'''<form id="{id}" method="post" onsubmit="{onsubmit}">
         <div id="form-header-{id}" class="text-center">

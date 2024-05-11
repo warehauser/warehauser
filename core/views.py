@@ -21,7 +21,7 @@ from typing import Any, List
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import login, update_session_auth_hash
+from django.contrib.auth import login, authenticate, update_session_auth_hash
 from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import make_password, check_password
@@ -79,7 +79,7 @@ def test_view(request):
         'cards': [
             {
                 'id': 'card-login-form',
-                'classList': 'container-lg d-flex justify-content-center card top',
+                'classList': 'container d-flex justify-content-center card top',
                 'method': 'GET',
                 'headers': {},
                 'body': {},
@@ -89,14 +89,26 @@ def test_view(request):
     }
     return render(request, "core/test.html", context=context)
 
+@login_required
+def dashboard_view(request):
+    return JsonResponse({}, status=200)
+
 @anonymous_required
 def auth_login_view(request):
     if request.method.lower() == 'post':
         form = WarehauserAuthLoginForm(request, data=request.POST)
+        if form.is_valid():
+            username = form.cleaned_data['username']
+            password = form.cleaned_data['password']
+           
+            user = authenticate(request, username=username, password=password)
+            if user is not None:
+                login(request, user)
+                # Redirect to a success page or dashboard
+                return redirect('dashboard_view')  # Replace 'dashboard' with your desired URL name
+            else:
+                messages.error(request, 'Invalid username or password.')
 
-        is_valid = form.is_valid()
-        if is_valid:
-            login(request, form.get_user())
             return JsonResponse({}, status=200)
         else:
             return JsonResponse({}, status=401)
