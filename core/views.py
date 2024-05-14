@@ -90,55 +90,6 @@ def test_view(request):
     return render(request, "core/test.html", context=context)
 
 @login_required
-def dashboard_view(request):
-    return JsonResponse({}, status=200)
-
-@anonymous_required
-def auth_login_view(request):
-    if request.method.lower() == 'post':
-        form = WarehauserAuthLoginForm(request, data=request.POST)
-        if form.is_valid():
-            username = form.cleaned_data['username']
-            password = form.cleaned_data['password']
-           
-            user = authenticate(request, username=username, password=password)
-            if user is not None:
-                login(request, user)
-                # Redirect to a success page or dashboard
-                return redirect('dashboard_view')  # Replace 'dashboard' with your desired URL name
-            else:
-                messages.error(request, 'Invalid username or password.')
-
-            return JsonResponse({}, status=200)
-        else:
-            return JsonResponse({}, status=401)
-
-    template = 'core/form.html'
-    forgot_url = reverse('auth_forgot_password_view')
-    context = {
-        'title': generate_page_title(_('Log In')),
-        'content': reverse('auth_login_view'),
-        'forms': [
-        {
-            'form': WarehauserAuthLoginForm(),
-            'onsubmit': 'submit_login_form',
-            'id': 'login-form',
-            'header': {
-                'icon': 'lock-closed-outline',
-                'title': _('Log In'),
-                'slug': _('Welcome to ') + 'Warehauser',
-            },
-
-            'buttons': [
-                {'title': _('Login'), 'attrs': generate_button_attributes({'id': 'submit', 'value': 'login', 'type': 'submit', 'disabled': 'true', 'class': 'btn btn-primary col-12 disabled'})},
-            ],
-            'postmark': mark_safe(f'<a href="{forgot_url}">Forgot your username or password?</a>'),
-        },],
-    }
-    return render(request, template, context)
-
-
-@login_required
 def home_view(request):
     context = {
         'title': BASE_TITLE
@@ -147,89 +98,79 @@ def home_view(request):
 
 # Authentication views
 
+from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login
+from django.contrib import messages
+from .forms import WarehauserAuthLoginForm
+from .decorators import anonymous_required
+
+@anonymous_required
+def auth_login_view(request):
+    if request.method == 'POST':
+        form = WarehauserAuthLoginForm(request, data=request.POST)
+        if form.is_valid():
+            username = form.cleaned_data['username']
+            password = form.cleaned_data['password']
+            user = authenticate(request, username=username, password=password)
+            if user is not None:
+                login(request, user)
+                # Redirect to a success page or another view
+                return redirect('home_view')
+            else:
+                # Handle invalid login credentials
+                messages.error(request, 'Invalid username or password.')
+    else:
+        form = WarehauserAuthLoginForm(request)
+
+    return render(request, 'core/forms/login.html', {'form': form})
+
 # @anonymous_required
 # def auth_login_view_old(request):
+#     autofocus_field = None
+#     select_text = False
+
 #     if request.method.lower() == 'post':
 #         form = WarehauserAuthLoginForm(request, data=request.POST)
 
 #         is_valid = form.is_valid()
 #         if is_valid:
 #             login(request, form.get_user())
-#             return JsonResponse({}, status=200)
+
+#             # Redirect to a success page or any other view
+#             next_url = request.POST.get('next')
+#             if next_url:
+#                 return redirect(next_url)
+#             else:
+#                 return redirect('home')  # Redirect to home if 'next' is not set
 #         else:
-#             return JsonResponse({}, status=401)
+#             messages.error(request, 'Invalid username or password.')
+#             first_visible_field = form.visible_fields()[0] if form.visible_fields() else None
+#             if first_visible_field and first_visible_field.field.widget.input_type != 'select' and first_visible_field.value():
+#                 autofocus_field = first_visible_field.auto_id  # Autofocus the field by its auto_id
+#                 select_text = True  # Set select_text to True to select all text in the field
+#     else:
+#         form = WarehauserAuthLoginForm(request)
 
 #     template = 'core/form.html'
-#     forgot_url = reverse('auth_forgot_password_view')
+#     form.id = 'login-form'
+
 #     context = {
 #         'title': generate_page_title(_('Log In')),
-#         'content': reverse('auth_login_view'),
-#         'forms': [
-#         {
-#             'form': WarehauserAuthLoginForm(),
-#             'onsubmit': 'submit_login_form',
-#             'id': 'login-form',
-#             'header': {
-#                 'icon': 'lock-closed-outline',
-#                 'title': _('Log In'),
-#                 'slug': _('Welcome to ') + 'Warehauser',
-#             },
-
-#             'buttons': [
-#                 {'title': _('Login'), 'attrs': generate_button_attributes({'id': 'submit', 'value': 'login', 'type': 'submit', 'disabled': 'true', 'class': 'btn btn-primary col-12 disabled'})},
-#             ],
-#             'postmark': mark_safe(f'<a href="{forgot_url}">Forgot your username or password?</a>'),
-#         },],
+#         'form': form,
+#         'autofocus_field': autofocus_field,
+#         # 'renderers': {
+#         #     'field_renderer_default': field_renderer_default,
+#         # },
+#         'select_text': select_text,
+#         'title': _('Login'),
+#         'illustration': 'icon ion-ios-locked-outline',
+#         'buttons': [
+#             {'title': _('Login'), 'attrs': generate_button_attributes({'id': 'submit', 'value': 'login', 'type': 'submit',})},
+#             {'title': _('Forgot Password'), 'type': 'href', 'attrs': generate_button_attributes({'id': 'forgot', 'href': 'auth_forgot_password_view', 'class': 'btn btn-secondary col-12',})},
+#         ],
 #     }
+
 #     return render(request, template, context)
-
-@anonymous_required
-def auth_login_view_old(request):
-    autofocus_field = None
-    select_text = False
-
-    if request.method.lower() == 'post':
-        form = WarehauserAuthLoginForm(request, data=request.POST)
-
-        is_valid = form.is_valid()
-        if is_valid:
-            login(request, form.get_user())
-
-            # Redirect to a success page or any other view
-            next_url = request.POST.get('next')
-            if next_url:
-                return redirect(next_url)
-            else:
-                return redirect('home')  # Redirect to home if 'next' is not set
-        else:
-            messages.error(request, 'Invalid username or password.')
-            first_visible_field = form.visible_fields()[0] if form.visible_fields() else None
-            if first_visible_field and first_visible_field.field.widget.input_type != 'select' and first_visible_field.value():
-                autofocus_field = first_visible_field.auto_id  # Autofocus the field by its auto_id
-                select_text = True  # Set select_text to True to select all text in the field
-    else:
-        form = WarehauserAuthLoginForm(request)
-
-    template = 'core/form.html'
-    form.id = 'login-form'
-
-    context = {
-        'title': generate_page_title(_('Log In')),
-        'form': form,
-        'autofocus_field': autofocus_field,
-        # 'renderers': {
-        #     'field_renderer_default': field_renderer_default,
-        # },
-        'select_text': select_text,
-        'title': _('Login'),
-        'illustration': 'icon ion-ios-locked-outline',
-        'buttons': [
-            {'title': _('Login'), 'attrs': generate_button_attributes({'id': 'submit', 'value': 'login', 'type': 'submit',})},
-            {'title': _('Forgot Password'), 'type': 'href', 'attrs': generate_button_attributes({'id': 'forgot', 'href': 'auth_forgot_password_view', 'class': 'btn btn-secondary col-12',})},
-        ],
-    }
-
-    return render(request, template, context)
 
 def auth_logout_view(request):
     auth_logout(request=request)

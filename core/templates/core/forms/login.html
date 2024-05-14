@@ -1,0 +1,134 @@
+{% load static %}{% load renderers %}<!doctype html>
+<html lang="en" version="1.0" data-bs-theme="dark">
+<head>
+    <meta charset="utf-8"/>
+    <title>{{ title }}</title>
+    <link rel="icon" href="{% static 'core/images/favicon.ico' %}" type="image/x-icon">
+    <link rel="shortcut icon" href="{% static 'core/images/favicon.ico' %}" type="image/x-icon">
+    <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="{% static 'core/css/warehauser.css' %}"/>
+</head>
+<body>
+    <header id="header" class="p-0 text-bg-dark sticky-top">
+        <div class="container-lg">
+            <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+                <div class="container-fluid">
+                    <a class="navbar-brand" href="/">Warehauser</a>
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item">
+{% if user.is_authenticated %}
+                            <span id="welcomeText" class="navbar-text">{{ _('Welcome,') }}</span>
+                            <a class="nav-link" href="{% url 'auth_user_profile_view' %}">{{ user.username }}</a>
+                            <span id="session-info-divider" class="divider"></span>
+                            <a class="nav-link" href="{% url 'auth_logout_view' %}"><ion-icon id="auth-user-icon" name="lock-open-outline" class="session-icon md hydrated"></ion-icon></a>
+{% else %}
+                            <span id="welcomeText" class="navbar-text">{{ _('Welcome,') }}</span>
+                            <span class="navbar-text">{{ _('Guest') }}</span>
+                            <span id="session-info-divider" class="divider"></span>
+                            <ion-icon id="guest-user-icon" name="lock-closed-outline" class="session-icon md hydrated"></ion-icon>
+{% endif %}
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+        </div>
+    </header>
+    <main>
+        <div class="container-lg d-flex justify-content-center align-items-center">
+            <div class="card" id="card-login">
+                <form id="form-login" method="post">
+                    {% csrf_token %}
+                    <div id="form-header-login" class="text-center">
+                        <ion-icon id="form-header-icon-login" name="lock-closed-outline" class="form-icon mt-5"></ion-icon>
+                        <h2 id="form-title-login">{{ _('Login') }}</h2>
+                    </div>
+                    <div class="text-center mb-4">
+                        <p class="mt-3">{{ _('Welcome to Warehauser') }}</p>
+                    </div>
+                    <div class="text-center mb-4">
+                        <span class="error invisible"><strong class="error">{{ _('Oops!') }}</strong> {{ _('Your details were not recognised.') }}</span>
+                    </div>
+                    <div class="row justify-content-center">
+                        <div class="row form-row mb-3">
+                            <div class="input-box">
+                                <input type="text" id="username" name="username" placeholder="" autofocus="true" autocomplete="false" required="true"/>
+                                <span>Username</span>
+                                <div class="required" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="Required"></div>
+                            </div>
+                        </div>
+                        <div class="row form-row mb-4">
+                            <div class="input-box">
+                                <input type="password" id="password" name="password" placeholder="" autocomplete="false" required="true"/>
+                                <span>Password</span>
+                                <div class="input-text-button"><ion-icon name="eye-outline" id="password-toggle" onclick="show_hide(this, 'password', 4);"></ion-icon></div>
+                                <div class="required" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="Required"></div>
+                            </div>
+                        </div>
+                        <div class="row form-row mb-4">
+                            <div class="button-row">
+                                <button id="submit" type="submit" value="login" class="btn btn-primary col-12" disabled="true">{{ _('Login') }}</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+                <div class="row form-row center mb-5">
+                    <a id="link-forgot" href="#">{{ _('Forgot your password?') }}</a>
+                </div>
+            </div>
+        </div>
+    </main>
+    <footer id="footer" class="fixed-bottom text-bg-dark bg-dark">
+        Welcome to Warehauser
+    </footer>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+$(document).ready(function() {
+    // Add listeners to all the required fields
+    $('#form-login input[required]').on('input', function() {
+        var formIsValid = true;
+        $('#form-login input[required]').each(function() {
+            if ($(this).val() === '') {
+                formIsValid = false;
+                return false; // Exit the loop early if any field is empty
+            }
+        });
+
+        // Enable or disable the submit button based on form validity
+        $('#submit').prop('disabled', !formIsValid);
+    });
+
+    // Enable tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Function to toggle visibility of "Welcome" text based on window width
+    function toggleWelcomeText() {
+        var windowWidth = $(window).width();
+        var navbarTriggerWidth = 576;
+
+        if (windowWidth > navbarTriggerWidth) {
+            $('#welcomeText').show(); // Show the "Welcome" text
+        } else {
+            $('#welcomeText').hide(); // Hide the "Welcome" text
+        }
+    }
+
+    // Call the function on page load
+    toggleWelcomeText();
+
+    // Call the function on window resize
+    $(window).on('resize', function() {
+        toggleWelcomeText();
+    });
+});
+    </script>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+    <script src="{% static 'core/js/warehauser.js' %}"></script>
+</body>
+</html>

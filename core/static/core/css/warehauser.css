@@ -2,7 +2,7 @@
 
 *
 {
-    --bs-button-padding-x: 400px;
+    /* --bs-button-padding-x: 400px; */
 
     --color-default: #fff;
     --color-opaque: #a5aab0;
@@ -34,9 +34,36 @@
 
 body
 {
-    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    height: 100svh;
     background: var(--color-background);
     overflow-x: hidden;
+}
+
+header {
+    flex: none;
+    min-height: 60px;
+}
+
+main {
+    flex: 1;
+}
+
+footer {
+    flex: none;
+}
+
+div.error
+,h1.error
+,h2.error
+,h3.error
+,h4.error
+,h5.error
+,h6.error
+,p.error
+,.error {
+    color: var(--color-error);
 }
 
 a.nav-link
@@ -47,12 +74,14 @@ a.nav-link
     vertical-align: middle;
 }
 
+a.nav-link {
+    height: 28px;
+}
+
 a.nav-link ion-icon
 ,a.navbar-brand ion-icon
 {
     position: relative;
-    top: -5px;
-    margin-left: 5px;
 }
 
 a.nav-link:hover
@@ -63,13 +92,6 @@ a.nav-link:hover
     outline: none;
     text-decoration: none;
     color: var(--color-icons);
-}
-
-header {
-}
-
-main
-{
 }
 
 .card-container {
@@ -115,11 +137,13 @@ main
     --bs-tooltip-arrow-width: 0px;
     --bs-tooltip-arrow-height: 0px;
 
-    border-radius: 0px;
-    border: 1px solid var(--color-error);
-}
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.75em;
 
-footer {
+    border: 1px solid var(--color-error);
+
+    padding: 0;
+    border-radius: 0px;
 }
 
 .divider::after {
@@ -157,7 +181,14 @@ footer {
     margin-left: 5px;
 }
 
+.navbar-brand {
+    position: relative;
+    top: 5px;
+}
+
 .session-icon {
+    position: relative;
+    top: 5px;
     width: var(--login-icon-dimension);
     height: var(--login-icon-dimension);
     color: var(--color-icons);
@@ -290,20 +321,16 @@ textarea
     right: 30px;
 }
 
-.input-text-button ion-icon
-{
-    cursor: pointer;
-}
-
 .input-box .input-text-button ion-icon {
     position: relative;
     width: 30px;
     height: 30px;
+    cursor: pointer;
 }
 
 .input-box input:valid ~ .input-text-button ion-icon
 {
-        color: var(--color-icons);
+    color: var(--color-icons);
 }
 
 .input-box.error input:focus ~ .input-text-button ion-icon
@@ -367,7 +394,6 @@ a:not(.btn):focus {
 .input-box input[type="password"]
 {
     height: 56px;
-    font-size: 1.25em;
     font-weight: bold;
     letter-spacing: 0.15em;
 }
@@ -521,6 +547,22 @@ a:not(.btn):focus {
     transform: translate(-50%,-50%) scale(1);
 }
 
+/* form */
+
+/* input[type='text'] */
+
+/* input[type='password'] */
+
+/* textarea */
+
+/* select */
+
+/* input[type='checkbox'] */
+
+/* input[type='radio'] */
+
+/* Animations */
+
 @keyframes keyframes-shake
 {
     0% { transform: translateX(0); }
@@ -537,46 +579,19 @@ a:not(.btn):focus {
     animation-iteration-count: 2;
 }
 
-@keyframes keyframes-login {
-    0% {
-        transform: translate(0, 0) scale(1);
-    }
-    100% {
-        transform: translate(var(--target-rect-left), var(--target-rect-top)) scale(var(--icon-scale-factor));
-    }
-}
-
-.icon-login-animation
-{
-    /* z-index: 2000; */
-    animation-name: keyframes-login;
-    transform-origin: top left;
-    animation-duration: 1000ms;
-    animation-iteration-count: 1;
-}
-
-@keyframes keyframes-user-info {
-    0% {
-        opacity: 0;
-    }
-    100% {
-        opacity: 1;
-    }
-}
-
-.user-info-animation
-{
-    animation-name: keyframes-user-info;
-    animation-duration: 300ms;
-    animation-iteration-count: 1;
-}
-
-.animation-enter-stage-top {
-    top: 50vh;
-    transition: 200ms ease-out;
-}
-
 .animate-move {
     transition: transform var(--animate-time) var(--animate-function);
     transform: translate(var(--deltaX), var(--deltaY));
+}
+
+#card-login {
+    margin-top: 50px;
+    width: 360px;
+}
+
+/* media rules */
+@media (max-width: 576px) {
+    .navbar-collapse {
+        display: none !important; /* Important to override Bootstrap styles */
+    }
 }

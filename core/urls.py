@@ -29,7 +29,6 @@ router.register(prefix=r'eventdefs',     viewset=views.EventDefViewSet,     base
 router.register(prefix=r'events',        viewset=views.EventViewSet,        basename='event')
 
 urlpatterns = [
-    path('dashboard/', views.dashboard_view, name='dashboard_view'),
     path('auth/login/', views.auth_login_view, name='auth_login_view'),
     path('auth/logout/', views.auth_logout_view, name='auth_logout_view'),
     path('auth/forgot/', views.auth_forgot_password_view, name='auth_forgot_password_view'),
@@ -41,5 +40,4 @@ urlpatterns = [
     path('auth/accept/<int:user>/', views.auth_otp_accept_view, name='auth_otp_accept_manual_view'),
     path('api/', include(router.urls)),
     path('', views.home_view, name='home'),
-    path('test/', views.test_view, name='test_view'),
 ]
