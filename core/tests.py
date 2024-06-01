@@ -139,51 +139,51 @@ class WarehauseTestCase(TestCase):
         cls.no_mapped_products_area.save()
 
         dfn = WarehauseDef.objects.get(id=5)
-        bin : Warehause = dfn.create_instance({"parent": cls.storage_area, "barcode": "A01-01-01-01-01"})
+        bin : Warehause = dfn.create_instance({"parent": cls.storage_area, "value": "A01-01-01-01-01"})
         bin.save()
         cls.bins.append(bin)
 
-        bin : Warehause = dfn.create_instance({"parent": cls.storage_area, "barcode": "A01-01-01-01-02"})
+        bin : Warehause = dfn.create_instance({"parent": cls.storage_area, "value": "A01-01-01-01-02"})
         bin.save()
         cls.bins.append(bin)
 
-        bin : Warehause = dfn.create_instance({"parent": cls.storage_area, "barcode": "A01-01-01-01-03"})
+        bin : Warehause = dfn.create_instance({"parent": cls.storage_area, "value": "A01-01-01-01-03"})
         bin.save()
         cls.bins.append(bin)
 
-        bin : Warehause = dfn.create_instance({"parent": cls.storage_area, "barcode": "A01-01-01-01-04"})
+        bin : Warehause = dfn.create_instance({"parent": cls.storage_area, "value": "A01-01-01-01-04"})
         bin.save()
         cls.bins.append(bin)
 
-        bin : Warehause = dfn.create_instance({"parent": cls.storage_area, "barcode": "A01-01-02-01-01"})
+        bin : Warehause = dfn.create_instance({"parent": cls.storage_area, "value": "A01-01-02-01-01"})
         bin.save()
         cls.bins.append(bin)
 
-        bin : Warehause = dfn.create_instance({"parent": cls.storage_area, "barcode": "A01-01-02-01-02"})
+        bin : Warehause = dfn.create_instance({"parent": cls.storage_area, "value": "A01-01-02-01-02"})
         bin.save()
         cls.bins.append(bin)
 
-        bin : Warehause = dfn.create_instance({"parent": cls.storage_area, "barcode": "A01-01-02-01-03"})
+        bin : Warehause = dfn.create_instance({"parent": cls.storage_area, "value": "A01-01-02-01-03"})
         bin.save()
         cls.bins.append(bin)
 
-        bin : Warehause = dfn.create_instance({"parent": cls.storage_area, "barcode": "A01-01-02-01-04"})
+        bin : Warehause = dfn.create_instance({"parent": cls.storage_area, "value": "A01-01-02-01-04"})
         bin.save()
         cls.bins.append(bin)
 
-        bin : Warehause = dfn.create_instance({"parent": cls.no_mapped_products_area, "barcode": "A02-01-01-01-01"})
+        bin : Warehause = dfn.create_instance({"parent": cls.no_mapped_products_area, "value": "A02-01-01-01-01"})
         bin.save()
         cls.unmapped_bins.append(bin)
 
-        bin : Warehause = dfn.create_instance({"parent": cls.no_mapped_products_area, "barcode": "A02-01-01-01-02"})
+        bin : Warehause = dfn.create_instance({"parent": cls.no_mapped_products_area, "value": "A02-01-01-01-02"})
         bin.save()
         cls.unmapped_bins.append(bin)
 
-        bin : Warehause = dfn.create_instance({"parent": cls.no_mapped_products_area, "barcode": "A02-01-01-01-03", "stock": cls.product_chains[1]})
+        bin : Warehause = dfn.create_instance({"parent": cls.no_mapped_products_area, "value": "A02-01-01-01-03", "stock": cls.product_chains[1]})
         bin.save()
         cls.unmapped_bins.append(bin)
 
-        bin : Warehause = dfn.create_instance({"parent": cls.no_mapped_products_area, "barcode": "A02-01-01-01-04", "stock": cls.product_chains[3]})
+        bin : Warehause = dfn.create_instance({"parent": cls.no_mapped_products_area, "value": "A02-01-01-01-04", "stock": cls.product_chains[3]})
         bin.save()
         cls.unmapped_bins.append(bin)
 

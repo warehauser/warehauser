@@ -28,7 +28,7 @@ def anonymous_required(view_func, redirect_url=None):
             if redirect_url:
                 return redirect(redirect_url)
             else:
-                return redirect(reverse('home'))  # Redirect to home or any other URL
+                return redirect(reverse('home_view'))  # Redirect to home or any other URL
         else:
             # User is not authenticated, execute the view function
             return view_func(request, *args, **kwargs)

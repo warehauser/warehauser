@@ -20,32 +20,31 @@ from .models import *
 # Use these KEY_OPTIONS_* arrays to declare what fields you want in
 # options to be searchable from the respective FilterSet.
 # Format: ['key1', 'key2',...]
-KEYS_OPTIONS_WAREHAUSEDEF  = ['barcodes',]
-KEYS_OPTIONS_WAREHAUSE     = ['barcodes',]
-KEYS_OPTIONS_PRODUCTDEF    = ['barcodes',]
-KEYS_OPTIONS_PRODUCT       = ['barcodes',]
-KEYS_OPTIONS_EVENTDEF      = ['barcodes',]
-KEYS_OPTIONS_EVENT         = ['barcodes',]
+KEYS_OPTIONS_WAREHAUSEDEF  = ['values',]
+KEYS_OPTIONS_WAREHAUSE     = ['values',]
+KEYS_OPTIONS_PRODUCTDEF    = ['values',]
+KEYS_OPTIONS_PRODUCT       = ['values',]
+KEYS_OPTIONS_EVENTDEF      = ['values',]
+KEYS_OPTIONS_EVENT         = ['values',]
 
 FILTER_FIELDS_STANDARD     = {
     'id': ['exact', 'lt', 'lte', 'gt', 'gte',],
     'external_id': ['exact', 'isnull',],
+    'key': ['iexact',],
     'created_at': ['exact', 'lt', 'lte', 'gt', 'gte',],
     'updated_at': ['exact', 'isnull', 'lt', 'lte', 'gt', 'gte',],
     'options': ['exact', 'isnull',],
     'is_virtual': ['exact',],
-    'barcode': ['exact',],
-    'descr': ['iexact',],
 }
 
 FILTER_FIELDS_DEF_STANDARD = {
     **FILTER_FIELDS_STANDARD,
-    'parent': ['exact', 'isnull',],
 }
 
 FILTER_FIELDS_INSTANCE_STANDARD = {
     **FILTER_FIELDS_STANDARD,
     'dfn': ['exact',],
+    'value': ['exact',],
     'status': ['exact', 'lt', 'lte', 'gt', 'gte',],
     'parent': ['exact', 'isnull',],
 }

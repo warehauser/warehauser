@@ -21,6 +21,9 @@
     --form-icon-dimension: 70px;
     --login-icon-dimension: calc(var(--form-icon-dimension) * var(--icon-scale-factor));
 
+    --animate-time: 500ms;
+    --animate-time-quick: 200ms;
+
     color: var(--color-default);
 }
 
@@ -41,17 +44,27 @@ body
     overflow-x: hidden;
 }
 
-header {
+header, footer {
     flex: none;
-    min-height: 60px;
 }
 
 main {
     flex: 1;
 }
 
-footer {
-    flex: none;
+main .container-lg {
+    flex: 1;
+    min-height: calc(100svh - 90px);
+}
+
+form div.error-messages {
+    overflow: hidden;
+    height: 0;
+    transition: height var(--animate-time-quick) ease;
+}
+
+form div.error-messages.show {
+    height: auto;
 }
 
 div.error
@@ -101,10 +114,12 @@ a.nav-link:hover
 }
 
 .card {
+    position: absolute;
     width: auto;
     border: 1px solid var(--color-disabled-highlight);
     border-radius: 0;
     background-color: var(--color-background);
+    top: 86px;
 }
 
 .card.top {
@@ -208,11 +223,6 @@ textarea
 .container-lg
 {
     min-width: 360px;
-}
-
-#login-form
-{
-    max-width: 400px;
 }
 
 .form-icon {
@@ -585,8 +595,9 @@ a:not(.btn):focus {
 }
 
 #card-login {
-    margin-top: 50px;
+    /* margin-top: 50px; */
     width: 360px;
+    max-width: 400px;
 }
 
 /* media rules */

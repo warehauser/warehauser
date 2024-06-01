@@ -41,10 +41,10 @@ class ModelCallback:
     # def clean_status(self, model):
     #     pass
 
-    # def clean_barcode(self, model):
+    # def clean_key(self, model):
     #     pass
 
-    # def clean_descr(self, model):
+    # def clean_value(self, model):
     #     pass
 
 class WarehauseDefCallback(ModelCallback):

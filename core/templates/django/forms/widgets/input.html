@@ -1,0 +1,7 @@
+{% load filters %}{% with id=widget.attrs|get_value_by_key:'id' %}<div class="input-box">
+        <input type="{{ widget.type }}" name="{{ widget.name }}"{% if widget.value != None %} value="{{ widget.value|stringformat:'s' }}"{% endif %}{% include "django/forms/widgets/attrs.html" %}>
+        <span class="label">{{ widget.name }}</span>{% if widget.type|lower == 'password' %}
+        <div class="input-text-button"><ion-icon name="eye-outline" id="{{ id }}-toggle" onclick="password_show_hide(this, '{{ id }}', 4);"></ion-icon></div>{% endif %}{% with required=widget.attrs|get_value_by_key:'required' %}{% if required %}
+        <div class="required" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="Required"></div>{% endif %}{% endwith %}
+    </div>
+{% endwith %}

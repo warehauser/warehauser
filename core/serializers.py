@@ -17,8 +17,10 @@
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import serializers
+from django.utils.translation import gettext as _
 
 from .models import *
+from .utils import filter_owner_groups
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -36,7 +38,7 @@ def to_related_representation(instance, representation, related_fields):
         if related_instance:
             representation[field_name] = {
                 'id': related_instance.id,
-                'decr': related_instance.descr
+                'key': related_instance.key
             }
 
     return representation
@@ -83,7 +85,7 @@ class AbstractDefSerializer(AbstractSerializer):
         #     if related_instance:
         #         representation[field_name] = {
         #             'id': related_instance.id,
-        #             'decr': related_instance.descr
+        #             'decr': related_instance.key
         #         }
 
         # return representation
@@ -91,20 +93,34 @@ class AbstractDefSerializer(AbstractSerializer):
 class AbstractInstSerializer(AbstractSerializer):
     pass
 
+class GroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Group
+        fields = ['id', 'name']  # Adjust fields as needed
 
 # Warehause model serializers
 
-class WarehauseDefSerializer(AbstractDefSerializer):
-    parent = warehausedef_related_field_serializer
+class WarehauseDefSerializer(serializers.ModelSerializer):
+    owner = serializers.PrimaryKeyRelatedField(queryset=filter_owner_groups(Group.objects))
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        if not user.is_superuser and not user.is_staff:
+            group = filter_owner_groups(user.groups).first()
+            if not group:
+                raise serializers.ValidationError(_(f'User \'{user.username}\' is not a member of any client group.'))
+            validated_data['owner'] = group
+        return super().create(validated_data=validated_data)
 
     class Meta:
         model = WarehauseDef
         fields = '__all__'
+        extra_kwargs = {'parent': {'allow_null': True, 'required': False,},}
         depth = 1
 
-class WarehauseSerializer(AbstractInstSerializer):
+class WarehauseSerializer(serializers.ModelSerializer):#AbstractInstSerializer):
     dfn    = warehausedef_related_field_serializer
-    parent = warehause_related_field_serializer
+    # parent = warehause_related_field_serializer
     user   = user_related_field_serializer
 
     def create(self, validated_data):
@@ -129,19 +145,21 @@ class WarehauseSerializer(AbstractInstSerializer):
         model = Warehause
         fields = '__all__'
         depth = 1
+        extra_kwargs = { 'parent': { 'allow_null': True, 'required': False,},}
 
 
 # Product model serializers
 
-class ProductDefSerializer(AbstractDefSerializer):
+class ProductDefSerializer(serializers.ModelSerializer):#AbstractDefSerializer):
     parent = productdef_related_field_serializer
 
     class Meta:
         model = ProductDef
         fields = '__all__'
         depth = 1
+        extra_kwargs = { 'parent': { 'allow_null': True, 'required': False,},}
 
-class ProductSerializer(AbstractInstSerializer):
+class ProductSerializer(serializers.ModelSerializer):#AbstractInstSerializer):
     dfn       = productdef_related_field_serializer
     parent    = product_related_field_serializer
     warehause = warehause_related_field_serializer
@@ -162,19 +180,21 @@ class ProductSerializer(AbstractInstSerializer):
         model = Product
         fields = '__all__'
         depth = 1
+        extra_kwargs = { 'parent': { 'allow_null': True, 'required': False,},}
 
 
 # Event model serializers
 
-class EventDefSerializer(AbstractDefSerializer):
+class EventDefSerializer(serializers.ModelSerializer):#AbstractDefSerializer):
     parent = eventdef_related_field_serializer
 
     class Meta:
         model = EventDef
         fields = '__all__'
         depth = 1
+        extra_kwargs = { 'parent': { 'allow_null': True, 'required': False,},}
 
-class EventSerializer(AbstractInstSerializer):
+class EventSerializer(serializers.ModelSerializer):#AbstractInstSerializer):
     dfn       = eventdef_related_field_serializer
     parent    = event_related_field_serializer
     warehause = warehause_related_field_serializer
@@ -203,3 +223,4 @@ class EventSerializer(AbstractInstSerializer):
         model = Event
         fields = '__all__'
         depth = 1
+        extra_kwargs = { 'parent': { 'allow_null': True, 'required': False,},}

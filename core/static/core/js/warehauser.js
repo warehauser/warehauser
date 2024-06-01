@@ -217,6 +217,35 @@ function reveal_card(id) {
     make_autofocus(id)
 }
 
+function reveal(id) {
+    let elem = document.querySelector(id);
+
+    // Measure the full height of the content
+    elem.style.display = 'block'; // Ensure it's visible to measure
+    let fullHeight = elem.scrollHeight + 'px';
+    elem.style.height = '0'; // Reset height to 0
+    elem.style.display = ''; // Revert display to default
+
+    // Force a reflow
+    void elem.offsetWidth;
+
+    // Apply the full height
+    elem.style.height = fullHeight;
+
+    // Remove the height setting after the transition to allow for future dynamic content
+    elem.addEventListener('transitionend', function handler(event) {
+        elem.style.height = 'auto';
+        elem.removeEventListener('transitionend', handler);
+
+        elem.querySelectorAll('.invisible').forEach(hidden => {
+            hidden.classList.remove('invisible')
+        });
+    });
+
+    // Add 'show' class to keep track of the state
+    elem.classList.add('show');
+}
+
 function do_login_click(event) {
     event.preventDefault()
     let link = document.getElementById('login-link')
@@ -368,7 +397,7 @@ function remove_error(input) {
 }
 
 let show_hide_timeouts = {}
-function show_hide(toggle, id, seconds=0) {
+function password_show_hide(toggle, id, seconds=0) {
     let input = document.getElementById(id);
     if(input.type === 'password') {
         input.setAttribute('type', 'text');
@@ -394,67 +423,39 @@ function show_hide(toggle, id, seconds=0) {
     }
 }
 
-function shake_form_header(form) {
-    const formHeader = document.getElementById('form-header-' + form.id);
-    formHeader.classList.add('shake-animation');
+function end_shake_animation(e) {
+    target = e.target;
+    target.classList.remove('shake-animation')
+    target.removeEventListener('animationend', end_shake_animation)
 }
 
-function show_logged_in(form)
-{
-    let header = document.getElementById('form-title-' + form.id);
-    if(header){
-        header.innerText = 'Logged In';
-    }
-
-    let icon = document.getElementById('form-header-icon-' + form.id);
-    let lock_icon = document.getElementById('lock-open-icon');
-
-    if(icon && lock_icon) {
-        const icon_rect = icon.getBoundingClientRect();
-        const lock_rect = lock_icon.getBoundingClientRect();
-
-        let offsetLeft = lock_rect.left - icon_rect.left;
-        let offsetTop = lock_rect.top - icon_rect.top;
-
-        document.documentElement.style.setProperty('--target-rect-left', offsetLeft + 'px');
-        document.documentElement.style.setProperty('--target-rect-top', offsetTop + 'px');
-
-        icon.setAttribute('name', 'lock-open-outline');
-        icon.classList.add('icon-login-animation');
-        icon.addEventListener('animationend', (event) => {
-            lock_icon.style.visibility = 'visible';
-            icon.style.visibility = 'hidden';
-            icon.classList.remove('icon-login-animation');
-
-            function opacity_listener(event)
-            {
-                const target = event.target;
-                target.classList.remove('opaque');
-                target.classList.remove('user-info-animation');
-            }
-
-            divider = document.getElementById('session-info-divider');
-            divider.addEventListener('animationend', opacity_listener);
-            divider.classList.add('user-info-animation');
-
-            let user_info = document.getElementById('user-info');
-            user_info.addEventListener('animationend', opacity_listener);
-            user_info.classList.add('user-info-animation');
-        });
-    }
+function shake_form_header(form) {
+    let formHeader = document.getElementById('form-header-icon-' + form.id)
+    formHeader.addEventListener('animationend', end_shake_animation)
+    formHeader.classList.add('shake-animation')
 }
 
 function prevent_default(event) {
     event.preventDefault()
 }
 
+function display_errors(form, b) {
+    error_span = form.querySelector('span.error')
+    if(b) {
+        error_span.classList.remove('invisible')
+    } else {
+        error_span.classList.add('invisible')
+    }
+}
+
 async function submit_login_form(id) {
-    form = document.getElementById(id)
+    form = document.querySelector(`#${id}`)
     if(!form) {
         return false
     }
 
     disable_form_by_id(id)
+    display_errors(form, false)
 
     formData = new FormData();
     fields = form.querySelectorAll('input, textarea')
@@ -469,23 +470,22 @@ async function submit_login_form(id) {
         method: form.method,
         body: formData
     }).then((response) => {
-// console.log(response)
         if(response.ok) {
-            // We are logged in! :-)
-            show_logged_in(form);
+            // Successful login
+            response.json().then((json) => {
+                animate_move_element_dismiss_top('card-login')
+                // window.location.href = json.redirect
+            })
         } else {
             setTimeout(() => {
-                shake_form_header(form);
+                display_errors(form, !response.ok)
+                shake_form_header(form)
                 enable_form_by_id(id)
                 make_autofocus(id)
-            }, 1500)
+            }, 1000)
         }
     });
 
-    return false;
-}
-
-function submit_form(form) {
     return false;
 }
 

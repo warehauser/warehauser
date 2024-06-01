@@ -14,13 +14,18 @@
 
 # forms.py
 
+import re
+
 from django import forms
 from django.core.validators import RegexValidator
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import AuthenticationForm, ReadOnlyPasswordHashField, PasswordResetForm, PasswordChangeForm
+from django.utils.safestring import SafeText
 from django.utils.translation import gettext as _
 
 from django.utils.html import format_html
+
+from .models import CHARFIELD_MAX_LENGTH
 
 class WarehauserAuthLoginForm(AuthenticationForm):
     def __init__(self, *args, **kwargs):
@@ -28,44 +33,52 @@ class WarehauserAuthLoginForm(AuthenticationForm):
 
         # Customize form fields here if needed
         self.fields['username'].widget.attrs.update({
-            # 'class': 'form-control',
-            # 'placeholder': _('Username'),
+            'placeholder': '',
             'required': 'true',
             'autocomplete': 'off',
+            'css_classes': 'row form-row mb-4',
         })
 
         self.fields['password'].widget.attrs.update({
-            # 'class': 'form-control',
-            # 'placeholder': _('Password'),
+            'placeholder': '',
             'required': 'true',
             'autocomplete': 'off',
-            'rdata': {
-                'row_class': 'row form-row mb-5',
-            },
+            'css_classes': 'row form-row mb-4',
         })
 
-class WarehauserAuthForgotPasswordForm(PasswordResetForm):
+class WarehauserAuthForgotPasswordForm(forms.Form):
     email = forms.EmailField(
         label=_("Email"),
-        max_length=254,
-        widget=forms.EmailInput(attrs={'autocomplete': 'off'}),
+        max_length=CHARFIELD_MAX_LENGTH,
+        widget=forms.EmailInput(attrs={
+            'placeholder': '',
+            'required': 'true',
+            'autocomplete': 'off',
+            'css_classes': 'row form-row mb-4',
+        }),
     )
-    password1 = forms.CharField(
-        label=_("New password"),
+    password = forms.CharField(
+        label=_("Password"),
         strip=False,
-        widget=forms.PasswordInput(attrs={'autocomplete': 'off'}),
+        widget=forms.PasswordInput(attrs={
+            'id': 'new-password',
+            'placeholder': '',
+            'required': 'true',
+            'autocomplete': 'off',
+            'css_classes': 'row form-row mb-4',
+        }),
     )
-    password2 = forms.CharField(
-        label=_("Confirm new password"),
+    confirm = forms.CharField(
+        label=_("Confirm"),
         strip=False,
-        widget=forms.PasswordInput(attrs={'autocomplete': 'off'}),
+        widget=forms.PasswordInput(attrs={
+            'id': 'confirm',
+            'placeholder': '',
+            'required': 'true',
+            'autocomplete': 'off',
+            'css_classes': 'row form-row mb-4',
+        }),
     )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['email'].widget.attrs.update({'class': 'form-control', 'placeholder': _('Email Address')})
-        self.fields['password1'].widget.attrs.update({'class': 'form-control', 'placeholder': _('Password')})
-        self.fields['password2'].widget.attrs.update({'class': 'form-control', 'placeholder': _('Confirm Password')})
 
     def clean_password2(self):
         password1 = self.cleaned_data.get('password1')

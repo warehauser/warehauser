@@ -1,0 +1,26 @@
+{% load filters %}<div class="card" id="card-{{ form.id }}">
+    <form method="post" id="form-{{ form.id }}"{% if form.onsubmit %} onsubmit="javascript:{{ form.onsubmit }};return false;"{% endif %}>
+        <div class="text-center">
+            <ion-icon name="{{form.header|get_value_by_key:'icon'}}" class="form-icon mt-5"></ion-icon>
+            <h2>{{ form.header|get_value_by_key:'heading' }}</h2>
+        </div>
+        <div class="text-center mb-4">
+            <p class="mt-3">{{ form.header|get_value_by_key:'slug' }}</p>
+        </div>
+        <div class="error-messages text-center mb-4">
+            <span id="form-{{ form.id }}-err-001" class="error invisible"><strong class="error">{{ _('Oops!') }}</strong> {{ _('Your details were not recognised.') }}</span>
+        </div>
+        <div class="row justify-content-center">
+            {% csrf_token %}
+            {{ form.as_div }}
+            <div class="row form-row mb-4">
+                <div class="button-row">
+                    <button type="submit" value="login" class="btn btn-primary col-12" disabled="true">Login</button>
+                </div>
+            </div>
+        </div>
+    </form>{% for footer in form.footer %}
+    <div class="{{ footer.classlist }}">
+        {{ footer.content }}
+    </div>{% endfor %}
+</div>

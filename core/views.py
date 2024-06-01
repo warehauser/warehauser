@@ -37,10 +37,10 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import gettext as _
 
 from django_filters.rest_framework import DjangoFilterBackend
-from guardian.shortcuts import get_objects_for_user, assign_perm
 
 from rest_framework import generics, viewsets, status
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.filters import SearchFilter
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
@@ -51,10 +51,10 @@ from .filters import *
 from .forms import *
 from .models import *
 from .permissions import *
-from .templatetags.renderers import render_fields
 from .serializers import *
+from .utils import *
 
-from .utils import generate_otp_code
+from .utils import generate_otp_code, is_valid_email_address
 
 BASE_TITLE = f'Warehauser - {_("Your warehouse run smoothly")}'
 
@@ -73,21 +73,43 @@ def generate_button_attributes(attrs:dict) -> dict:
 
 # Create your views here.
 
-def test_view(request):
-    context = {
-        'title': BASE_TITLE,
-        'cards': [
-            {
-                'id': 'card-login-form',
-                'classList': 'container d-flex justify-content-center card top',
-                'method': 'GET',
-                'headers': {},
-                'body': {},
-                'url': reverse('auth_login_view'),
-            }
-        ],
+# from django.forms.boundfield import BoundField
+
+# def apply_patches():
+#     print('Applying patches')
+#     if not getattr(BoundField.css_classes, 'patched', False):
+#         unpatched = BoundField.css_classes
+
+#         def css_classes(self, extra_classes=None):
+#             return unpatched(self, ['form-field'] + (extra_classes or []))
+
+#         BoundField.css_classes = css_classes
+#         BoundField.css_classes.patched = True
+
+def dashboard_view(request):
+    login_form = AuthenticationForm(auto_id="%s")
+    login_form.fields['username'].widget.attrs.update({'autocomplete': 'off', 'css_classes': 'row form-row mb-4'})
+    login_form.fields['password'].widget.attrs.update({'autocomplete': 'off', 'css_classes': 'row form-row mb-4'})
+
+    login_form.id = 'login'
+    login_form.onsubmit = f'submit_login_form(\'{login_form.id}\')'
+    login_form.header = {
+        'icon': 'lock-closed-outline',
+        'heading': _('Login'),
+        'slug': _('Welcome to Warehauser'),
     }
-    return render(request, "core/test.html", context=context)
+    login_form.footer = [{'classlist': 'row form-row center mb-5', 'content': mark_safe('<a id="link-forgot" href="#">Forgot your password?</a>'),},]
+
+    password_reset_form = WarehauserAuthForgotPasswordForm(auto_id="%s")
+    password_reset_form.id = 'password-reset'
+    password_reset_form.onsubmit = f'submit_password_reset_form(\'{password_reset_form.id}\')'
+    password_reset_form.header = {
+        'icon': 'lock-closed-outline',
+        'heading': _('Forgot Password'),
+        'slug': _('Let\'s fix that'),
+    }
+
+    return render(request, "core/dashboard.html", context={'forms': [password_reset_form,login_form,],})
 
 @login_required
 def home_view(request):
@@ -98,79 +120,48 @@ def home_view(request):
 
 # Authentication views
 
+
+
+
+
+
+
 from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login
 from django.contrib import messages
+from django.http import JsonResponse
+from django.contrib.auth import authenticate, login
 from .forms import WarehauserAuthLoginForm
-from .decorators import anonymous_required
 
 @anonymous_required
 def auth_login_view(request):
-    if request.method == 'POST':
-        form = WarehauserAuthLoginForm(request, data=request.POST)
+    if request.method.lower() == 'post':
+        form = WarehauserAuthLoginForm(None, data=request.POST)
         if form.is_valid():
+            user = form.get_user()
+        else:
             username = form.cleaned_data['username']
             password = form.cleaned_data['password']
-            user = authenticate(request, username=username, password=password)
-            if user is not None:
-                login(request, user)
-                # Redirect to a success page or another view
-                return redirect('home_view')
+            if is_valid_email_address(username):
+                user = authenticate(request, email=username, password=password)
             else:
-                # Handle invalid login credentials
-                messages.error(request, 'Invalid username or password.')
+                user = authenticate(request, username=username, password=password)
+
+        if user:
+            login(request, user)
+            next_url = request.POST.get('next')
+            if next_url:
+                # If 'next' URL is provided, return JSON response with redirect URL
+                return JsonResponse({'redirect': next_url}, status=200)
+            else:
+                # If 'next' URL is not provided, return JSON response with home URL
+                return JsonResponse({'redirect': reverse('home_view')}, status=200)
+        else:
+            # Handle invalid login credentials
+            return JsonResponse({'error': 'Invalid credentials',}, status=401)
     else:
         form = WarehauserAuthLoginForm(request)
 
     return render(request, 'core/forms/login.html', {'form': form})
-
-# @anonymous_required
-# def auth_login_view_old(request):
-#     autofocus_field = None
-#     select_text = False
-
-#     if request.method.lower() == 'post':
-#         form = WarehauserAuthLoginForm(request, data=request.POST)
-
-#         is_valid = form.is_valid()
-#         if is_valid:
-#             login(request, form.get_user())
-
-#             # Redirect to a success page or any other view
-#             next_url = request.POST.get('next')
-#             if next_url:
-#                 return redirect(next_url)
-#             else:
-#                 return redirect('home')  # Redirect to home if 'next' is not set
-#         else:
-#             messages.error(request, 'Invalid username or password.')
-#             first_visible_field = form.visible_fields()[0] if form.visible_fields() else None
-#             if first_visible_field and first_visible_field.field.widget.input_type != 'select' and first_visible_field.value():
-#                 autofocus_field = first_visible_field.auto_id  # Autofocus the field by its auto_id
-#                 select_text = True  # Set select_text to True to select all text in the field
-#     else:
-#         form = WarehauserAuthLoginForm(request)
-
-#     template = 'core/form.html'
-#     form.id = 'login-form'
-
-#     context = {
-#         'title': generate_page_title(_('Log In')),
-#         'form': form,
-#         'autofocus_field': autofocus_field,
-#         # 'renderers': {
-#         #     'field_renderer_default': field_renderer_default,
-#         # },
-#         'select_text': select_text,
-#         'title': _('Login'),
-#         'illustration': 'icon ion-ios-locked-outline',
-#         'buttons': [
-#             {'title': _('Login'), 'attrs': generate_button_attributes({'id': 'submit', 'value': 'login', 'type': 'submit',})},
-#             {'title': _('Forgot Password'), 'type': 'href', 'attrs': generate_button_attributes({'id': 'forgot', 'href': 'auth_forgot_password_view', 'class': 'btn btn-secondary col-12',})},
-#         ],
-#     }
-
-#     return render(request, template, context)
 
 def auth_logout_view(request):
     auth_logout(request=request)
@@ -373,11 +364,30 @@ class CreateUserView(generics.CreateAPIView):
     serializer_class = get_user_model()
     permission_classes = [AllowAny]
 
+from rest_framework import viewsets, status
+# from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
+from rest_framework.renderers import JSONRenderer
+from django.utils import timezone
+from django.core.exceptions import ObjectDoesNotExist
+
 class WarehauserBaseViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated, WarehauserPermission,]
-    renderer_classes   = [JSONRenderer,]
-    search_fields      = ['id', 'external_id', 'options__barcodes__contains', 'barcode', 'descr',]
-    lookup_field       = 'id'
+    lookup_field = 'id'
+    permission_classes = [WarehauserPermission,]
+    renderer_classes = [JSONRenderer,]
+    search_fields = ['id', 'external_id', 'options__values__contains', 'value', 'descr', 'owner']
+
+    # API filtering
+    filter_backends = [DjangoFilterBackend, SearchFilter,]
+
+    def _protect_fields(self, data):
+        # Prevent altering id, updated_at, or created_at fields
+        for field in ['id', 'owner', 'updated_at', 'created_at']:
+            if field in data:
+                raise ValidationError(
+                    {'error': _(f'Cannot set autogenerated field \'{field}\'.')}
+                )
 
     def get_permissions(self):
         """
@@ -385,12 +395,36 @@ class WarehauserBaseViewSet(viewsets.ModelViewSet):
         """
         return [permission() for permission in self.permission_classes]
 
-    def create(self, request, *args, **kwargs):
-        self._protect_fields(data=request.data)
-        instance = super().create(request=request, *args, **kwargs)
+    def get_queryset(self):
+        user = self.request.user
 
-        self._grant_all_admin_permissions(user=request.user, instance=instance)
-        return instance
+        # If the user is staff or superuser, they can see all objects
+        if user.is_staff or user.is_superuser:
+            return self.serializer_class.Meta.model.objects.all().order_by('created_at', 'updated_at')
+
+        # Otherwise, only show objects the user has access to
+        return self.serializer_class.Meta.model.objects.filter(owner__in=user.groups.all()).order_by('created_at', 'updated_at')
+
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        self._protect_fields(data)
+
+        # Retrieve the user's group that starts with 'client_'
+        group = filter_owner_groups(request.user.groups).first()
+        if not group:
+            raise ValidationError({'error': _('User is not a member of any client group.')})
+
+        # Set the owner field to the retrieved group
+        data['owner'] = group.id
+
+        # return super().create(request, *args, **kwargs)
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def perform_create(self, serializer):
+        serializer.save()
 
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -401,11 +435,10 @@ class WarehauserBaseViewSet(viewsets.ModelViewSet):
         # Check for field changes
         has_changed = False
         for key, value in data.items():
-            # Check if the instance's current 'key' attribute is a JSONField
             attr = getattr(instance, key, None)
-            if isinstance(attr, JSONField):
+            if isinstance(attr, dict) and isinstance(value, dict):
                 # Update the JSONField attribute
-                json = getattr(instance, key, dict())
+                json = getattr(instance, key, {})
                 json.update(value)
                 setattr(instance, key, json)
                 has_changed = True
@@ -419,12 +452,12 @@ class WarehauserBaseViewSet(viewsets.ModelViewSet):
             instance.save()
 
             return Response(
-                {"message": f"[Update]: {instance.__class__.__name__} {instance.id} updated."},
+                {'message': _(f'[Update]: {instance.__class__.__name__} {instance.id} updated.')},
                 status=status.HTTP_200_OK
             )
 
         return Response(
-            {"message": f"[Update]: {instance.__class__.__name__} {instance.id} no change."},
+            {'message': _(f'[Update]: {instance.__class__.__name__} {instance.id} no change.')},
             status=status.HTTP_200_OK
         )
 
@@ -439,66 +472,22 @@ class WarehauserBaseViewSet(viewsets.ModelViewSet):
             return Response(data={'message': e.detail}, status=e.code)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    # def list(self, request):
-    #     return super().list(request=request)
-
-    # def retrieve(self, request, *args, **kwargs):
-    #     pass
-
-    def _protect_fields(self, data):
-        # Prevent altering id, updated_at, or created_at fields
-        disallowed_fields = ['id', 'updated_at', 'created_at']
-        for field in disallowed_fields:
-            if field in data:
-                return Response(
-                    {"error": f"Cannot change autogenerated field '{field}'."},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-    def _grant_all_admin_permissions(self, user, instance):
-        # Give client admin users full permissions for object.
-        codename = type(instance).__name__.lower()
-        groups = user.groups.filter(name__startswith='warehauser_', name__endswith='_admin')
-        if groups.exists():
-            for group in groups:
-                assign_perm(f'view_{codename}', group, instance)
-                assign_perm(f'change_{codename}', group, instance)
-                assign_perm(f'delete_{codename}', group, instance)
-
 class WarehauserDefinitionViewSet(WarehauserBaseViewSet):
-    def create(self, request, *args, **kwargs):
-        instance = super().create(request=request, *args, **kwargs)
-        codename = type(instance).__name__.lower()
-
-        # Definition objects only allow non admin users to view.
-        groups = request.user.groups.filter(name__startswith='warehauser_', name__endswith='_user')
-        if groups.exists():
-            for group in groups:
-                assign_perm(f'view_{codename}', group, instance)
-
-        serializer = self.serializer_class(instance)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    @action(detail=True, methods=['post'])
-    def do_spawn(self, request, *args, **kwargs):
+    def _do_spawn(self, request, *args, **kwargs):
         dfn = self.get_object()
         data = request.data
 
         instance = dfn.create_instance(data)
         instance.save()
 
-        self._grant_all_admin_permissions(user=request.user, instance=instance)
-
-        # Give client users full permissions for instance
-        codename = type(instance).__name__.lower()
-        groups = request.user.groups.filter(name__startswith='warehauser_', name__endswith='_user')
-        if groups.exists():
-            for group in groups:
-                assign_perm(f'view_{codename}', group, instance)
-                assign_perm(f'change_{codename}', group, instance)
-                assign_perm(f'delete_{codename}', group, instance)
-
         return instance
+
+    @action(detail=True, methods=['post'])
+    def do_spawn(self, request, *args, **kwargs):
+        instance = self._do_spawn(request=request)
+
+        serializer = self.serializer_class(instance)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class WarehauserInstanceViewSet(WarehauserBaseViewSet):
     def create(self, request, *args, **kwargs):
@@ -509,49 +498,18 @@ class WarehauserInstanceViewSet(WarehauserBaseViewSet):
 
 class WarehauseDefViewSet(WarehauserDefinitionViewSet):
     serializer_class = WarehauseDefSerializer
-
-    # API filtering
-    filter_backends = [DjangoFilterBackend, SearchFilter,]
     filterset_class = WarehauseDefFilter
-
-    def get_queryset(self):
-        user = self.request.user
-        queryset = super().get_queryset()
-        return get_objects_for_user(user, 'core.warehausedef', klass=queryset).order_by('created_at', 'updated_at',)
-
-    @action(detail=True, methods=['post'])
-    def do_spawn(self, request, *args, **kwargs):
-        instance = super().do_spawn(request, *args, **kwargs)
-
-        serializer = self.serializer_class(instance)
-        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class WarehauseViewSet(WarehauserInstanceViewSet):
     serializer_class = WarehauseSerializer
-
-    # API filtering
-    filter_backends = [DjangoFilterBackend, SearchFilter,]
     filterset_class = WarehauseFilter
-
-    def get_queryset(self):
-        user = self.request.user
-        queryset = super().get_queryset()
-        return get_objects_for_user(user, 'core.warehause', klass=queryset).order_by('created_at', 'updated_at',)
 
 
 # PRODUCT viewsets
 
 class ProductDefViewSet(WarehauserDefinitionViewSet):
     serializer_class = ProductDefSerializer
-
-    # API filtering
-    filter_backends = [DjangoFilterBackend, SearchFilter,]
     filterset_class = ProductDefFilter
-
-    def get_queryset(self):
-        user = self.request.user
-        queryset = super().get_queryset()
-        return get_objects_for_user(user, 'core.productdef', klass=queryset).order_by('created_at', 'updated_at',)
 
     @action(detail=True, methods=['get'], url_path='warehauses')
     def get_warehauses(self, request, id=None):
@@ -560,43 +518,20 @@ class ProductDefViewSet(WarehauserDefinitionViewSet):
         serializer = WarehauseSerializer(warehauses, many=True)
         return Response(serializer.data)
 
-    @action(detail=True, methods=['post'])
-    def do_spawn(self, request, *args, **kwargs):
-        instance = super().do_spawn(request, *args, **kwargs)
-
-        serializer = self.serializer_class(instance)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
 class ProductViewSet(WarehauserInstanceViewSet):
     serializer_class = ProductSerializer
-
-    # API filtering
-    filter_backends = [DjangoFilterBackend, SearchFilter,]
     filterset_class = ProductFilter
-
-    def get_queryset(self):
-        user = self.request.user
-        queryset = super().get_queryset()
-        return get_objects_for_user(user, 'core.product', klass=queryset).order_by('created_at', 'updated_at',)
 
 
 # EVENT viewsets
 
 class EventDefViewSet(WarehauserDefinitionViewSet):
     serializer_class = EventDefSerializer
-
-    # API filtering
-    filter_backends = [DjangoFilterBackend, SearchFilter,]
     filterset_class = EventDefFilter
-
-    def get_queryset(self):
-        user = self.request.user
-        queryset = super().get_queryset()
-        return get_objects_for_user(user, 'core.eventdef', klass=queryset).order_by('created_at', 'updated_at',)
 
     @action(detail=True, methods=['post'])
     def do_spawn(self, request, *args, **kwargs):
-        instance = super().do_spawn(request, *args, **kwargs)
+        instance = super()._do_spawn(request=request)
 
         if not instance.is_batched:
             # process immediately
@@ -609,12 +544,4 @@ class EventDefViewSet(WarehauserDefinitionViewSet):
 
 class EventViewSet(WarehauserInstanceViewSet):
     serializer_class = EventSerializer
-
-    # API filtering
-    filter_backends = [DjangoFilterBackend, SearchFilter,]
     filterset_class = EventFilter
-
-    def get_queryset(self):
-        user = self.request.user
-        queryset = super().get_queryset()
-        return get_objects_for_user(user, 'core.event', klass=queryset).order_by('created_at', 'updated_at',)

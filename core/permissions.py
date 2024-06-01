@@ -21,38 +21,17 @@ from rest_framework.permissions import BasePermission, IsAuthenticated
 
 class WarehauserPermission(BasePermission):
     def has_permission(self, request, view):
-        method:str = request.method
-        user:User  = request.user
+        user:User = request.user
+        return user and user.is_authenticated
 
-        model_name = view.queryset.model.__name__.lower()
-
-        if method in ['GET']:
-            return True
-        if method in ['POST']:
-            return user.has_perm(f'core.add_{model_name}')
-        if method in ['PUT', 'PATCH']:
-            return user.has_perm(f'core.change_{model_name}')
-        if method in ['DELETE']:
-            return user.has_perm(f'core.delete_{model_name}')
-        return False
-
-    def has_object_permission(self, request, view, obj):         
-        method:str = request.method
-        user:User  = request.user
-
-        codename = type(obj).__name__.lower()
-
-        if method in ['GET']:
-            return user.is_staff or user.has_perm(f'view_{codename}', obj)
-        if method in ['PUT', 'PATCH']:
-            return user.has_perm(f'change_{codename}', obj)
-        if method in ['DELETE']:
-            return user.has_perm(f'delete_{codename}', obj)
-        return False
+    def has_object_permission(self, request, view, obj):
+        user = request.user
+        return user.is_staff or user.is_superuser or user.groups.filter(id=obj.owner.id).exists()
 
 class IsSuperuser(IsAuthenticated):
     """
     Allows access only to superusers.
     """
     def has_permission(self, request, view):
-        return request.user and request.user.is_authenticated and request.user.is_superuser
+        user = request.user
+        return user and user.is_authenticated and user.is_superuser

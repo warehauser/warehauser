@@ -23,6 +23,7 @@ from db_mutex.db_mutex import db_mutex
 from django.db import models
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.forms.models import model_to_dict
 from django.utils import timezone
 from django.utils.translation import gettext as _
@@ -42,22 +43,20 @@ class WarehauserAbstractModel(models.Model):
 
     Attributes:
         external_id (string):   convenience placeholder for external system id for this model object. Not used by any warehauser code.
+        key         (string):   human readable description field naming this model object. Default is None.
         created_at  (datetime): date and time this model object was first saved to the database. Auto generated and not editable.
         updated_at  (datetime): date and time this model object was last saved to the database. Auto generated at save time.
         options     (json):     optional dictionary of key value pairs of arbitrary data.
-        barcode     (string):   barcode string that identifies this model object. If there are more than one barcode, it is best practice to add those to the options attribute (above).
-        descr       (string):   human readable description field naming this model object. Default is None.
         is_virtual  (bool):     True if this model object should have status set to DESTROY after first use is complete. Default is False.
 
         callback    (ModelCallback): optional delegate object used to make various pre and post checks of model object function calls.
     """
     id          = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    descr       = models.CharField(max_length=CHARFIELD_MAX_LENGTH, null=True, blank=True, default=None,)
     external_id = models.CharField(max_length=CHARFIELD_MAX_LENGTH, null=True, blank=True,)
+    key         = models.CharField(max_length=CHARFIELD_MAX_LENGTH, null=True, blank=True, default=None,)
     created_at  = models.DateTimeField(auto_now_add=True, null=False, blank=False, editable=False,)
     updated_at  = models.DateTimeField(auto_now_add=False, null=True, blank=True,)
     options     = models.JSONField(null=True, blank=True,)
-    barcode     = models.CharField(max_length=CHARFIELD_MAX_LENGTH, null=False, blank=False,)
     is_virtual  = models.BooleanField(null=False, blank=False, default=False,)
 
     _callback   = None
@@ -159,6 +158,9 @@ class WarehauserAbstractModel(models.Model):
         """
         if self._callback is None:
             return
+
+        if not exclude:
+            exclude = list()
 
         for field in [field for field in self._meta.fields if field.name not in exclude]:
             # Generate method name for field
@@ -304,7 +306,10 @@ class WarehauserAbstractDefinitionModel(WarehauserAbstractModel):
 class WarehauserAbstractInstanceModel(WarehauserAbstractModel):
     """
     Abstract parent class for all warehauser core app instance models.
+        value       (string):   value string that identifies this model object. Usually a barcode or an address. If there are more than one value, it is best practice to add those to the options['values'] attribute (above).
     """
+    value       = models.CharField(max_length=CHARFIELD_MAX_LENGTH, null=False, blank=False,)
+
     class Meta:
         abstract = True
 
@@ -347,11 +352,11 @@ class WarehauseFields(models.Model):
 
 class WarehauseDef(WarehauserAbstractDefinitionModel, WarehauseFields):
     """
-    Definition model for Warehauses. Always create Warehause objects through the appropriate WarehauseDef create_instance() method. Note that barcode field has a unique constraint added to this model, so there should be at most one WarehauseDef per barcode.
+    Definition model for Warehauses. Always create Warehause objects through the appropriate WarehauseDef create_instance() method.
 
     Attributes:
-        parent (WarehauseDef): the parent WarehauseDef or None if no parent. Used to conceptually arrange WarehauseDefs into a nesting hierarchy, ignored otherwise.
-        status (int):          the status of this WarehauseDef with available choices of core.status.WAREHAUSEDEF_STATUS_CODES.
+        owner  (Group): the group (or client) that owns this data.
+        status (int):   the status of this WarehauseDef with available choices of core.status.WAREHAUSEDEF_STATUS_CODES.
 
     Example:
         ```
@@ -362,7 +367,7 @@ class WarehauseDef(WarehauserAbstractDefinitionModel, WarehauseFields):
         model = dfn.create_instance(data=data)
         ```
     """
-    parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=True,)
+    owner       = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='warehausedefs', null=False, blank=False,)
     status      = models.IntegerField(choices=WAREHAUSEDEF_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
 
     def create_instance(self, data:dict=None, callback=None):
@@ -379,9 +384,6 @@ class WarehauseDef(WarehauserAbstractDefinitionModel, WarehauseFields):
 
     class Meta(WarehauserAbstractDefinitionModel.Meta):
         abstract = False
-        constraints = [
-            models.UniqueConstraint(fields=['barcode'], name='constraint_unique_warehauserdef_barcode')
-        ]
         verbose_name = 'warehausedef'
         verbose_name_plural = 'warehausedefs'
 
@@ -390,6 +392,7 @@ class Warehause(WarehauserAbstractInstanceModel, WarehauseFields):
     Warehause instance class.
 
     Attributes:
+        owner     (Group):        the group (or client) that owns this data.
         parent    (Warehause):    parent Warehause or None if no parent.
         status    (int):          status of this Warehause with available choices of core.status.WAREHAUSE_STATUS_CODES.
         dfn       (WarehauseDef): WarehauseDef used to create this Warehause object.
@@ -397,6 +400,7 @@ class Warehause(WarehauserAbstractInstanceModel, WarehauseFields):
         stock_min (float):        minimum amount of Product that is required in this Warehause. If the quantity decreases past this value then request a replenishment. None if product_def is None.
         stock_max (float):        maximum amount of Product that is allowed in this Warehause. None if product_def is None.
     """
+    owner       = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='warehauses', null=False, blank=False,)
     parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=True,)
     status      = models.IntegerField(choices=WAREHAUSE_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
     dfn         = models.ForeignKey('WarehauseDef', on_delete=models.CASCADE, related_name='instances', null=False, blank=False, editable=False,)
@@ -581,10 +585,10 @@ class ProductFields(models.Model):
 
 class ProductDef(WarehauserAbstractDefinitionModel, ProductFields):
     """
-    Definition model for Products. Always create Product objects through the appropriate ProductDef create_instance() method. Note that barcode field has a unique constraint added to this model, so there should be at most one ProductDef per barcode.
+    Definition model for Products. Always create Product objects through the appropriate ProductDef create_instance() method.
 
     Attributes:
-        parent     (ProductDef):      the parent ProductDef or None if no parent. Used to conceptually arrange ProductDefs into a nesting hierarchy, ignored otherwise.
+        owner      (Group):           the group (or client) that owns this data.
         status     (int):             the status of this ProductDef with available choices of core.status.PRODUCT_STATUS_CODES.
         warehauses (list(Warehause)): a list of appropriate Warehauses this ProductDef can be stored. If none are listed then store at any Warehause that returns is_storage True. All Warehauses listed mean this ProductDef can be stored at that
                                       Warehause and all children Warehauses that return is_storage True
@@ -598,7 +602,7 @@ class ProductDef(WarehauserAbstractDefinitionModel, ProductFields):
         model = dfn.create_instance(data=data)
         ```
     """
-    parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=True,)
+    owner       = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='productdefs', null=False, blank=False,)
     status      = models.IntegerField(choices=PRODUCTDEF_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
     warehauses  = models.ManyToManyField(Warehause)
 
@@ -609,9 +613,6 @@ class ProductDef(WarehauserAbstractDefinitionModel, ProductFields):
 
     class Meta(WarehauserAbstractDefinitionModel.Meta):
         abstract = False
-        constraints = [
-            models.UniqueConstraint(fields=['barcode'], name='constraint_unique_productdef_barcode')
-        ]
         verbose_name = 'productdef'
         verbose_name_plural = 'productdefs'
 
@@ -620,6 +621,7 @@ class Product(WarehauserAbstractInstanceModel, ProductFields):
     Product instance class.
 
     Attributes:
+        owner      (Group):      the group (or client) that owns this data.
         parent     (Product):    parent Product or None if no parent. Used to conceptually arrange Products into a nesting hierarchy, ignored otherwise.
         status     (int):        status of this Product with available choices of core.status.PRODUCT_STATUS_CODES.
         dfn        (ProductDef): ProductDef used to create this Product object.
@@ -629,6 +631,7 @@ class Product(WarehauserAbstractInstanceModel, ProductFields):
         expires    (Date):       date this product expires. If None then this product has infinite shelf life. Default None.
         is_damaged (bool):       True if this product is damaged. Default False.
     """
+    owner       = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='products', null=False, blank=False,)
     parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=True,)
     status      = models.IntegerField(choices=PRODUCT_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
     dfn         = models.ForeignKey('ProductDef', on_delete=models.CASCADE, related_name='instances', null=False, blank=False, editable=False,)
@@ -884,11 +887,11 @@ class EventFields(models.Model):
 
 class EventDef(WarehauserAbstractDefinitionModel, EventFields):
     """
-    Definition model for Events. Always create Event objects through the appropriate EventDef create_instance() method. Note that barcode field has a unique constraint added to this model, so there should be at most one EventDef per barcode.
+    Definition model for Events. Always create Event objects through the appropriate EventDef create_instance() method.
 
     Attributes:
-        parent (EventDef): the parent EventDef or None if no parent. Used to conceptually arrange EventDefs into a nesting hierarchy, ignored otherwise.
-        status (int):      the status of this EventDef with available choices of core.status.EVENTDEF_STATUS_CODES.
+        owner  (Group): the group (or client) that owns this data.
+        status (int):   the status of this EventDef with available choices of core.status.EVENTDEF_STATUS_CODES.
 
     Example:
         ```
@@ -899,7 +902,7 @@ class EventDef(WarehauserAbstractDefinitionModel, EventFields):
         model = dfn.create_instance(data=data)
         ```
     """
-    parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=True,)
+    owner       = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='eventdefs', null=False, blank=False,)
     status      = models.IntegerField(choices=EVENTDEF_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
 
     def create_instance(self, data:dict = None, callback:ModelCallback = None):
@@ -909,9 +912,6 @@ class EventDef(WarehauserAbstractDefinitionModel, EventFields):
 
     class Meta(WarehauserAbstractDefinitionModel.Meta):
         abstract = False
-        constraints = [
-            models.UniqueConstraint(fields=['barcode'], name='constraint_unique_eventdef_barcode')
-        ]
         verbose_name = 'eventdef'
         verbose_name_plural = 'eventdefs'
 
@@ -920,6 +920,7 @@ class Event(WarehauserAbstractInstanceModel, EventFields):
     Event instance class.
 
     Attributes:
+        owner      (Group):     the group (or client) that owns this data.
         parent     (Event):     parent Event or None if no parent. Used to conceptually arrange Events into a nesting hierarchy, ignored otherwise.
         status     (int):       status of this Event with available choices of core.status.EVENT_STATUS_CODES.
         dfn        (EventDef):  EventDef used to create this Event object.
@@ -928,6 +929,7 @@ class Event(WarehauserAbstractInstanceModel, EventFields):
         proc_start (DateTime):  timestamp this event started processing.
         proc_end   (DateTime):  timestamp this event ended processing.
     """
+    owner       = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='events', null=False, blank=False,)
     parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=True,)
     status      = models.IntegerField(choices=EVENT_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
     dfn         = models.ForeignKey('EventDef', on_delete=models.CASCADE, related_name='instances', null=False, blank=False, editable=False,)

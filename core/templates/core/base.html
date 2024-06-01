@@ -1,5 +1,5 @@
-{% load static %}{% load renderers %}<!doctype html>
-<html lang="en" version="1.0">
+{% load static %}{% load i18n %}<!doctype html>
+<html lang="en" version="1.0" data-bs-theme="dark">
 <head>
     <meta charset="utf-8"/>
     <title>{{ title }}</title>
@@ -10,28 +10,87 @@
     <link rel="stylesheet" href="{% static 'core/css/warehauser.css' %}"/>
 </head>
 <body>
-    <div class="session-info">
-        <div id="user-info" class="user-info opaque">
-            Welcome <a id="user-settings" href="">warehauser</a>
+    <header id="header" class="p-0 text-bg-dark sticky-top">
+        <div class="container-lg">
+            <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+                <div class="container-fluid">
+                    <a class="navbar-brand" href="/">Warehauser</a>
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item">
+{% if user.is_authenticated %}{% if LANGUAGE_BIDI %}
+                            <a class="nav-text" href="{% url 'auth_user_profile_view' %}">{{ user.username }}</a>
+                            <span id="welcomeText" class="navbar-text">{{ _('Welcome,') }}</span>
+{% else %}
+                            <span id="welcomeText" class="navbar-text">{{ _('Welcome,') }}</span>
+                            <a class="nav-text" href="{% url 'auth_user_profile_view' %}">{{ user.username }}</a>
+{% endif %}
+                            <span id="session-info-divider" class="divider"></span>
+                            <a class="nav-text" href="{% url 'auth_logout_view' %}" title="Logout"><ion-icon id="auth-user-icon" name="lock-open-outline" class="session-icon md hydrated"></ion-icon></a>
+{% else %}{% if LANGUAGE_BIDI %}
+                            <span class="navbar-text">{{ _('Guest') }}</span>
+                            <span id="welcomeText" class="navbar-text">{{ _('Welcome,') }}</span>
+{% else %}
+                            <span id="welcomeText" class="navbar-text">{{ _('Welcome,') }}</span>
+                            <span class="navbar-text">{{ _('Guest') }}</span>
+{% endif %}
+                            <span id="session-info-divider" class="divider"></span>
+                            <ion-icon id="guest-user-icon" name="lock-closed-outline" class="session-icon md hydrated"></ion-icon>
+{% endif %}
+                        </li>
+                    </ul>
+                </div>
+            </nav>
         </div>
-        <span id="session-info-divider" class="divider opaque"></span>
-        <div class="lock-info">
-            <ion-icon id="lock-open-icon" name="lock-open-outline" class="session-icon"></ion-icon>
-        </div>
-    </div>
-    <div class="content">
-    </div>
+    </header>
+    <main>
+{% block content %}{% endblock %}
+    </main>
+    <footer id="footer" class="fixed-bottom text-bg-dark bg-dark">
+        <div class="container-lg d-flex justify-content-center align-items-center">{{ _('Welcome to Warehauser') }}</div>
+    </footer>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        window.onload = async function() {
-            const body = document.body;
-        
-            load_content('{{ content }}')
-        
-            let forms = document.querySelectorAll('form');
-            forms.forEach(form => {
-                init_form(form);
-            });
-        };
+$(document).ready(function() {
+    // Add listeners to all the required fields
+    $('#form-login input[required]').on('input', function() {
+        var formIsValid = true;
+        $('#form-login input[required]').each(function() {
+            if ($(this).val() === '') {
+                formIsValid = false;
+                return false; // Exit the loop early if any field is empty
+            }
+        });
+
+        // Enable or disable the submit button based on form validity
+        $('#submit').prop('disabled', !formIsValid);
+    });
+
+    // Enable tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Function to toggle visibility of "Welcome" text based on window width
+    function toggleWelcomeText() {
+        var windowWidth = $(window).width();
+        var navbarTriggerWidth = 576;
+
+        if (windowWidth > navbarTriggerWidth) {
+            $('#welcomeText').show(); // Show the "Welcome" text
+        } else {
+            $('#welcomeText').hide(); // Hide the "Welcome" text
+        }
+    }
+
+    // Call the function on page load
+    toggleWelcomeText();
+
+    // Call the function on window resize
+    $(window).on('resize', function() {
+        toggleWelcomeText();
+    });
+});
     </script>
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
