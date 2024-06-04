@@ -29,3 +29,7 @@ def pop_key_from_attrs(field, key):
 @register.filter
 def get_value_by_key(d: dict, key: str):
     return d.get(key, None)
+
+@register.simple_tag
+def setvar(val=None):
+    return val

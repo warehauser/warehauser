@@ -28,6 +28,8 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 
+from django.utils.translation import gettext_lazy as _
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -72,6 +74,7 @@ INSTALLED_APPS = [
     'django_extensions',
     'db_mutex',
     'core',
+    'web',
     'corsheaders',
 ]
 
@@ -81,6 +84,7 @@ CRISPY_TEMPLATE_PACK = 'bootstrap5'
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -173,16 +177,6 @@ AUTHENTICATION_BACKENDS = (
     'core.backends.WarehauserEmailOrUsernameAuthBackend',
 )
 
-# Internationalization
-# https://docs.djangoproject.com/en/5.0/topics/i18n/
-
-LANGUAGE_CODE = 'en-us'
-LANGUAGE_BIDI = False  # Set to True for RTL languages, False otherwise
-
-TIME_ZONE = 'Australia/Sydney'
-USE_I18N = True
-USE_TZ = True
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
@@ -196,7 +190,7 @@ AUTH_USER_MODEL = 'auth.User'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
-LOGIN_URL = 'auth_login_view'
+LOGIN_URL = 'home_view'
 
 # Logging settings
 
@@ -262,3 +256,23 @@ LOGGING = {
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWS_CREDENTIALS = True
+
+# Internationalization
+# https://docs.djangoproject.com/en/5.0/topics/i18n/
+
+LOCALE_PATHS = [
+    BASE_DIR / 'locale',  # Adjust this path if your locale directory is elsewhere
+]
+
+LANGUAGES = [
+    ('en', _('English')),
+    ('ar', _('Arabic')),
+]
+
+LANGUAGE_CODE = 'en'
+LANGUAGE_BIDI = False  # Set to True for RTL languages, False otherwise
+USE_I18N = True
+USE_L10N = True
+USE_TZ = True
+
+TIME_ZONE = 'Australia/Sydney'

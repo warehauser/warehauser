@@ -1,5 +1,5 @@
-{% load filters %}<div class="card" id="card-{{ form.id }}">
-    <form method="post" id="form-{{ form.id }}"{% if form.onsubmit %} onsubmit="javascript:{{ form.onsubmit }};return false;"{% endif %}>
+{% load i18n filters %}<div class="card" id="card-{{ form.id }}"{% if form.card and form.card|get_value_by_key:'classList' %} class="{{ form.card|get_value_by_key:'classList' }}"{% endif %}>
+    <form method="post" id="{{ form.id }}"{% if form.onsubmit %} onsubmit="javascript:{{ form.onsubmit }};return false;"{% endif %}>
         <div class="text-center">
             <ion-icon name="{{form.header|get_value_by_key:'icon'}}" class="form-icon mt-5"></ion-icon>
             <h2>{{ form.header|get_value_by_key:'heading' }}</h2>
@@ -15,7 +15,7 @@
             {{ form.as_div }}
             <div class="row form-row mb-4">
                 <div class="button-row">
-                    <button type="submit" value="login" class="btn btn-primary col-12" disabled="true">Login</button>
+                    <button type="submit" value="login" class="btn btn-primary col-12" disabled="true">{% trans 'Login' %}</button>
                 </div>
             </div>
         </div>

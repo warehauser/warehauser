@@ -27,14 +27,15 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
-from django.core.mail import send_mail
-from django.db.models import JSONField
+# from django.core.mail import send_mail
+# from django.db.models import JSONField
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.templatetags.static import static
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext as _
+from django.utils import translation
 
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -53,8 +54,6 @@ from .models import *
 from .permissions import *
 from .serializers import *
 from .utils import *
-
-from .utils import generate_otp_code, is_valid_email_address
 
 BASE_TITLE = f'Warehauser - {_("Your warehouse run smoothly")}'
 
@@ -86,12 +85,22 @@ def generate_button_attributes(attrs:dict) -> dict:
 #         BoundField.css_classes = css_classes
 #         BoundField.css_classes.patched = True
 
-def dashboard_view(request):
+
+
+
+def home_view(request):
+
+    # Save the current language
+    current_language = translation.get_language()
+
+    # Set the language to Arabic
+    translation.activate('ar')
+
     login_form = AuthenticationForm(auto_id="%s")
     login_form.fields['username'].widget.attrs.update({'autocomplete': 'off', 'css_classes': 'row form-row mb-4'})
     login_form.fields['password'].widget.attrs.update({'autocomplete': 'off', 'css_classes': 'row form-row mb-4'})
 
-    login_form.id = 'login'
+    login_form.id = 'form-login'
     login_form.onsubmit = f'submit_login_form(\'{login_form.id}\')'
     login_form.header = {
         'icon': 'lock-closed-outline',
@@ -101,18 +110,35 @@ def dashboard_view(request):
     login_form.footer = [{'classlist': 'row form-row center mb-5', 'content': mark_safe('<a id="link-forgot" href="#">Forgot your password?</a>'),},]
 
     password_reset_form = WarehauserAuthForgotPasswordForm(auto_id="%s")
-    password_reset_form.id = 'password-reset'
+    password_reset_form.id = 'form-password-reset'
+    password_reset_form.card = {
+        'classList': 'invisible',
+        'onload': mark_safe('animate_move_element_dismiss_right("card-form-password-reset",0,"linear")'),
+    }
     password_reset_form.onsubmit = f'submit_password_reset_form(\'{password_reset_form.id}\')'
     password_reset_form.header = {
         'icon': 'lock-closed-outline',
         'heading': _('Forgot Password'),
         'slug': _('Let\'s fix that'),
     }
+    print(f'Current Language: {translation.get_language()}')
+    print(_('Stuff here'))
 
-    return render(request, "core/dashboard.html", context={'forms': [password_reset_form,login_form,],})
+    context = {
+        'title': generate_page_title('Welcome'),
+        'forms': [password_reset_form, login_form,],
+    }
+    print(context['title'])
+
+    response = render(request, "core/dashboard.html", context=context)
+
+    # Revert back to the original language
+    translation.activate(current_language)
+
+    return response
 
 @login_required
-def home_view(request):
+def home_view2(request):
     context = {
         'title': BASE_TITLE
     }
@@ -127,7 +153,6 @@ def home_view(request):
 
 
 from django.shortcuts import render, redirect
-from django.contrib import messages
 from django.http import JsonResponse
 from django.contrib.auth import authenticate, login
 from .forms import WarehauserAuthLoginForm
@@ -147,14 +172,9 @@ def auth_login_view(request):
                 user = authenticate(request, username=username, password=password)
 
         if user:
+            # login user
             login(request, user)
-            next_url = request.POST.get('next')
-            if next_url:
-                # If 'next' URL is provided, return JSON response with redirect URL
-                return JsonResponse({'redirect': next_url}, status=200)
-            else:
-                # If 'next' URL is not provided, return JSON response with home URL
-                return JsonResponse({'redirect': reverse('home_view')}, status=200)
+            return JsonResponse({'user': user.username}, status=200)
         else:
             # Handle invalid login credentials
             return JsonResponse({'error': 'Invalid credentials',}, status=401)
@@ -165,7 +185,7 @@ def auth_login_view(request):
 
 def auth_logout_view(request):
     auth_logout(request=request)
-    return redirect('auth_login_view')
+    return redirect('home_view')
 
 @login_required
 def auth_user_profile_view(request):
@@ -363,14 +383,6 @@ class CreateUserView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = get_user_model()
     permission_classes = [AllowAny]
-
-from rest_framework import viewsets, status
-# from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import ValidationError
-from rest_framework.response import Response
-from rest_framework.renderers import JSONRenderer
-from django.utils import timezone
-from django.core.exceptions import ObjectDoesNotExist
 
 class WarehauserBaseViewSet(viewsets.ModelViewSet):
     lookup_field = 'id'

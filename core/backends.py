@@ -21,8 +21,9 @@ from .utils import is_valid_email_address
 
 class WarehauserEmailOrUsernameAuthBackend(ModelBackend):
     def authenticate(self, request, username=None, password=None, **kwargs):
+        print('core.backends.WarehauserEmailOrUsernameAuthBackend.authenticate(username,password) START.')
         if username is None or password is None:
-            return  # If either username or password is None, authentication cannot proceed
+            return None  # If either username or password is None, authentication cannot proceed
         
         # Check if the username is a valid email address
         is_email = is_valid_email_address(username)

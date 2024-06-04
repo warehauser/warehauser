@@ -21,8 +21,8 @@
     --form-icon-dimension: 70px;
     --login-icon-dimension: calc(var(--form-icon-dimension) * var(--icon-scale-factor));
 
-    --animate-time: 500ms;
-    --animate-time-quick: 200ms;
+    /* --animate-time: 500ms;
+    --animate-time-quick: 200ms; */
 
     color: var(--color-default);
 }
@@ -105,6 +105,16 @@ a.nav-link:hover
     outline: none;
     text-decoration: none;
     color: var(--color-icons);
+}
+
+a.disabled {
+    pointer-events: none; /* Prevent clicking */
+    cursor: text; /* Change the cursor to indicate it is not clickable */
+    text-decoration: none; /* Optionally, remove the underline */
+}
+
+a.disabled ion-icon {
+    cursor: pointer;
 }
 
 .card-container {
@@ -594,8 +604,7 @@ a:not(.btn):focus {
     transform: translate(var(--deltaX), var(--deltaY));
 }
 
-#card-login {
-    /* margin-top: 50px; */
+#card-form-login, #card-form-password-reset {
     width: 360px;
     max-width: 400px;
 }

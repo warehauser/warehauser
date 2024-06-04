@@ -68,32 +68,32 @@ class Command(BaseCommand):
             else:
                 group.delete()
                 if output_json:
-                    response = {'message': _('Client \'%s\' deleted successfully.') % client_name}
+                    response = {'message': _('Client \'%(client_name)s\' deleted successfully.') % ({'client_name': client_name})}
                     self.stdout.write(json.dumps(response, indent=4))
                 else:
-                    self.stdout.write(self.style.SUCCESS(_('Client \'%s\' deleted successfully.') % client_name))
+                    self.stdout.write(self.style.SUCCESS(_('Client \'%(client_name)s\' deleted successfully.') % ({'client_name': client_name})))
         except Group.DoesNotExist:
             if output_json:
                 response = {'error': _('Client \'%s\' does not exist.') % client_name}
                 self.stdout.write(json.dumps(response, indent=4))
             else:
-                self.stdout.write(self.style.ERROR(_('Client \'%s\' does not exist.') % client_name))
+                self.stdout.write(self.style.ERROR(_('Client \'%s\' does not exist.') % ({'client_name': client_name})))
 
     def delete_client(self, client_name, output_json=False):
         try:
             group = Group.objects.get(name=f'client_{client_name}')
             group.delete()
             if output_json:
-                response = {'message': _('Client \'%s\' deleted successfully.') % client_name}
+                response = {'message': _('Client \'%(client_name)s\' deleted successfully.') % ({'client_name': client_name})}
                 self.stdout.write(json.dumps(response, indent=4))
             else:
-                self.stdout.write(self.style.SUCCESS(_('Client \'%s\' deleted successfully.') % client_name))
+                self.stdout.write(self.style.SUCCESS(_('Client \'%(client_name)s\' deleted successfully.') % ({'client_name': client_name})))
         except Group.DoesNotExist:
             if output_json:
-                response = {'error': _('Client \'%s\' does not exist.') % client_name}
+                response = {'error': _('Client \'%(client_name)s\' does not exist.') % ({'client_name': client_name})}
                 self.stdout.write(json.dumps(response, indent=4))
             else:
-                self.stdout.write(self.style.ERROR(_('Client \'%s\' does not exist.') % client_name))
+                self.stdout.write(self.style.ERROR(_('Client \'%(client_name)s\' does not exist.') % ({'client_name': client_name})))
 
     def create_or_show_client_info(self, client_name, output_json=False):
         try:
@@ -103,17 +103,17 @@ class Command(BaseCommand):
                 response = {'client': client_name, 'members': list(users)}
                 self.stdout.write(json.dumps(response, indent=4))
             else:
-                self.stdout.write(self.style.SUCCESS(_('Client \'%s\' members: %s') % (client_name, ', '.join(users))))
+                self.stdout.write(self.style.SUCCESS(_('Client \'%(client_name)s\' members: %(members)s') % ({'client_name': client_name, 'members':  ', '.join(users)})))
         except Group.DoesNotExist:
             self.create_client(client_name, output_json)
 
     def create_client(self, client_name, output_json=False):
         group = Group.objects.create(name=f'client_{client_name}')
         if output_json:
-            response = {'message': _('Client \'%s\' created successfully.') % client_name}
+            response = {'message': _('Client \'%(client_name)s\' created successfully.') % ({'client_name': client_name})}
             self.stdout.write(json.dumps(response, indent=4))
         else:
-            self.stdout.write(self.style.SUCCESS(_('Client \'%s\' created successfully.') % client_name))
+            self.stdout.write(self.style.SUCCESS(_('Client \'%(client_name)s\' created successfully.') % ({'client_name': client_name})))
 
     def modify_client_users(self, client_name, usernames, remove, output_json=False):
         try:
@@ -125,33 +125,33 @@ class Command(BaseCommand):
                     if remove:
                         user.groups.remove(group)
                         if output_json:
-                            response = {'message': _('Removed user \'%s\' from client \'%s\'.') % (username, client_name)}
+                            response = {'message': _('Removed user \'%(username)s\' from client \'%(client_name)s\'.') % ({'username': username, 'client_name': client_name})}
                             self.stdout.write(json.dumps(response, indent=4))
                         else:
-                            self.stdout.write(self.style.SUCCESS(_('Removed user \'%s\' from client \'%s\'.') % (username, client_name)))
+                            self.stdout.write(self.style.SUCCESS(_('Removed user \'%(username)s\' from client \'%(client_name)s\'.') % ({'username': username, 'client_name': client_name})))
                     else:
                         if not user.groups.exists():
                             user.groups.add(group)
                             if output_json:
-                                response = {'message': _('Added user \'%s\' to client \'%s\'.') % (username, client_name)}
+                                response = {'message': _('Added user \'%(username)s\' to client \'%(client_name)s\'.') % ({'username': username, 'client_name': client_name})}
                                 self.stdout.write(json.dumps(response, indent=4))
                             else:
-                                self.stdout.write(self.style.SUCCESS(_('Added user \'%s\' to client \'%s\'.') % (username, client_name)))
+                                self.stdout.write(self.style.SUCCESS(_('Added user \'%(username)s\' to client \'%(client_name)s\'.') % ({'username': username, 'client_name': client_name})))
                         else:
                             if output_json:
-                                response = {'error': _('User \'%s\' is already a member of another client.') % username}
+                                response = {'error': _('User \'%(username)s\' is already a member of another client.') % ({'username': username})}
                                 self.stdout.write(json.dumps(response, indent=4))
                             else:
-                                self.stdout.write(self.style.ERROR(_('User \'%s\' is already a member of another client.') % username))
+                                self.stdout.write(self.style.ERROR(_('User \'%(username)s\' is already a member of another client.') % ({'username': username})))
                 except User.DoesNotExist:
                     if output_json:
-                        response = {'error': _('User with username \'%s\' does not exist.') % username}
+                        response = {'error': _('User with username \'%(username)s\' does not exist.') % ({'username': username})}
                         self.stdout.write(json.dumps(response, indent=4))
                     else:
-                        self.stdout.write(self.style.ERROR(_('User with username \'%s\' does not exist.') % username))
+                        self.stdout.write(self.style.ERROR(_('User with username \'%(username)s\' does not exist.') % ({'username': username})))
         except Group.DoesNotExist:
             if output_json:
-                response = {'error': _('Client \'%s\' does not exist.') % client_name}
+                response = {'error': _('Client \'%(client_name)s\' does not exist.') % ({'client_name': client_name})}
                 self.stdout.write(json.dumps(response, indent=4))
             else:
-                self.stdout.write(self.style.ERROR(_('Client \'%s\' does not exist.') % client_name))
+                self.stdout.write(self.style.ERROR(_('Client \'%(client_name)s\' does not exist.') % ({'client_name': client_name})))

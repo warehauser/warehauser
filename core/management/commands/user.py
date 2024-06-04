@@ -1,12 +1,24 @@
 import json
+from typing import Callable
 
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User, Group
 from rest_framework.authtoken.models import Token
 from django.utils.translation import gettext as _
-from django.core.exceptions import ObjectDoesNotExist
 
 class Command(BaseCommand):
+    def _output(self, message:str, json:bool = False, key:str = 'message', func:Callable[[str], str] = None):
+        # Provide a default function if none is provided
+        if func is None:
+            func = self.style.SUCCESS
+
+        if json:
+            # Handle JSON output
+            self.stdout.write(json.dumps({key:message}, indent=4))
+        else:
+            # Handle standard output
+            self.stdout.write(func(message))
+
     help = _('Manage user info, create a new user, and add/remove groups from a user.')
 
     def add_arguments(self, parser):
@@ -54,54 +66,36 @@ class Command(BaseCommand):
         try:
             user = User.objects.get(username=username)
         except User.DoesNotExist:
-            if output_json:
-                response = {'error': _('User with username \'%s\' does not exist.') % user.username}
-                self.stdout.write(json.dumps(response, indent=4))
-            else:
-                self.stdout.write(self.style.ERROR(_('User with username \'%s\' does not exist.') % user.username))
+            message = _('User with username \'%(username)s\' does not exist.') % ({'username': user.username})
+            self._output(message=message, json=output_json, key='error', func=self.style.ERROR)
+            return
 
         if create_token:
             if Token.objects.filter(user=user).exists():
                 token = Token.objects.get(user=user)
                 token.delete()
-                if output_json:
-                    response = {'message': _(f'Token deleted successfully for user {user.username}.')}
-                    self.stdout.write(json.dumps(response, indent=4))
-                else:
-                    self.stdout.write(self.style.SUCCESS(_(f'Token deleted successfully for user {user.username}.')))
+                message = _('Token deleted successfully for user \'%(username)s\'.' % ({'username': user.username}))
+                self._output(message=message, json=output_json)
             else:
-                if output_json:
-                    response = {'message': _(f'No token user {user.username} found.')}
-                    self.stdout.write(json.dumps(response, indent=4))
-                else:
-                    self.stdout.write(self.style.SUCCESS(_(f'No token user {user.username} found.')))
+                message = _('No token for user \'%(username)s\' found.' % ({'username': user.username}))
+                self._output(message=message, json=output_json)
             return
 
-        confirm = input(_('Are you sure you want to delete the user \'%s\'? (y/N): ') % username).lower()
+        confirm = input(_('Are you sure you want to delete the user \'%(username)s\'? (y/N): ') % ({'username': user.username})).lower()
         if confirm == 'y':
             self.delete_user(user, output_json)
         else:
-            if output_json:
-                response = {'message': 'Deletion cancelled.'}
-                self.stdout.write(json.dumps(response, indent=4))
-            else:
-                self.stdout.write(self.style.SUCCESS(_('Deletion cancelled.')))
+            self._output(message='Deletion cancelled.', json=output_json)
 
     def delete_user(self, user, output_json=False):
         user.delete()
-        if output_json:
-            response = {'message': _('User \'%s\' deleted successfully.') % user.username}
-            self.stdout.write(json.dumps(response, indent=4))
-        else:
-            self.stdout.write(self.style.SUCCESS(_('User \'%s\' deleted successfully.') % user.username))
+        message = _('User \'%(username)s\' deleted successfully.') % ({'username': user.username})
+        self._output(message=message, json=output_json)
 
     def create_user(self, username, password, email, group_names, create_token=False, output_json=False):
         if User.objects.filter(username=username).exists():
-            if output_json:
-                response = {'error': _('User with username \'%s\' already exists.') % username}
-                self.stdout.write(json.dumps(response, indent=4))
-            else:
-                self.stdout.write(self.style.ERROR(_('User with username \'%s\' already exists.') % username))
+            message = _('User with username \'%(username)s\' already exists.') % ({'username': username})
+            self._output(message=message, json=output_json, key='error', func=self.style.ERROR)
             return
 
         user = User.objects.create_user(username=username, password=password, email=email)
@@ -109,17 +103,11 @@ class Command(BaseCommand):
 
         if create_token:
             token = Token.objects.create(user=user)
-            if output_json:
-                response = {'message': _('Token created successfully for user \'%s\': %s') % (username, token.key)}
-                self.stdout.write(json.dumps(response, indent=4))
-            else:
-                self.stdout.write(self.style.SUCCESS(_('Token created successfully for user \'%s\': %s') % (username, token.key)))
+            message = _('Token created successfully for user \'%(username)s\': %(token)s') % ({'username': username, 'token': token.key})
+            self._output(message=message, json=output_json)
         else:
-            if output_json:
-                response = {'message': _('User \'%s\' created successfully.') % username}
-                self.stdout.write(json.dumps(response, indent=4))
-            else:
-                self.stdout.write(self.style.SUCCESS(_('User \'%s\' created successfully.') % username))
+            message = _('User \'%(username)s\' created successfully.') % ({'username': user.username})
+            self._output(message=message, json=output_json)
 
         if group_names:
             groups = [group.strip() for group in group_names.split(',')]
@@ -132,45 +120,30 @@ class Command(BaseCommand):
             user = User.objects.get(username=username)
             if password:
                 user.set_password(password)
-                if output_json:
-                    response = {'message': _('Password for user \'%s\' updated successfully.') % username}
-                    self.stdout.write(json.dumps(response, indent=4))
-                else:
-                    self.stdout.write(self.style.SUCCESS(_('Password for user \'%s\' updated successfully.') % username))
+                message = _('Password for user \'%(username)s\' updated successfully.') % ({'username': username})
+                self._output(message=message, json=output_json)
 
             if email:
                 user.email = email
 
-                if output_json:
-                    response = {'message': _('Email for user \'%s\' updated successfully.') % username}
-                    self.stdout.write(json.dumps(response, indent=4))
-                else:
-                    self.stdout.write(self.style.SUCCESS(_('Email for user \'%s\' updated successfully.') % username))
+                message = _('Email for user \'%(username)s\' updated successfully.') % ({'username': username})
+                self._output(message=message, json=output_json)
 
             if active is not None:
                 user.is_active = active.lower() == 'true'
-                if output_json:
-                    response = {'message': _('Active status for user \'%s\' set to %s.') % (username, active)}
-                    self.stdout.write(json.dumps(response, indent=4))
-                else:
-                    self.stdout.write(self.style.SUCCESS(_('Active status for user \'%s\' set to %s.') % (username, active)))
+                message = _('Active status for user \'%(username)s\' set to %(active)s.') % {'username': username, 'active': active}
+                self._output(message=message, json=output_json)
 
             user.save()
 
             if create_token:
                 token, created = Token.objects.get_or_create(user=user)
                 if created:
-                    if output_json:
-                        response = {'message': _('Token created successfully for user \'%s\': %s') % (username, token.key)}
-                        self.stdout.write(json.dumps(response, indent=4))
-                    else:
-                        self.stdout.write(self.style.SUCCESS(_('Token created successfully for user \'%s\': %s') % (username, token.key)))
+                    message = _('Token created successfully for user \'%(username)s\': %(token)s') % ({'username': username, 'token': token.key})
+                    self._output(message=message, json=output_json)
                 else:
-                    if output_json:
-                        response = {'message': _('Token already exists for user \'%s\': %s') % (username, token.key)}
-                        self.stdout.write(json.dumps(response, indent=4))
-                    else:
-                        self.stdout.write(self.style.SUCCESS(_('Token already exists for user \'%s\': %s') % (username, token.key)))
+                    message = _('Token for user \'%(username)s\': %(token)s') % ({'username': username, 'token': token.key})
+                    self._output(message=message, json=output_json)
 
             if group_names:
                 groups = [group.strip() for group in group_names.split(',')]
@@ -178,33 +151,22 @@ class Command(BaseCommand):
                     group, created = Group.objects.get_or_create(name=group_name)
                     if remove:
                         user.groups.remove(group)
-                        if output_json:
-                            response = {'message': _('Removed user \'%s\' from group \'%s\'.') % (username, group_name)}
-                            self.stdout.write(json.dumps(response, indent=4))
-                        else:
-                            self.stdout.write(self.style.SUCCESS(_('Removed user \'%s\' from group \'%s\'.') % (username, group_name)))
+                        message = _('Removed user \'%(username)s\' from group \'%(group_name)s\'.') % ({'username': username, 'group_name': group_name})
+                        self._output(message=message, json=output_json)
                     else:
                         user.groups.add(group)
-                        if output_json:
-                            response = {'message': _('Added user \'%s\' to group \'%s\'.') % (username, group_name)}
-                            self.stdout.write(json.dumps(response, indent=4))
-                        else:
-                            self.stdout.write(self.style.SUCCESS(_('Added user \'%s\' to group \'%s\'.') % (username, group_name)))
+                        message = _('Added user \'%(username)s\' to group \'%(group_name)s\'.') % ({'username': username, 'group_name': group_name})
+                        self._output(message=message, json=output_json)
 
             self.show_user_info(username, output_json)
 
         except User.DoesNotExist:
             if output_json:
-                response = {'error': _('User with username \'%s\' does not exist.') % username}
-                self.stdout.write(json.dumps(response, indent=4))
-            else:
-                self.stdout.write(self.style.ERROR(_('User with username \'%s\' does not exist.') % username))
+                message = _('User with username \'%(username)s\' does not exist.') % ({'username': username})
+                self._output(message=message, json=output_json, key='error', func=self.style.ERROR)
         except Group.DoesNotExist:
-            if output_json:
-                response = {'error': _('Group with name \'%s\' does not exist.') % group_name}
-                self.stdout.write(json.dumps(response, indent=4))
-            else:
-                self.stdout.write(self.style.ERROR(_('Group with name \'%s\' does not exist.') % group_name))
+                message = _('Group with name \'%(group_name)s\' does not exist.') % {'group_name': group_name}
+                self._output(message=message, json=output_json, key='error', func=self.style.ERROR)
 
     def show_user_info(self, username, create_token, output_json=False):
         try:
@@ -240,14 +202,8 @@ class Command(BaseCommand):
                         value = self.style.SUCCESS(f'{value}')
                     self.stdout.write(f'{prompt}{value}')
         except User.DoesNotExist:
-            if output_json:
-                response = {'error': _('User with username \'%s\' does not exist.') % username}
-                self.stdout.write(json.dumps(response, indent=4))
-            else:
-                self.stdout.write(self.style.ERROR(_('User with username \'%s\' does not exist.') % username))
+            message = _('User with username \'%(username)s\' does not exist.') % ({'username': username})
+            self._output(message=message, json=output_json, key='error', func=self.style.ERROR)
         except Token.DoesNotExist:
-            if output_json:
-                response = {'error': _('Token for user \'%s\' does not exist.') % username}
-                self.stdout.write(json.dumps(response, indent=4))
-            else:
-                self.stdout.write(self.style.ERROR(_('Token for user \'%s\' does not exist.') % username))
+            message = _('Token for user \'%(username)s\' does not exist.') % ({'username': username})
+            self._output(message=message, json=output_json, key='error', func=self.style.ERROR)

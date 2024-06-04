@@ -68,43 +68,49 @@ function animate_move_element_reveal(id) {
     animate_move_element(element, 0, 0, 'ease-out', animate_move_reveal_end_listener)
 }
 
-function animate_move_element_dismiss_top(id) {
+function animate_move_element_dismiss_top(id,animate_time='500ms',animate_func='ease-in') {
     let element = document.getElementById(id)
     if (!element) {
         return
     }
+
+    element.style.setProperty('--animate-time', animate_time)
 
     // Calculate the new position to move the element off screen at the top by just 1 pixel
     let rect = element.getBoundingClientRect()
     let positionY = 1 - rect.top - rect.height
 
-    animate_move_element(element, 0, positionY, 'ease-in', animate_move_dismiss_end_listener)
+    animate_move_element(element, 0, positionY, animate_func, animate_move_dismiss_end_listener)
 }
 
-function animate_move_element_dismiss_left(id) {
+function animate_move_element_dismiss_left(id,animate_time='500ms',animate_func='ease-in') {
     let element = document.getElementById(id)
     if (!element) {
         return
     }
+
+    element.style.setProperty('--animate-time', animate_time)
 
     // Calculate the new position to move the element off screen at the left by just 1 pixel
     let rect = element.getBoundingClientRect()
     let positionX = 1 - rect.left - rect.width
 
-    animate_move_element(element, positionX, 0, 'ease-in', animate_move_dismiss_end_listener)
+    animate_move_element(element, positionX, 0, animate_func, animate_move_dismiss_end_listener)
 }
 
-function animate_move_element_dismiss_right(id) {
+function animate_move_element_dismiss_right(id,animate_time='500ms',animate_func='ease-in') {
     let element = document.getElementById(id)
     if (!element) {
         return
     }
 
+    element.style.setProperty('--animate-time', animate_time)
+
     // Calculate the new position to move the element off screen at the right by just 1 pixel
     let rect = element.getBoundingClientRect()
-    let positionX = window.innerWidth - rect.right + 1
+    let positionX = window.innerWidth + 1
 
-    animate_move_element(element, positionX, 0, 'ease-in', animate_move_dismiss_end_listener)
+    animate_move_element(element, positionX, 0, animate_func, animate_move_dismiss_end_listener)
 }
 
 async function load_card(id, url) {
@@ -430,7 +436,7 @@ function end_shake_animation(e) {
 }
 
 function shake_form_header(form) {
-    let formHeader = document.getElementById('form-header-icon-' + form.id)
+    let formHeader = form.querySelector('ion-icon')
     formHeader.addEventListener('animationend', end_shake_animation)
     formHeader.classList.add('shake-animation')
 }
@@ -448,6 +454,37 @@ function display_errors(form, b) {
     }
 }
 
+function get_user_language_direction() {
+    const rtlLanguages = ['ar', 'he', 'iw', 'fa', 'ur', 'syc', 'ps', 'ku', 'yi', 'dv', 'ug']
+
+    // Get the user's preferred language
+    const userLanguage = navigator.language || navigator.userLanguage
+
+    // Extract the primary language code (e.g., 'en-US' -> 'en')
+    const primaryLanguage = userLanguage.split('-')[0]
+
+    // Check if the primary language is in the list of RTL languages
+    const isRtl = rtlLanguages.includes(primaryLanguage)
+
+    return isRtl ? 'rtl' : 'ltr'
+}
+
+const link_username = document.getElementById('link-username')
+
+function update_username(username) {
+}
+
+function show_login(json) {
+    let username = json['user']
+    let element = document.querySelector('#link-username')
+    element.innerHTML = username
+    element.classList.remove('disabled')
+    element = document.querySelector('#user-icon')
+    element.setAttribute('name', 'lock-open-outline')
+    element = document.querySelector('#link-logout')
+    element.classList.remove('disabled')
+}
+
 async function submit_login_form(id) {
     form = document.querySelector(`#${id}`)
     if(!form) {
@@ -458,7 +495,7 @@ async function submit_login_form(id) {
     display_errors(form, false)
 
     formData = new FormData();
-    fields = form.querySelectorAll('input, textarea')
+    fields = form.querySelectorAll('input, textarea, select')
     fields.forEach((field) => {
         field.parentElement.classList.remove('error');
         field.disabled = true;
@@ -466,21 +503,21 @@ async function submit_login_form(id) {
         formData.append(field.name, field.value);
     });
 
-    let response = await fetch('/auth/login/', {
+    await fetch('/auth/login/', {
         method: form.method,
         body: formData
     }).then((response) => {
         if(response.ok) {
             // Successful login
             response.json().then((json) => {
-                animate_move_element_dismiss_top('card-login')
-                // window.location.href = json.redirect
+                animate_move_element_dismiss_top('card-form-login','500ms')
+                show_login(json)
             })
         } else {
             setTimeout(() => {
                 display_errors(form, !response.ok)
                 shake_form_header(form)
-                enable_form_by_id(id)
+                enable_form(form)
                 make_autofocus(id)
             }, 1000)
         }
