@@ -1,11 +1,22 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
 msgid ""
 msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2024-06-04 16:32+1000\n"
-"Language: LC_MESSAGES\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-
 #: .\core\forms.py:51
 msgid "Email"
 msgstr ""
@@ -70,26 +81,26 @@ msgstr ""
 #: .\core\templates\core\base.html:22 .\core\templates\core\base.html:24
 #: .\core\templates\core\base.html:31 .\core\templates\core\base.html:33
 msgid "Welcome,"
-msgstr "مرحباً"
+msgstr "Willkommen"
 
 #: .\core\templates\core\base.html:30 .\core\templates\core\base.html:34
 msgid "Guest"
-msgstr "ضيف"
+msgstr "Gast"
 
 #: .\core\templates\core\base.html:49 .\core\templates\core\dashboard.html:39
 #: .\core\templates\core\forms\login.html:12 .\core\views.py:108
 msgid "Welcome to Warehauser"
-msgstr "مرحبا بكم في المستودع"
+msgstr "Willkommen bei Warehauser"
 
 #: .\core\templates\core\base_old.html:33
 #: .\core\templates\core\base_old.html:38
 msgid "Logged in as"
-msgstr "تسجيل دخولك"
+msgstr ""
 
 #: .\core\templates\core\base_old.html:35
 #: .\core\templates\core\dashboard.html:23
 msgid "Logout"
-msgstr "تسجيل خروج"
+msgstr ""
 
 #: .\core\templates\core\base_old.html:39
 #: .\core\templates\core\dashboard.html:23
@@ -97,15 +108,15 @@ msgstr "تسجيل خروج"
 #: .\core\templates\core\forms\login.html:9
 #: .\core\templates\core\forms\login.html:36 .\core\views.py:107
 msgid "Login"
-msgstr "تسجيل الدخول"
+msgstr ""
 
 #: .\core\templates\core\base_old.html:54
 msgid "Powered by"
-msgstr "مشغل بواسطة"
+msgstr ""
 
 #: .\core\templates\core\dashboard.html:1
 msgid "guest"
-msgstr "ضيف"
+msgstr ""
 
 #: .\core\templates\core\dashboard.html:20
 #, python-format
@@ -117,17 +128,17 @@ msgstr ""
 
 #: .\core\templates\core\dashboard.html:34 .\core\views.py:125
 msgid "Stuff here"
-msgstr "المحتوى هنا"
+msgstr ""
 
 #: .\core\templates\core\forms\form.html:11
 #: .\core\templates\core\forms\login.html:15
 msgid "Oops!"
-msgstr "أُووبس!"
+msgstr ""
 
 #: .\core\templates\core\forms\form.html:11
 #: .\core\templates\core\forms\login.html:15
 msgid "Your details were not recognised."
-msgstr "لم يتم التعرف على التفاصيل الخاصة بك."
+msgstr ""
 
 #: .\core\templates\core\forms\login.html:42
 msgid "Forgot your password?"
@@ -183,7 +194,7 @@ msgstr ""
 
 #: .\warehauser\settings.py:270
 msgid "Arabic"
-msgstr "عربي"
+msgstr ""
 
 #: .\warehauser\tasks.py:67 .\warehauser\tasks.py:69 .\warehauser\tasks.py:90
 #: .\warehauser\tasks.py:92 .\warehauser\tasks.py:102 .\warehauser\tasks.py:104

@@ -42,3 +42,5 @@ urlpatterns = [
     path('', views.home_view, name='home_view'),
     # path('', views.dashboard_view, name='dashboard_view'),
 ]
+
+urlpatterns += urlpatterns

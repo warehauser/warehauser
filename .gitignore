@@ -36,3 +36,5 @@ docs/build/*
 
 .env
 core/tasks.py
+
+local/*/LC_MESSAGES/*.mo

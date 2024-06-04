@@ -90,12 +90,6 @@ def generate_button_attributes(attrs:dict) -> dict:
 
 def home_view(request):
 
-    # Save the current language
-    current_language = translation.get_language()
-
-    # Set the language to Arabic
-    translation.activate('ar')
-
     login_form = AuthenticationForm(auto_id="%s")
     login_form.fields['username'].widget.attrs.update({'autocomplete': 'off', 'css_classes': 'row form-row mb-4'})
     login_form.fields['password'].widget.attrs.update({'autocomplete': 'off', 'css_classes': 'row form-row mb-4'})
@@ -121,20 +115,13 @@ def home_view(request):
         'heading': _('Forgot Password'),
         'slug': _('Let\'s fix that'),
     }
-    print(f'Current Language: {translation.get_language()}')
-    print(_('Stuff here'))
 
     context = {
         'title': generate_page_title('Welcome'),
         'forms': [password_reset_form, login_form,],
     }
-    print(context['title'])
 
     response = render(request, "core/dashboard.html", context=context)
-
-    # Revert back to the original language
-    translation.activate(current_language)
-
     return response
 
 @login_required
