@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animated Nag Popup Example</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet prefetch">
+    <link href="/static/web/css/warehauser.css" rel="stylesheet">
+    <style>
+        .modal {
+            --animate-time: 5000ms;
+            display: none; /* Ensure the modal is hidden by default */
+        }
+
+        .modal-content {
+            border: 1px solid var(--color-disabled-highlight);
+            background-color: var(--color-background);
+            color: var(--color-default);
+        }
+
+        .modal-content, .modal-header, .modal-footer {
+            border-radius: 0;
+        }
+
+        .modal-header {
+            border-bottom: 0;
+        }
+
+        .modal-footer {
+            border-top: 0;
+        }
+
+        .modal.top {
+            transform: translateY(-100vh); /* Start off-screen top */
+        }
+
+        .modal.left {
+            transform: translateX(-100vw); /* Start off-screen left */
+        }
+
+        .modal.right {
+            transform: translateX(100vw); /* Start off-screen right */
+        }
+
+        .modal.showing {
+            display: block; /* Ensure the modal is visible during the transition */
+        }
+
+        /* animation rules */
+        .animate-move {
+            transition: transform var(--animate-time) var(--animate-func) var(--animate-delay);
+            transform: translate(var(--deltaX), var(--deltaY)); /* Move to the specified position */
+        }
+
+        /* media rules */
+        @media (max-width: 576px) {
+            .navbar-collapse {
+                display: none !important; /* Important to override Bootstrap styles */
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="#" id="showModalLink">Show Nag Popup</a>
+
+    <div id="modalContainer">
+        <!-- Modal -->
+        <div class="modal fade" id="nagModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div class="w-100 text-center">
+                            <ion-icon name="lock-closed-outline" class="form-icon mt-4"></ion-icon>
+                            <h2>Login</h2>
+                            <p>Welcome to Warehauser</p>
+                        </div>
+                        <!-- <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> -->
+                    </div>
+                    <div class="modal-body">
+                        This is a nag popup message!
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="closeModalButton">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JQuery JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- ION ICON JS -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+    <!-- Custom JS -->
+    <script>
+        async function loadContent(id, url) {
+            let container = document.getElementById(id);
+            if(!container) {
+                return;
+            }
+
+            let response = await fetch(url);
+            let content = await response.text();
+
+            container.innerHTML = container.innerHTML + content;
+        }
+
+        function animateElement(el, time, func, x, y, delay) {
+console.log('animateElement ' + el)
+            // Set CSS variables on the element
+            el.style.setProperty('--animate-time', time);
+            el.style.setProperty('--animate-func', func);
+            el.style.setProperty('--deltaX', x);
+            el.style.setProperty('--deltaY', y);
+            el.style.setProperty('--animate-delay', delay);
+
+            // Add a listener for transition end to clean up
+            el.addEventListener('transitionend', function handleTransitionEnd() {
+                // Remove the CSS variables
+                el.style.removeProperty('--animate-time');
+                el.style.removeProperty('--animate-func');
+                el.style.removeProperty('--deltaX');
+                el.style.removeProperty('--deltaY');
+                el.style.removeProperty('--animate-delay');
+
+                // Remove the animate-move class
+                el.classList.remove('animate-move');
+
+                // Remove this event listener
+                el.removeEventListener('transitionend', handleTransitionEnd);
+            });
+
+            // Add the animate-move class to start the animation
+            el.classList.add('animate-move');
+console.log(el.classList)
+console.log(getComputedStyle(el).getPropertyValue('--animate-time')) // There is no getProperty. How do I do this correctly?
+        }
+
+        $(document).ready(async function () {
+            // await loadContent('modalContainer', '/static/web/form.html');
+            let nagModal = new bootstrap.Modal(document.getElementById('nagModal'));
+            let modalElement = document.getElementById('nagModal');
+
+            document.getElementById('showModalLink').addEventListener('click', function (e) {
+                e.preventDefault();
+                // modalElement.style.display = 'block'; // Ensure the modal is visible
+                animateElement(modalElement, '5000ms', 'ease-out', '-100vw', '0', '0'); // Trigger the animation
+                nagModal.show();
+            });
+
+            document.getElementById('closeModalButton').addEventListener('click', function () {
+                modalElement.addEventListener('transitionend', function handleTransitionEnd() {
+                    nagModal.hide();
+                    // modalElement.style.display = 'none'; // Hide the modal after transition
+                    modalElement.classList.remove('dismiss');
+                    modalElement.removeEventListener('transitionend', handleTransitionEnd);
+                });
+                animateElement(modalElement, '5000ms', 'ease-out', '-100vw', '0', '0'); // Animate off-screen left
+                modalElement.classList.add('dismiss');
+            });
+
+            modalElement.addEventListener('shown.bs.modal', function () {
+                modalElement.classList.remove('dismiss');
+            });
+        });
+    </script>
+</body>
+</html>

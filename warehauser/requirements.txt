@@ -26,6 +26,7 @@ matplotlib==3.8.4
 numpy==1.26.4
 packaging==23.2
 pillow==10.3.0
+polib==1.2.0
 prompt-toolkit==3.0.43
 psycopg2==2.9.9
 psycopg2-binary==2.9.9

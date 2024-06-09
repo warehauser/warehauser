@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from django.conf.urls.i18n import i18n_patterns
 from django.contrib import admin
 from django.urls import path, include
 
@@ -20,7 +21,13 @@ from django.urls import path, include
 urlpatterns = [
     # path('admin/', admin.site.urls),
     path('', include('core.urls')),
+    path('', include('web.urls')),
 ]
+
+
+urlpatterns += i18n_patterns(
+    path('', include('web.urls'))
+)
 
 admin.site.site_header = "Warehauser Admin"
 admin.site.site_title = "Warehauser Admin Portal"

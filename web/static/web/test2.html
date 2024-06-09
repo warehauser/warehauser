@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/web/images/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="/static/web/images/favicon.ico" type="image/x-icon">
+    <title>Animated Nag Popup Example</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet prefetch">
+    <!-- <link href="/static/web/css/warehauser.css" rel="stylesheet"> -->
+    <style>
+@import url('https://fonts.googleapis.com/css?family=Poppins');
+
+* {
+    --color-default: #fff;
+    --color-background: #1d2b3a;
+    --color-opaque: #a5aab0;
+    --color-disabled: rgba(255, 255, 255, 0.15);
+    --color-disabled-highlight: #888;
+    --color-icons: #00dfc4;
+    --color-error: #be4d25;
+
+    --icon-scale-factor: 0.4;
+    --form-icon-dimension: 70px;
+
+    background-color: var(--color-background);
+    color: var(--color-default);
+}
+
+*, *::before, *::after
+{
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+.modal {
+    display: block;
+}
+
+.modal-header, .modal-content, .modal-footer {
+    border-radius: 0;
+}
+
+.modal-content {
+    border: 1px solid var(--color-disabled-highlight);
+    background-color: var(--color-background);
+    color: var(--color-default);
+}
+
+.modal-header {
+    border-bottom: 0;
+}
+
+.modal-footer {
+    border-top: 0;
+}
+
+/* Define the keyframes */
+@keyframes keyframesTransform {
+    from {
+        transform: translate(var(--translate-start-x), var(--translate-start-y));
+    }
+    to {
+        transform: translate(var(--translate-delta-x), var(--translate-delta-y));
+    }
+}
+
+/* animation rules */
+.animate-transform {
+    animation: keyframesTransform var(--animate-time) var(--animate-func) var(--animate-delay) var(--animate-direction);
+}
+
+/* media rules */
+@media (max-width: 576px) {
+    .navbar-collapse {
+        display: none !important; /* Important to override Bootstrap styles */
+    }
+}
+    </style>
+</head>
+<body>
+    <div id="modal-container" class="text-center d-none">
+
+        <!-- Modals -->
+        <div class="modal" id="modal-login" tabindex="-1" offscreen="top">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div class="w-100 text-center">
+                            <ion-icon name="lock-closed-outline" class="form-icon mt-4"></ion-icon>
+                            <h2>Login</h2>
+                            <p>Welcome to Warehauser</p>
+                        </div>
+                        <!-- <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> -->
+                    </div>
+                    <div class="modal-body">
+                        This is a nag popup message!
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="closeModalButton">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal" id="modal-password-forgot" tabindex="-1" offscreen="right">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div class="w-100 text-center">
+                            <ion-icon name="lock-closed-outline" class="form-icon mt-4"></ion-icon>
+                            <h2>Forgot Password</h2>
+                            <p>Let us fix that!</p>
+                        </div>
+                        <!-- <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> -->
+                    </div>
+                    <div class="modal-body">
+                        This is a nag popup message!
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="closeModalButton">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JQuery JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- ION ICON JS -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+    <!-- Custom JS -->
+    <script>
+const modalContainer = document.getElementById('modal-container');
+
+function handleAnimationEnd(event) {
+    let el = event.target;
+
+    // Remove the animate-move class
+    el.classList.remove('animate-transform');
+
+    // Remove the CSS variables
+    el.style.removeProperty('--translate-delta-x');
+    el.style.removeProperty('--translate-delta-y');
+    el.style.removeProperty('--animate-time');
+    el.style.removeProperty('--animate-func');
+    el.style.removeProperty('--animate-delay');
+    el.style.removeProperty('--animate-direction');
+
+    // Remove this event listener
+    el.removeEventListener('animationend', handleAnimationEnd);
+}
+
+function animateTransformElement(el, x, y, time, func, delay, direction, handler) {
+    // Set CSS variables on the element
+    el.style.setProperty('--translate-delta-x', x);
+    el.style.setProperty('--translate-delta-y', y);
+    el.style.setProperty('--animate-time', time);
+    el.style.setProperty('--animate-func', func);
+    el.style.setProperty('--animate-delay', delay);
+    el.style.setProperty('--animate-direction', direction);
+
+    // Add a listener for transition end to clean up
+    if(handler) {
+        el.addEventListener(handler);
+    }
+
+    // Add the animate-move class to start the animation
+    el.classList.add('animate-transform');
+}
+
+
+
+
+
+
+
+
+
+// function animateFromTop(el) {
+//     let originalDisplay = el.style.display;
+//     let originalVisibility = el.style.visibility;
+
+//     el.style.setProperty('visibility', 'hidden');
+//     el.style.setProperty('display', 'block');
+
+//     let rect = el.getBoundingClientRect();
+//     let offsetY = (rect.top + rect.height) * (-1);
+// console.log(el, rect, offsetY);
+
+//     el.style.setProperty('display', originalDisplay);
+//     el.style.setProperty('visibility', originalVisibility);
+
+//     animateTransformElement(el, '0px', offsetY, '0px', '0px', '500ms', 'ease-out', '0ms', 'forwards', null);
+// }
+
+function revealModal(id) {
+    let modal = modalContainer.querySelector(`div.modal#${id}`);
+    modalContainer.classList.remove('d-none');
+    animateModalFromTop(modal);
+    modal.classList.remove('d-none');
+}
+
+function executeForId(id, func) {
+    let el = document.getElementById(id);
+    return func(el);
+}
+
+$(document).ready(async function () {
+    modalContainer.style.setProperty('visibility', 'hidden');
+    modalContainer.classList.remove('d-none');
+
+    // Force reflow
+    modalContainer.offsetHeight; // Accessing offsetHeight forces reflow
+
+    let modals = modalContainer.querySelectorAll('div.modal');
+    modals.forEach(modal => {
+        let content = modal.getElementsByClassName('modal-content').item(0);
+        let rect = content.getBoundingClientRect();
+        modal.classList.add('d-none');
+
+        let startx = 0;
+        let starty = 0;
+        let offscreen = modal.getAttribute('offscreen').trim().toLowerCase();
+        switch(offscreen) {
+            case 'top':
+                starty = (rect.top + rect.height + 1) * (-1);
+                break;
+            case 'left':
+                startx = (rect.left + window.innerWidth + 1) * (-1);
+                break;
+            case 'right':
+                startx = rect.left + window.innerWidth + 1;
+                break;
+            default:
+                console.log('Unexpected offscreen attribute for modal.');
+        }
+
+        content.style.setProperty('--translate-start-x', startx);
+        content.style.setProperty('--translate-start-y', starty);
+    });
+
+    // modalContainer.classList.add('d-none');
+    modalContainer.style.removeProperty('visibility');
+
+    let modal = document.getElementById('modal-login');
+    animateTransformElement(modal.querySelector('div.modal-content'), '0px', '0px', '3000ms', 'ease-out', '0ms', 'forwards', null);
+    modal.classList.remove('d-none');
+});
+    </script>
+</body>
+</html>
