@@ -14,7 +14,7 @@
 
 from django_filters import rest_framework as filters
 
-from .models import *
+from core.models import *
 
 # Each model has a options field that is defined as a JSONField.
 # Use these KEY_OPTIONS_* arrays to declare what fields you want in

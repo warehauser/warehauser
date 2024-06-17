@@ -407,14 +407,14 @@ function password_show_hide(toggle, id, seconds=0) {
     let input = document.getElementById(id);
     if(input.type === 'password') {
         input.setAttribute('type', 'text');
-        toggle.setAttribute('name', 'eye-off-outline');
+        toggle.setAttribute('name', 'eye-outline');
         input.focus()
 
         if(seconds > 0) {
             // Automatically reset the input type to password after specified seconds
             show_hide_timeouts[id] = setTimeout(() => {
                 input.setAttribute('type', 'password');
-                toggle.setAttribute('name', 'eye-outline');
+                toggle.setAttribute('name', 'eye-off-outline');
                 delete show_hide_timeouts[id];
             }, seconds * 1000); // Convert seconds to milliseconds
         }
@@ -424,7 +424,7 @@ function password_show_hide(toggle, id, seconds=0) {
             delete show_hide_timeouts[id];
         }
         input.setAttribute('type', 'password');
-        toggle.setAttribute('name', 'eye-outline');
+        toggle.setAttribute('name', 'eye-off-outline');
         input.focus()
     }
 }

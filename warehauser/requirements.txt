@@ -1,5 +1,6 @@
 asgiref==3.7.2
 async-timeout==4.0.3
+beautifulsoup4==4.12.3
 certifi==2024.2.2
 charset-normalizer==3.3.2
 contourpy==1.2.1
@@ -41,6 +42,7 @@ requests==2.31.0
 schedule==1.2.1
 silx==2.1.0
 six==1.16.0
+soupsieve==2.5
 sqlparse==0.4.4
 typing_extensions==4.9.0
 tzdata==2023.4

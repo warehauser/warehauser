@@ -17,11 +17,10 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import ModelBackend
 
-from .utils import is_valid_email_address
+from core.utils import is_valid_email_address
 
 class WarehauserEmailOrUsernameAuthBackend(ModelBackend):
     def authenticate(self, request, username=None, password=None, **kwargs):
-        print('core.backends.WarehauserEmailOrUsernameAuthBackend.authenticate(username,password) START.')
         if username is None or password is None:
             return None  # If either username or password is None, authentication cannot proceed
         

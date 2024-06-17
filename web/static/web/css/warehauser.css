@@ -590,7 +590,7 @@ a:not(.btn):focus {
     animation-duration: 300ms;
     animation-iteration-count: 2;
 }
-
+/* 
 .animate-move {
     transition: transform var(--animate-time) var(--animate-function);
     transform: translate(var(--deltaX), var(--deltaY));
@@ -601,9 +601,8 @@ a:not(.btn):focus {
     max-width: 400px;
 }
 
-/* media rules */
 @media (max-width: 576px) {
     .navbar-collapse {
-        display: none !important; /* Important to override Bootstrap styles */
+        display: none !important;
     }
-}
+} */

@@ -12,24 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# filters.py
+# utils.py
 
-from django import template
+from datetime import datetime
 
-register = template.Library()
-
-@register.filter
-def pop_key(d: dict, key: str):
-    return d.pop(key, None)
-
-@register.filter
-def pop_key_from_attrs(field, key):
-    return pop_key(field.field.widget.attrs, key)
-
-@register.filter
-def get_value_by_key(d: dict, key: str):
-    return d.get(key, None)
-
-@register.simple_tag
-def setvar(val=None):
-    return val
+def debug_func(func):
+    def func_mod(*args, **kwargs):
+        print(f'{func.__name__}({args}, {kwargs}) called at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}.')
+        result = func(*args, **kwargs)
+        print(f'Result is: {result}')
+        return result
+    return func_mod

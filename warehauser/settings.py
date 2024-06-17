@@ -111,6 +111,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django.template.context_processors.csrf',
+                'web.context_processors.bidi',
             ],
         },
     },
@@ -174,7 +176,7 @@ AUTH_PASSWORD_VALIDATORS = [
 AUTHENTICATION_BACKENDS = (
     # 'userena.backends.UserenaAuthenticationBackend',
     # 'django.contrib.auth.backends.ModelBackend',
-    'core.backends.WarehauserEmailOrUsernameAuthBackend',
+    'web.backends.WarehauserEmailOrUsernameAuthBackend',
 )
 
 # Static files (CSS, JavaScript, Images)
@@ -261,7 +263,7 @@ CORS_ALLOWS_CREDENTIALS = True
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
 LOCALE_PATHS = [
-    BASE_DIR / 'locale',  # Adjust this path if your locale directory is elsewhere
+    os.path.join(BASE_DIR, 'locale'),  # Adjust this path if your locale directory is elsewhere
 ]
 
 LANGUAGES = [
@@ -270,8 +272,8 @@ LANGUAGES = [
     ('ar', _('Arabic')),
 ]
 
-LANGUAGE_CODE = 'en'
-LANGUAGE_BIDI = False  # Set to True for RTL languages, False otherwise
+# LANGUAGE_CODE = 'en'
+# LANGUAGE_BIDI = False  # Set to True for RTL languages, False otherwise
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True

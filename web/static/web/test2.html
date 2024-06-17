@@ -35,6 +35,36 @@
     font-family: 'Poppins', sans-serif;
 }
 
+
+
+
+
+
+a:not(.btn)
+{
+    text-decoration: none;
+    color: var(--color-icons);
+}
+
+body
+{
+    display: flex;
+    flex-direction: column;
+    height: 100svh;
+    background: var(--color-background);
+    overflow-x: hidden;
+}
+
+
+
+
+.navbar-brand {
+    position: relative;
+    top: 5px;
+}
+
+
+
 .modal {
     display: block;
 }
@@ -60,10 +90,10 @@
 /* Define the keyframes */
 @keyframes keyframesTransform {
     from {
-        transform: translate(var(--translate-start-x), var(--translate-start-y));
+        transform: translate(var(--translate-from-x), var(--translate-from-y));
     }
     to {
-        transform: translate(var(--translate-delta-x), var(--translate-delta-y));
+        transform: translate(var(--translate-to-x), var(--translate-to-y));
     }
 }
 
@@ -81,52 +111,87 @@
     </style>
 </head>
 <body>
-    <div id="modal-container" class="text-center d-none">
 
-        <!-- Modals -->
-        <div class="modal" id="modal-login" tabindex="-1" offscreen="top">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <div class="w-100 text-center">
-                            <ion-icon name="lock-closed-outline" class="form-icon mt-4"></ion-icon>
-                            <h2>Login</h2>
-                            <p>Welcome to Warehauser</p>
+
+
+    <header id="header" class="p-0 text-bg-dark sticky-top">
+        <div class="container-lg">
+            <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+                <div class="container-fluid">
+                    <a class="navbar-brand" href="/">Warehauser</a>
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item">
+                            {% url 'auth_user_profile_view' as urlprofile %}{% with url=urlprofile %}{% blocktrans %}<span id="welcomeText" class="navbar-text">Welcome,</span>
+                            <a id="link-username" class="nav-text {{ disabled }}" href="{{ url }}">{{ username }}</a>{% endblocktrans %}{% endwith %}
+                            <span id="session-info-divider" class="divider"></span>
+                            <a id="link-logout" class="nav-text {{ disabled }}" href="{% url 'auth_logout_view' %}"{% if user.is_authenticated %} title="{% trans "Logout" %}"{% else %} title="{% trans "Login" %}"{% endif %}><ion-icon id="user-icon" name="lock-{{ iconname }}-outline" class="session-icon md hydrated"></ion-icon></a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+        </div>
+    </header>
+    <main>
+
+
+
+
+        <div id="modal-container" class="text-center d-none">
+
+            <!-- Modals -->
+            <div class="modal" id="modal-login" tabindex="-1" offscreen="top">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <div class="w-100 text-center">
+                                <ion-icon name="lock-closed-outline" class="form-icon mt-4"></ion-icon>
+                                <h2>Login</h2>
+                                <p>Welcome to Warehauser</p>
+                            </div>
+                            <!-- <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> -->
                         </div>
-                        <!-- <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> -->
-                    </div>
-                    <div class="modal-body">
-                        This is a nag popup message!
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" id="closeModalButton">Close</button>
+                        <div class="modal-body">
+                            This is a nag popup message!
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" id="closeModalButton">Close</button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="modal" id="modal-password-forgot" tabindex="-1" offscreen="right">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <div class="w-100 text-center">
-                            <ion-icon name="lock-closed-outline" class="form-icon mt-4"></ion-icon>
-                            <h2>Forgot Password</h2>
-                            <p>Let us fix that!</p>
+            <div class="modal" id="modal-password-forgot" tabindex="-1" offscreen="right">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <div class="w-100 text-center">
+                                <ion-icon name="lock-closed-outline" class="form-icon mt-4"></ion-icon>
+                                <h2>Forgot Password</h2>
+                                <p>Let us fix that!</p>
+                            </div>
+                            <!-- <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> -->
                         </div>
-                        <!-- <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> -->
-                    </div>
-                    <div class="modal-body">
-                        This is a nag popup message!
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" id="closeModalButton">Close</button>
+                        <div class="modal-body">
+                            This is a nag popup message!
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" id="closeModalButton">Close</button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-    </div>
+        </div>
+    </main>
+
+
+
+
+
+
+    <footer id="footer" class="fixed-bottom text-bg-dark bg-dark">
+        <div class="container-lg d-flex justify-content-center align-items-center">{% blocktrans %}Welcome to Warehauser{% endblocktrans %}</div>
+    </footer>
 
     <!-- JQuery JS -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -149,8 +214,8 @@ function handleAnimationEnd(event) {
     el.classList.remove('animate-transform');
 
     // Remove the CSS variables
-    el.style.removeProperty('--translate-delta-x');
-    el.style.removeProperty('--translate-delta-y');
+    el.style.removeProperty('--translate-to-x');
+    el.style.removeProperty('--translate-to-y');
     el.style.removeProperty('--animate-time');
     el.style.removeProperty('--animate-func');
     el.style.removeProperty('--animate-delay');
@@ -160,10 +225,10 @@ function handleAnimationEnd(event) {
     el.removeEventListener('animationend', handleAnimationEnd);
 }
 
-function animateTransformElement(el, x, y, time, func, delay, direction, handler) {
+function animateTransformElement(el, tox, toy, time, func, delay, direction, handler) {
     // Set CSS variables on the element
-    el.style.setProperty('--translate-delta-x', x);
-    el.style.setProperty('--translate-delta-y', y);
+    el.style.setProperty('--translate-to-x', tox);
+    el.style.setProperty('--translate-to-y', toy);
     el.style.setProperty('--animate-time', time);
     el.style.setProperty('--animate-func', func);
     el.style.setProperty('--animate-delay', delay);
@@ -171,43 +236,11 @@ function animateTransformElement(el, x, y, time, func, delay, direction, handler
 
     // Add a listener for transition end to clean up
     if(handler) {
-        el.addEventListener(handler);
+        el.addEventListener('animationend', handler);
     }
 
     // Add the animate-move class to start the animation
     el.classList.add('animate-transform');
-}
-
-
-
-
-
-
-
-
-
-// function animateFromTop(el) {
-//     let originalDisplay = el.style.display;
-//     let originalVisibility = el.style.visibility;
-
-//     el.style.setProperty('visibility', 'hidden');
-//     el.style.setProperty('display', 'block');
-
-//     let rect = el.getBoundingClientRect();
-//     let offsetY = (rect.top + rect.height) * (-1);
-// console.log(el, rect, offsetY);
-
-//     el.style.setProperty('display', originalDisplay);
-//     el.style.setProperty('visibility', originalVisibility);
-
-//     animateTransformElement(el, '0px', offsetY, '0px', '0px', '500ms', 'ease-out', '0ms', 'forwards', null);
-// }
-
-function revealModal(id) {
-    let modal = modalContainer.querySelector(`div.modal#${id}`);
-    modalContainer.classList.remove('d-none');
-    animateModalFromTop(modal);
-    modal.classList.remove('d-none');
 }
 
 function executeForId(id, func) {
@@ -219,42 +252,41 @@ $(document).ready(async function () {
     modalContainer.style.setProperty('visibility', 'hidden');
     modalContainer.classList.remove('d-none');
 
-    // Force reflow
-    modalContainer.offsetHeight; // Accessing offsetHeight forces reflow
-
     let modals = modalContainer.querySelectorAll('div.modal');
     modals.forEach(modal => {
         let content = modal.getElementsByClassName('modal-content').item(0);
         let rect = content.getBoundingClientRect();
         modal.classList.add('d-none');
 
-        let startx = 0;
-        let starty = 0;
+        let fromx = 0;
+        let fromy = 0;
+
         let offscreen = modal.getAttribute('offscreen').trim().toLowerCase();
         switch(offscreen) {
             case 'top':
-                starty = (rect.top + rect.height + 1) * (-1);
+                fromy = (rect.top + rect.height + 1) * (-1);
                 break;
             case 'left':
-                startx = (rect.left + window.innerWidth + 1) * (-1);
+                fromx = (rect.left + window.innerWidth + 1) * (-1);
                 break;
             case 'right':
-                startx = rect.left + window.innerWidth + 1;
+                fromx = rect.left + window.innerWidth + 1;
                 break;
             default:
                 console.log('Unexpected offscreen attribute for modal.');
         }
 
-        content.style.setProperty('--translate-start-x', startx);
-        content.style.setProperty('--translate-start-y', starty);
+        content.style.setProperty('--translate-from-x', fromx + 'px');
+        content.style.setProperty('--translate-from-y', fromy + 'px');
     });
 
-    // modalContainer.classList.add('d-none');
+    modalContainer.classList.add('d-none');
     modalContainer.style.removeProperty('visibility');
 
-    let modal = document.getElementById('modal-login');
-    animateTransformElement(modal.querySelector('div.modal-content'), '0px', '0px', '3000ms', 'ease-out', '0ms', 'forwards', null);
-    modal.classList.remove('d-none');
+    // let modal = document.getElementById('modal-login');
+    // let modal = document.getElementById('modal-password-forgot');
+    // animateTransformElement(modal.querySelector('div.modal-content'), '0px', '0px', '500ms', 'ease-out', '0ms', 'forwards', handleAnimationEnd);
+    // modal.classList.remove('d-none');
 });
     </script>
 </body>

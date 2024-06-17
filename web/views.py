@@ -32,22 +32,13 @@ from django.core.exceptions import ObjectDoesNotExist
 # from django.core.mail import send_mail
 # from django.db.models import JSONField
 from django.http import HttpResponse, JsonResponse
+from django.middleware.csrf import get_token
 from django.shortcuts import render, redirect, get_object_or_404
-from django.templatetags.static import static
+# from django.templatetags.static import static
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext as _
 from django.utils import translation
-
-from django_filters.rest_framework import DjangoFilterBackend
-
-from rest_framework import generics, viewsets, status
-from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
-from rest_framework.filters import SearchFilter
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.response import Response
-from rest_framework.renderers import JSONRenderer
 
 from core.models import *
 
@@ -80,38 +71,39 @@ def generate_button_attributes(attrs:dict) -> dict:
 
 def home_view(request):
 
-    login_form = AuthenticationForm(auto_id="%s")
-    login_form.fields['username'].widget.attrs.update({'autocomplete': 'off', 'css_classes': 'row form-row mb-4'})
-    login_form.fields['password'].widget.attrs.update({'autocomplete': 'off', 'css_classes': 'row form-row mb-4'})
+    login_form = WarehauserAuthLoginForm(auto_id="%s")
+    # login_form.fields['username'].widget.attrs.update({'autocomplete': 'off', 'css_classes': 'row form-row mb-4'})
+    # login_form.fields['password'].widget.attrs.update({'autocomplete': 'off', 'css_classes': 'row form-row mb-4'})
 
-    login_form.id = 'form-login'
-    login_form.onsubmit = f'submit_login_form(\'{login_form.id}\')'
-    login_form.header = {
-        'icon': 'lock-closed-outline',
-        'heading': _('Login'),
-        'slug': _('Welcome to Warehauser'),
-    }
-    login_form.footer = [{'classlist': 'row form-row center mb-5', 'content': mark_safe('<a id="link-forgot" href="#">Forgot your password?</a>'),},]
+    # login_form.modalid = 'modal-login'
+    # login_form.offscreen = 'top'
+    # login_form.header = {
+    #     'icon': 'lock-closed-outline',
+    #     'heading': _('Login'),
+    #     'slug': _('Welcome to Warehauser'),
+    #     'close': True,
+    # }
+    # login_form.footer = [{'tag': 'div', 'attrs': {'class': 'row form-row w-100 mb-5 text-center'}, 'content': mark_safe('<a id="link-forgot" href="#">Forgot your password?</a>'),},]
 
     password_reset_form = WarehauserAuthForgotPasswordForm(auto_id="%s")
-    password_reset_form.id = 'form-password-reset'
-    password_reset_form.card = {
-        'classList': 'invisible',
-        'onload': mark_safe('animate_move_element_dismiss_right("card-form-password-reset",0,"linear")'),
-    }
-    password_reset_form.onsubmit = f'submit_password_reset_form(\'{password_reset_form.id}\')'
-    password_reset_form.header = {
-        'icon': 'lock-closed-outline',
-        'heading': _('Forgot Password'),
-        'slug': _('Let\'s fix that'),
-    }
+    # password_reset_form.modalid = 'modal-password-reset'
+    # password_reset_form.offscreen = 'right'
+    # password_reset_form.card = {
+    #     'classList': 'invisible',
+    #     'onload': mark_safe('animate_move_element_dismiss_right("card-form-password-reset",0,"linear")'),
+    # }
+    # password_reset_form.onsubmit = f'submit_password_reset_form(\'{password_reset_form.id}\')'
+    # password_reset_form.header = {
+    #     'icon': 'lock-closed-outline',
+    #     'heading': _('Forgot Password'),
+    #     'slug': _('Let\'s fix that'),
+    # }
 
     context = {
         'title': generate_page_title('Welcome'),
-        'forms': [password_reset_form, login_form,],
     }
 
-    response = render(request, "core/dashboard.html", context=context)
+    response = render(request, "web/index.html", context=context)
     return response
 
 
@@ -135,7 +127,7 @@ from .forms import WarehauserAuthLoginForm
 @anonymous_required
 def auth_login_view(request):
     if request.method.lower() == 'post':
-        form = WarehauserAuthLoginForm(None, data=request.POST)
+        form = WarehauserAuthLoginForm(auto_id="%s", data=request.POST)
         if form.is_valid():
             user = form.get_user()
         else:
@@ -156,7 +148,28 @@ def auth_login_view(request):
     else:
         form = WarehauserAuthLoginForm(request)
 
-    return render(request, 'core/forms/login.html', {'form': form})
+    data = {
+        'attrs': {'id': 'form-login', 'action': 'javascript:submitLogin(\'form-login\');', 'method': 'post',},
+        'buttons': [{'attrs': {'type': 'submit', 'value': 'login', 'class': 'btn btn-primary col-12', 'disabled': True,}, 'content': _('Login')}],
+        'modal': {
+            'attrs': {'class': 'modal', 'id': 'modal-login', 'tabindex': -1, 'offscreen': 'top',},
+            'header': {
+                'icon': 'lock-closed-outline',
+                'heading': _('Login'),
+                'slug': _('Welcome to Warehauser'),
+                # 'close': True, # use the close key to add a close icon to the modal. Not advised for form-login
+            },
+            'body': {
+            },
+            'footer': [{
+                'tag': 'div',
+                'attrs': {'class': 'row form-row w-100 mb-4 text-center'},
+                'content': [{'tag': 'a', 'attrs': {'id': 'link-forgot', 'href': '#',}, 'content': _('Forgot your password?'),}]}],
+        },
+        'csrf': get_token(request=request),
+    }
+
+    return HttpResponse(form.as_modal(data=data))
 
 def auth_logout_view(request):
     auth_logout(request=request)
@@ -293,7 +306,7 @@ def _auth_otp_attempt(request:Any, action:str, type:str, useraux:UserAux, otp:st
 
     if count > 2:
         _auth_opt_register_attempt(useraux=useraux, action=action)
-        return _auth_otp_form(request=request, title=_(f'{action.title()} Action'), err=f'Too many attempts. Wait {minutes} minutes before retrying.')
+        return _auth_otp_form(request=request, title=_(f'{action.title()} Action'), err=_(f'Too many attempts. Wait {minutes} minutes before retrying.'))
 
     time_limit = now - timedelta(days=1)
 
