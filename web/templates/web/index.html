@@ -464,9 +464,6 @@ body[data-dir="rtl"] .input-text-button {
     </header>
     <main>
         <div id="modal-container" class="text-center fade show"></div>
-        <div><a href="#">Hello World</a></div>
-        <div><a href="#">NESARA</a></div>
-        <div><a href="#">GESARA</a></div>
     </main>
     <footer id="footer" class="fixed-bottom text-bg-dark bg-dark">
         <div class="container-lg d-flex justify-content-center align-items-center">{% blocktrans %}Welcome to Warehauser{% endblocktrans %}</div>
@@ -752,7 +749,7 @@ function animateDismissModal(modal) {
     );
 }
 
-function make_autofocus(containerId) {
+function makeAutofocus(containerId) {
     const container = document.getElementById(containerId)
     if (!container) return
 
@@ -763,7 +760,7 @@ function make_autofocus(containerId) {
     }
 }
 
-function prevent_default(event) {
+function preventDefault(event) {
     event.preventDefault()
 }
 
@@ -772,7 +769,7 @@ function disableLink(link) {
 
     link.classList.add('disabled-link');
     link.setAttribute('tabindex', -1);
-    link.addEventListener('click', prevent_default)
+    link.addEventListener('click', preventDefault)
 
     if (hasFocus) {
         link.blur();
@@ -786,7 +783,7 @@ function disableLinkById(id) {
 function enableLink(link) {
     link.classList.remove('disabled-link');
     link.removeAttribute('tabindex');
-    link.removeEventListener('click', prevent_default)
+    link.removeEventListener('click', preventDefault)
 }
 
 function enableLinkById(id) {
@@ -898,7 +895,7 @@ async function submitLogin(id) {
                 displayErrors(form, !response.ok);
                 shakeFormHeader(form);
                 enableForm(form);
-                make_autofocus(id);
+                makeAutofocus(id);
             }, 1000)
         }
     });
