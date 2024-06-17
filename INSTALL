@@ -45,39 +45,67 @@ Create groups in the shell by running these commands:
     from django.contrib.auth.models import Group
     g1 = Group.objects.create(name='admin')
     g2 = Group.objects.create(name='user')
-    g3 = Group.objects.create(name='warehauser_admin')
-    g4 = Group.objects.create(name='warehauser_user')
-    g3.user_set.add(g1)
-    g4.user_set.add(g2)
 
 Create users while in the shell by running these commands:
 
     from django.contrib.auth.models import User
-    User.objects.create(username='warehauser', email='<email address>', password='<password>', is_superuser=True)
+    User.objects.create(username='<username>', email='<email address>', password='<password>', is_superuser=True)
 
 Note you can use whatever group names you like, but remember them for the next step and you need two unique groups as default.
 
-10. In warehauser/settings.py register the two groups above like so:
-
-WAREHAUSER_ADMIN_GROUP = 'warehauser_admin'
-WAREHAUSER_USER_GROUP = 'warehauser_user'
-
 (Replace the group names with the names of the groups you created in step 9 if different.)
 
-11. Create a superuser. In warehauser we assign all privileges via groups but the admin groups should still have is_superuser flag set to True as well to be compatible with third party libraries such as django-gaurdian.
+10. Create a superuser. In warehauser we assign all privileges via groups but the admin groups should still have is_superuser flag set to True as well to be compatible with third party libraries such as django-gaurdian.
 
     python manage.py createsuperuser
-    python manage.py addtogroup <username> warehause_admin
+    python manage.py addtogroup <username> <group>
 
-where <username> is the username you created in the createsuperuser command above, and replace warehause_admin with the name of the group created above for admins.
+where <username> is the username you created in the createsuperuser command above, and replace <group> with the name of the group created above for admins.
 
 Create as many user accounts as you need by repeating these steps:
 
     python manage.py createsuperuser --no-superuser
-    python manage.py addtogroup <username> warehause_user
+
+Optionally add any groups:
+
+    python manage.py addtogroup <username> <groupname>
 
 where again <username> is the username you created in the createsuperuser command above, and replace warehause_user with the name of the group created above for users.
 
+Internationalization Quick Guide
+--------------------------------
+
+To register a new language to add to translations edit the warehauser\settings.py:
+
+LANGUAGES = [
+    ('<language code>', _('<language name>')),
+]
+
+where <language code> is the 2 letter code for your new language, and <language name> is the English name of the language. So for example:
+
+    ('en', _('English')), # for English
+    ('de', _('German')),  # for German
+
+From the warehauser project base directory run the following command:
+
+    django-admin makemessages -l <language code>
+
+A few files will be created in the warehauser project directory:
+
+    locale\<language code>\LC_MESSAGES\django.po
+
+For each language you created. Open each such file in a text editor of your choice and add translations. Each message to translate will be in the form of:
+
+    #: .\warehauser\settings.py:270
+    msgid "English"
+    msgstr ""
+
+For each add the translation string in the double quotes "" of msgstr.
+
+IMPORTANT: Some "msgid" will have "{variable}" strings. The msgstr MUST have the same "{variable}" EXACTLY as it appears in the msgid. For example:
+
+    msgid "Some text {variable.somefunc()}"
+    msgstr "<translation text for Some text> {variable.somefunc()}"
 
 Quick Start Guide
 -----------------
