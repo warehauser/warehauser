@@ -43,14 +43,10 @@ from django.utils import translation
 from core.models import *
 
 from .decorators import *
-# from .filters import *
 from .forms import *
 from .models import *
-# from .permissions import *
-# from .serializers import *
 from core.utils import *
-
-
+from .renderers import _render_tags, _generate_tag
 
 BASE_TITLE = f'Warehauser - {_("Your warehouse run smoothly")}'
 
@@ -106,7 +102,11 @@ def home_view(request):
     response = render(request, "web/index.html", context=context)
     return response
 
-
+def dashboard_view(request):
+    tags = [
+        _generate_tag('div', {}, [_generate_tag('a', {'href': '#'}, 'Hello World')]),
+    ]
+    return HttpResponse(_render_tags(tags))
 
 
 
