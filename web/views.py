@@ -103,6 +103,88 @@ def home_view(request):
     return response
 
 def dashboard_view(request):
+    data = '''
+        <div class="container-fluid">
+'''
+    if(request.user.is_superuser):
+        data = data + '''
+            <div class="row">
+                <a class="nav-link" href="#">
+                    <ion-icon name="people-outline" class="icon"></ion-icon>
+                    <span class="link-text">Clients</span>
+                </a>
+            </div>
+'''
+
+
+
+                        # <div id="sidebar-toggler" class="text-end">
+                        #     <ion-icon name="ellipsis-horizontal-outline" size="large"></ion-icon>
+                        # </div>
+
+                            # <li class="nav-item">
+                            #     <a class="nav-link" href="#">
+                            #         <ion-icon name="bar-chart-outline" class="icon"></ion-icon>
+                            #         <span class="link-text">Reports</span>
+                            #     </a>
+                            # </li>
+                            # <li class="nav-item">
+                            #     <a class="nav-link" href="#">
+                            #         <ion-icon name="layers-outline" class="icon"></ion-icon>
+                            #         <span class="link-text">Integrations</span>
+                            #     </a>
+                            # </li>
+
+    data = data + '''
+            <div class="row">
+                <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+                    <div class="position-sticky">
+                        <ul class="nav flex-column">
+                            <li class="nav-item">
+                                <a class="nav-link" href="#">
+                                    <ion-icon name="location-outline" class="icon"></ion-icon>
+                                    <span class="link-text">Warehauses</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#">
+                                    <ion-icon name="cube-outline" class="icon"></ion-icon>
+                                    <span class="link-text">Products</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#">
+                                    <ion-icon name="notifications-outline" class="icon"></ion-icon>
+                                    <span class="link-text">Events</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#">
+                                    <ion-icon name="settings-outline" class="icon"></ion-icon>
+                                    <span class="link-text">Settings</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </nav>
+
+                <!-- Main content area -->
+                <div class="col-md-9 col-lg-10 ms-sm-auto px-md-4">
+                    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                        <h1 class="h2">Dashboard</h1>
+                    </div>
+                    <p>Hello world</p>
+                </div>
+            </div>'''
+
+    data = data + '''
+        </div>
+'''
+
+    return HttpResponse(mark_safe(data))
+    if request.user:
+        print('user is ', request.user)
+
     tags = [
         _generate_tag('div', {}, [_generate_tag('a', {'href': '#'}, 'Hello World')]),
     ]

@@ -23,6 +23,56 @@
     --icon-scale-factor: 0.4;
     --form-icon-dimension: 70px;
     --user-icon-dimension: calc(var(--form-icon-dimension) * var(--icon-scale-factor));
+
+
+
+    --color-icons: #21B3C0;
+
+    --color-primary: #2143C0;
+    --color-primary-disabled: #0D78C9;
+    --color-secondary: #21B3C0;
+    --color-secondary-disabled: #21B3C0;
+
+    --bs-btn-disabled-bg: var(--color-primary-disabled);
+    --bs-btn-disabled-border-color: var(--color-primary-disabled);
+
+    {% comment %}
+    --color-error: #B9181D;
+    --color-error: #DE3B40;
+    --color-error: #F27D81;
+{% endcomment %}
+    --color-error: #F22128;
+
+{% comment %}
+    --color-warning: #DD980E;
+    --color-warning: #EFB034;
+    --color-warning: #FCB831;
+{% endcomment %}
+    --color-warning: #F6CE7E;
+
+{% comment %}
+    --color-success: #0EAA42;
+    --color-success: #1DD75B;
+    --color-success: #18EC5F;
+{% endcomment %}
+    --color-success: #6EED98;
+
+{% comment %}
+    --color-info: #0D78C9;
+    --color-info: #379AE6;
+    --color-info: #1091F4;
+{% endcomment %}
+    --color-info: #60B2F0;
+
+    /* Gray scale colours. Generally used for text and backgrounds. */
+    --color-gray-1: #dce5e5;
+    --color-gray-2: #b8c7c7;
+    --color-gray-3: #879ca1;
+    --color-gray-4: #52676b;
+    --color-gray-5: #304040;
+    --color-gray-6: #1c2326;
+    --color-gray-7: #161d1d;
+
 }
 
 *, *::before, *::after
@@ -53,6 +103,11 @@ body
     text-transform: uppercase;
 }
 
+.btn-primary {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
 header {
     z-index: 1000;
 }
@@ -79,6 +134,53 @@ header {
 
 main {
 }
+
+#sidebar {
+    color: var(--color-default);
+    background: var(--color-background) !important;
+    border: 1px solid var(--color-disabled-highlight);
+    border-radius: 0px;
+    padding-top: 15px;
+    padding-bottom: 15px;
+    transition: width 0.3s;
+}
+
+#sidebar.collapsed {
+    width: 80px;
+}
+
+#sidebar .nav-link {
+    display: flex;
+    align-items: center;
+}
+
+#sidebar.collapsed .nav-link .link-text {
+    display: none;
+}
+
+#sidebar .nav-link ion-icon {
+    min-width: 28px !important;
+    min-height: 28px !important;
+}
+
+#sidebar .nav-link .link-text {
+    margin-left: 15px;
+    color: var(--color-default);
+}
+
+#sidebar-toggler {
+    cursor: pointer;
+    margin: 1rem 0 1rem 1rem;
+    display: flex;
+    align-items: center;
+}
+
+#sidebar-toggler ion-icon {
+    font-size: 28px !important;
+}
+
+
+
 
 .form-icon {
     width: var(--form-icon-dimension);
@@ -161,6 +263,18 @@ footer {
 
 .tooltip.error {
     border-color: var(--color-error);
+}
+
+.tooltip.warning {
+    border-color: var(--color-warning);
+}
+
+.tooltip.success {
+    border-color: var(--color-success);
+}
+
+.tooltip.info {
+    border-color: var(--color-info);
 }
 
 .input-box {
@@ -257,6 +371,160 @@ body[data-dir="rtl"] .input-box input:focus ~ span
     background-color: var(--color-error);
 }
 
+.input-box.error input:focus ~ .input-text-button ion-icon
+,.input-box.error input:valid ~ .input-text-button ion-icon {
+    color: var(--color-error);
+}
+
+.input-box.error .input-text-button ion-icon {
+    color: var(--color-error);
+}
+
+
+
+
+
+
+
+.input-box.warning input
+,.input-box.warning input:not(:placeholder-shown):valid
+,.input-box.warning textarea {
+    border-color: var(--color-warning);
+}
+
+.input-box.warning input ~ span
+,.input-box.warning textarea ~ span {
+    color: var(--color-warning);
+}
+
+.input-box.warning input:focus ~ span
+,.input-box.warning textarea:focus ~ span {
+    color: var(--color-background);
+    background-color: var(--color-warning);
+}
+
+.input-box.warning input:not(:placeholder-shown):valid ~ span
+,.input-box.warning textarea:not(:placeholder-shown):valid ~ span {
+    color: var(--color-default);
+    background-color: var(--color-warning);
+}
+
+.input-box.warning input:required ~ .required
+,.input-box.warning textarea:required ~ .required {
+    background-color: var(--color-warning);
+}
+
+.input-box.warning input:focus ~ .input-text-button ion-icon
+,.input-box.warning input:valid ~ .input-text-button ion-icon {
+    color: var(--color-warning);
+}
+
+.input-box.warning .input-text-button ion-icon {
+    color: var(--color-warning);
+}
+
+
+
+
+
+
+.input-box.success input
+,.input-box.success input:not(:placeholder-shown):valid
+,.input-box.success textarea {
+    border-color: var(--color-success);
+}
+
+.input-box.success input ~ span
+,.input-box.success textarea ~ span {
+    color: var(--color-success);
+}
+
+.input-box.success input:focus ~ span
+,.input-box.success textarea:focus ~ span {
+    color: var(--color-background);
+    background-color: var(--color-success);
+}
+
+.input-box.success input:not(:placeholder-shown):valid ~ span
+,.input-box.success textarea:not(:placeholder-shown):valid ~ span {
+    color: var(--color-default);
+    background-color: var(--color-success);
+}
+
+.input-box.success input:required ~ .required
+,.input-box.success textarea:required ~ .required {
+    background-color: var(--color-success);
+}
+
+.input-box.success input:focus ~ .input-text-button ion-icon
+,.input-box.success input:valid ~ .input-text-button ion-icon {
+    color: var(--color-success);
+}
+
+.input-box.success .input-text-button ion-icon {
+    color: var(--color-success);
+}
+
+
+
+
+
+.input-box.info input
+,.input-box.info input:not(:placeholder-shown):valid
+,.input-box.info textarea {
+    border-color: var(--color-info);
+}
+
+.input-box.info input ~ span
+,.input-box.info textarea ~ span {
+    color: var(--color-info);
+}
+
+.input-box.info input:focus ~ span
+,.input-box.info textarea:focus ~ span {
+    color: var(--color-background);
+    background-color: var(--color-info);
+}
+
+.input-box.info input:not(:placeholder-shown):valid ~ span
+,.input-box.info textarea:not(:placeholder-shown):valid ~ span {
+    color: var(--color-default);
+    background-color: var(--color-info);
+}
+
+.input-box.info input:required ~ .required
+,.input-box.info textarea:required ~ .required {
+    background-color: var(--color-info);
+}
+
+.input-box.info input:focus ~ .input-text-button ion-icon
+,.input-box.info input:valid ~ .input-text-button ion-icon {
+    color: var(--color-info);
+}
+
+.input-box.info .input-text-button ion-icon {
+    color: var(--color-info);
+}
+
+
+
+
+.input-box input[type="password"] {
+    height: 56px;
+    font-weight: bold;
+    letter-spacing: 0.15em;
+}
+
+
+
+
+
+
+
+
+
+
+
 .input-box input:required ~ .required
 ,.input-box textarea:required ~ .required {
     --dimension: 15px;
@@ -280,17 +548,6 @@ body[data-dir="ltr"] .input-box input:required ~ .required
 body[data-dir="rtl"] .input-box input:required ~ .required
 ,body[data-dir="rtl"] .input-box textarea:required ~ .required {
     left: calc(var(--dimension)/2);
-}
-
-.input-box.error input:required ~ .required
-,.input-box.error textarea:required ~ .required {
-    background-color: var(--color-error);
-}
-
-.input-box input[type="password"] {
-    height: 56px;
-    font-weight: bold;
-    letter-spacing: 0.15em;
 }
 
 a.disabled-link
@@ -328,15 +585,6 @@ body[data-dir="rtl"] .input-text-button {
 
 .input-box input:valid ~ .input-text-button ion-icon {
     color: var(--color-icons);
-}
-
-.input-box.error input:focus ~ .input-text-button ion-icon
-,.input-box.error input:valid ~ .input-text-button ion-icon {
-    color: var(--color-error);
-}
-
-.input-box.error .input-text-button ion-icon {
-    color: var(--color-error);
 }
 
 .container-lg {
@@ -849,7 +1097,21 @@ async function loadFormModal(sel, url, init = null) {
 }
 
 async function loadDashboard() {
-    loadContent('#dashboard', '/dashboard/');
+    await loadContent('#dashboard', '/dashboard/');
+
+    var sidbarToggler = document.getElementById('sidebar-toggler');
+    if(sidbarToggler) {
+        sidbarToggler.addEventListener('click', function() {
+        var sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('collapsed');
+
+        var togglerIcon = document.querySelector('#sidebar-toggler ion-icon');
+        if (sidebar.classList.contains('collapsed')) {
+            togglerIcon.setAttribute('name', 'ellipsis-vertical-outline');
+        } else {
+            togglerIcon.setAttribute('name', 'ellipsis-horizontal-outline');
+        }
+    })};
 }
 
 
