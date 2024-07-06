@@ -27,50 +27,55 @@ class WarehauserFormMixin:
     def _generate_html_input(self, name:str, field):
         attrs = {'id': name.lower(), 'name': name.lower(), 'type': field.widget.input_type,}
         attrs.update(field.widget.attrs)
+        label = field.label
 
-        tags = {
-            'tag': 'div',
-            'attrs': {'class': 'row form-row mt-3',},
-            'content': [{
-                'tag': 'div',
-                'attrs': {'class': 'input-box',},
-                'content': [{
-                    'tag': 'input',
-                    'attrs': attrs,
-                },
-                {
-                    'tag': 'span',
-                    'attrs': {'class': 'label',},
-                    'content': _(name),
-                },
-                *([{
-                    'tag': 'div',
-                    'attrs': {
-                        'class': 'input-text-button',
-                    },
-                    'content': [{
-                        'tag': 'ion-icon',
-                        'attrs': {'id': f'{name}-toggle', 'name': 'eye-off-outline', 'onclick': f'passwordShowHide(this, \'{name}\', 4000);',},
-                        'content': '',
-                    },],
-                }] if field.widget.__class__.__name__.lower() == 'passwordinput' else []),
-                *([{
-                    'tag': 'div',
-                    'attrs': {
-                        'class': 'required',
-                        'data-bs-toggle': 'tooltip',
-                        'data-bs-placement': 'left',
-                        'data-bs-title': 'Required',
-                    },
-                    'content': '',
-                }] if field.widget.attrs.get('required', False) else []),
-                {
-                    'tag': 'div',
-                    'attrs': {'class': 'error error-message', 'id': f'error-{name}',},
-                    'content': '',
-                },
-            ],},],
-        }
+        tags:list = list()
+
+        tags.append(_generate_tag(tag='input',
+                            attrs=attrs,
+                            content=None))
+
+        tags.append(_generate_tag(tag='span',
+                                attrs={
+                                    'class': 'label',
+                                },
+                                content=_(label),
+                                ))
+
+        if field.widget.__class__.__name__.lower() == 'passwordinput':
+            toggle_icon = _generate_tag(tag='ion-icon',
+                                        attrs={
+                                            'id': f'{name}-toggle',
+                                            'name': 'eye-off-outline',
+                                            'onclick': f'passwordShowHide(this, \'{name}\', 4000);',
+                                        },
+                                        content='')
+            tags.append(_generate_tag(tag='div', attrs={'class': 'input-text-button',}, content=toggle_icon))
+
+        if field.widget.attrs.get('required', False):
+            tags.append(_generate_tag(tag='div',
+                        attrs={
+                                'class': 'required',
+                                'data-bs-toggle': 'tooltip',
+                                'data-bs-placement': 'left',
+                                'data-bs-title': 'Required',
+                        },
+                        content=''))
+
+        tags.append(_generate_tag(tag='div',
+                      attrs={
+                          'class': 'error error-message',
+                          'id': f'error-{name}',
+                          },
+                       content=''))
+
+        npt_box = _generate_tag(tag='div',
+                                attrs={'class': 'input-box',},
+                                content=tags)
+
+        tags = _generate_tag(tag='div',
+                           attrs={'class': 'row form-row mt-3',},
+                           content=npt_box)
 
         return tags
 
@@ -98,7 +103,14 @@ class WarehauserFormMixin:
                 content.append(_generate_tag(tag='p', attrs={'class': 'modal-header-slug',}, content=value))
 
             if 'close' in header:
-                content.append(_generate_tag(tag='ion-icon', attrs={'class': 'modal-close-icon', 'name': 'close-circle-outline', 'role': 'img',}, content=''))
+                id = data['attrs']['id']
+                try:
+                    href = header['close']['href']
+                except KeyError as ke:
+                    pass
+
+                content.append(_generate_tag(tag='a', attrs={'href': href,},
+                                             content=_generate_tag(tag='ion-icon', attrs={'class': 'modal-close-icon', 'name': 'close-circle-outline', 'role': 'img',}, content='')))
 
         content = _generate_tag(tag='div', attrs={'class': 'w-100 text-center'}, content=content)
         content = _generate_tag(tag='div', attrs={'class': 'modal-header'}, content=content)
@@ -127,38 +139,44 @@ class WarehauserFormMixin:
             footer = None
         return _generate_tag(tag='div', attrs={'class': 'modal-footer',}, content=footer)
 
+    # @debug_func
     def as_modal(self, data):
         content = [self._generate_modal_header(data), self._generate_modal_body(data), self._generate_modal_footer(data)]
         content = _generate_tag(tag='div', attrs={'class': 'modal-content'}, content=content)
         content = _generate_tag(tag='div', attrs={'class': 'modal-dialog'}, content=content)
-        content = _generate_tag(tag='div', attrs=data['modal']['attrs'], content=content)
         content = _generate_tag(tag='form', attrs=data['attrs'], content=content)
+        content = _generate_tag(tag='div', attrs=data['modal']['attrs'], content=content)
 
         return _render_bs4(_render_tags([content]))
 
 class WarehauserAuthLoginForm(AuthenticationForm, WarehauserFormMixin):
-    # id:str = 'form-login'
-
     def __init__(self, *args, **kwargs):
         self.csrf_token = kwargs.pop('csrf_token', None)
         super().__init__(*args, **kwargs)
 
-        # Customize form fields here if needed
-        self.fields['username'].widget.attrs.update({
+    username = forms.CharField(
+        label=_('Username'),
+        max_length=CHARFIELD_MAX_LENGTH,
+        widget=forms.TextInput(attrs={
             'placeholder': '',
             'required': 'true',
             'autocomplete': 'off',
-        })
+            'autofocus': 'true',
+        }),
+    )
 
-        self.fields['password'].widget.attrs.update({
+    password = forms.CharField(
+        label=_("Password"),
+        strip=False,
+        widget=forms.PasswordInput(attrs={
+            'id': 'password',
             'placeholder': '',
             'required': 'true',
             'autocomplete': 'off',
-        })
+        }),
+    )
 
 class WarehauserAuthForgotPasswordForm(forms.Form, WarehauserFormMixin):
-    # id:str = 'form-password-reset'
-
     def __init__(self, *args, **kwargs):
         self.csrf_token = kwargs.pop('csrf_token', None)
         super().__init__(*args, **kwargs)
@@ -170,29 +188,29 @@ class WarehauserAuthForgotPasswordForm(forms.Form, WarehauserFormMixin):
             'placeholder': '',
             'required': 'true',
             'autocomplete': 'off',
-            'css_classes': 'row form-row mb-4',
+            'autofocus': 'true',
         }),
     )
+
     password = forms.CharField(
-        label=_("Password"),
+        label=_("New Password"),
         strip=False,
         widget=forms.PasswordInput(attrs={
-            'id': 'new-password',
+            'id': 'password',
             'placeholder': '',
             'required': 'true',
             'autocomplete': 'off',
-            'css_classes': 'row form-row mb-4',
         }),
     )
+
     confirm = forms.CharField(
-        label=_("Confirm"),
+        label=_("Confirm Password"),
         strip=False,
         widget=forms.PasswordInput(attrs={
             'id': 'confirm',
             'placeholder': '',
             'required': 'true',
             'autocomplete': 'off',
-            'css_classes': 'row form-row mb-4',
         }),
     )
 

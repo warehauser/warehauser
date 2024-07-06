@@ -231,7 +231,7 @@ def auth_login_view(request):
         form = WarehauserAuthLoginForm(request)
 
     data = {
-        'attrs': {'id': 'form-login', 'action': 'javascript:submitLogin(\'form-login\');', 'method': 'post',},
+        'attrs': {'id': 'form-login', 'action': 'javascript:submitLogin();', 'method': 'post',},
         'buttons': [{'attrs': {'type': 'submit', 'value': 'login', 'class': 'btn btn-primary col-12', 'disabled': True,}, 'content': _('Login')}],
         'modal': {
             'attrs': {'class': 'modal', 'id': 'modal-login', 'tabindex': -1, 'offscreen': 'top',},
@@ -246,7 +246,7 @@ def auth_login_view(request):
             'footer': [{
                 'tag': 'div',
                 'attrs': {'class': 'row form-row w-100 mb-4 text-center'},
-                'content': [{'tag': 'a', 'attrs': {'id': 'link-forgot', 'href': '#',}, 'content': _('Forgot your password?'),}]}],
+                'content': [{'tag': 'a', 'attrs': {'id': 'link-forgot', 'href': 'javascript:getForgotPassword();',}, 'content': _('Forgot your password?'),}]}],
         },
         'csrf': get_token(request=request),
     }
@@ -320,13 +320,62 @@ def auth_change_password_view(request):
 
     return render(request, template, context)
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 @anonymous_required
 def auth_forgot_password_view(request):
-    if request.method.lower() == 'post':
-        pass
-
     form = WarehauserAuthForgotPasswordForm(request)
-    return render(request, 'auth/reset_password.html', {'form': form})
+
+    if request.method.lower() == 'post':
+        print(request.POST['email'])
+
+    data = {
+        'attrs': {'id': 'form-forgot', 'action': 'javascript:submitForgotPassword();', 'method': 'post',},
+        'buttons': [{'attrs': {'type': 'submit', 'value': 'sendcode', 'class': 'btn btn-primary col-12', 'disabled': True,}, 'content': _('Send Code')}],
+        'modal': {
+            'attrs': {'class': 'modal', 'id': 'modal-forgot', 'tabindex': -1, 'offscreen': 'top',},
+            'header': {
+                'icon': 'lock-closed-outline',
+                'heading': _('Forgot Password'),
+                'slug': _('Request change of password'),
+                'close': {'href': 'javascript:cancelForm(loadLogin);',}, # use the close key to add a close icon to the modal. Not advised for form-login
+            },
+            'body': {
+            },
+        },
+        'csrf': get_token(request=request),
+    }
+
+    return HttpResponse(form.as_modal(data=data))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def _auth_otp_form(request:Any, title:str, err:str = None) -> HttpResponse:
     form = WarehauserOTPChallengeForm()

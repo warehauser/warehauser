@@ -18,15 +18,14 @@
     --color-disabled: rgba(255, 255, 255, 0.15);
     --color-disabled-highlight: #888;
     --color-icons: #00dfc4;
+    --color-icons-hover: #00bfa4;
     --color-error: #be4d25;
 
     --icon-scale-factor: 0.4;
     --form-icon-dimension: 70px;
     --user-icon-dimension: calc(var(--form-icon-dimension) * var(--icon-scale-factor));
 
-
-
-    --color-icons: #21B3C0;
+    {% comment %} --color-icons: #21B3C0; {% endcomment %}
 
     --color-primary: #2143C0;
     --color-primary-disabled: #0D78C9;
@@ -87,6 +86,11 @@ a:not(.btn)
 {
     text-decoration: none;
     color: var(--color-icons);
+}
+
+a:not(.btn):hover
+{
+    color: var(--color-icons-hover);
 }
 
 body
@@ -179,9 +183,6 @@ main {
     font-size: 28px !important;
 }
 
-
-
-
 .form-icon {
     width: var(--form-icon-dimension);
     height: var(--form-icon-dimension);
@@ -206,7 +207,9 @@ footer {
     margin-top: 80px;
 }
 
-.modal#modal-login .modal-dialog {
+.modal#modal-login .modal-dialog
+, .modal#modal-forgot .modal-dialog
+ {
     max-width: 360px;
 }
 
@@ -326,11 +329,12 @@ body[data-dir="rtl"] .input-box span {
 }
 
 .input-box input:focus ~ span
-,.input-box input:disabled ~ span
 ,.input-box input:not(:placeholder-shown):valid ~ span
+,.input-box input:not(:placeholder-shown):disabled ~ span
 ,.input-box textarea:focus ~ span
 ,.input-box textarea:not(:placeholder-shown):valid ~ span
-,.input-box textarea:disabled ~ span {
+,.input-box textarea:not(:placeholder-shown):disabled ~ span
+{
     color: var(--color-background);
     font-size: 0.75em;
     transform: translateX(25px) translateY(-7px);
@@ -380,12 +384,6 @@ body[data-dir="rtl"] .input-box input:focus ~ span
     color: var(--color-error);
 }
 
-
-
-
-
-
-
 .input-box.warning input
 ,.input-box.warning input:not(:placeholder-shown):valid
 ,.input-box.warning textarea {
@@ -422,11 +420,6 @@ body[data-dir="rtl"] .input-box input:focus ~ span
 .input-box.warning .input-text-button ion-icon {
     color: var(--color-warning);
 }
-
-
-
-
-
 
 .input-box.success input
 ,.input-box.success input:not(:placeholder-shown):valid
@@ -465,10 +458,6 @@ body[data-dir="rtl"] .input-box input:focus ~ span
     color: var(--color-success);
 }
 
-
-
-
-
 .input-box.info input
 ,.input-box.info input:not(:placeholder-shown):valid
 ,.input-box.info textarea {
@@ -506,24 +495,11 @@ body[data-dir="rtl"] .input-box input:focus ~ span
     color: var(--color-info);
 }
 
-
-
-
 .input-box input[type="password"] {
     height: 56px;
     font-weight: bold;
     letter-spacing: 0.15em;
 }
-
-
-
-
-
-
-
-
-
-
 
 .input-box input:required ~ .required
 ,.input-box textarea:required ~ .required {
@@ -695,10 +671,29 @@ body[data-dir="rtl"] .input-text-button {
 
     <!-- Custom JS -->
     <script>
+// Determine the current language code from the URL
+const langCode = getNonENLangCode();
+
 const modalContainer = document.getElementById('modal-container');
 const animationRevealModalTime = '500ms';
 
 let show_hide_timeouts = {};
+let currentModal = null;
+
+function getNonENLangCode() {
+    let langCodeMatch = window.location.pathname.match(/^\/([a-z]{2})\//);
+    let langCode = langCodeMatch ? langCodeMatch[1] : null;
+
+    if (langCode == 'en') {
+        return null;
+    }
+
+    return langCode;
+}
+
+async function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 function passwordShowHide(toggle, id, milliseconds = 0) {
     let $toggle = $(toggle);
@@ -881,6 +876,18 @@ function handleAnimationRevealModalEnd(event) {
     }
 }
 
+function handleAnimationDismissModalEnd(event) {
+    var el = event.target;
+
+    // Remove the animate-transform class
+    el.classList.remove('animate-transform');
+
+    // Remove this event listener
+    el.removeEventListener('animationend', handleAnimationDismissModalEnd);
+
+    el.classList.add('d-none');
+}
+
 function animateTransformElement(el, tox, toy, time, func, delay, direction, handler) {
     // Set CSS variables on the element
     el.style.setProperty('--translate-to-x', tox);
@@ -908,25 +915,6 @@ function animateRevealModal(modal) {
     );
 }
 
-function handleAnimationDismissModalEnd(event) {
-    var el = event.target;
-
-    // Remove the animate-transform class
-    el.classList.remove('animate-transform');
-
-    // Remove this event listener
-    el.removeEventListener('animationend', handleAnimationDismissModalEnd);
-
-    el.classList.add('d-none');
-}
-
-function handleLoginEnd(event) {
-    var el = document.getElementById('form-login');
-    el.remove();
-
-    loadDashboard();
-}
-
 function animateDismissModal(modal, handler = null) {
     if (handler == null) {
         handler = handleAnimationDismissModalEnd
@@ -936,6 +924,13 @@ function animateDismissModal(modal, handler = null) {
         modal.querySelector('div.modal-content'),
         '0px', '0px', animationRevealModalTime, 'ease-out', '0ms', 'reverse', handler
     );
+}
+
+function animateDismissForm(modal, endHandler) {
+    modal.querySelectorAll('form').forEach(function(form) {
+        disableForm(form);
+    });
+    animateDismissModal(modal, endHandler);
 }
 
 function makeAutofocus(containerId) {
@@ -1060,7 +1055,6 @@ function updateSessionInfo(json, lock = false) {
 
 
 // Loading functions
-
 async function loadContent(sel, url, init = null) {
     let container = document.querySelector(sel);
 
@@ -1092,9 +1086,85 @@ async function loadContent(sel, url, init = null) {
     }
 }
 
-async function loadFormModal(sel, url, init = null) {
-    await loadContent('#modal-container', url, init);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+async function loadModal(event, url) {
+    if(event) {
+        handleAnimationDismissModalEnd(event);
+        await delay(200);
+    }
+
+    if(langCode) {
+        url = `/${langCode}${url}`
+    }
+
+    await loadContent('#modal-container', url, initModal);
+
+    currentModal = document.querySelector('div.modal');
+
+    animateRevealModal(currentModal);
 }
+
+
+
+
+
+
+async function loadLogin(event) {
+    loadModal(event, '/auth/login/');
+}
+
+async function loadForgotPassword(event) {
+    loadModal(event, '/auth/forgot/');
+}
+
+
+
+
+
+async function getForgotPassword() {
+    animateDismissForm(currentModal, loadForgotPassword);
+}
+
+async function cancelForm(endHandler) {
+    animateDismissForm(currentModal, endHandler);
+}
+
+
+
+
+
+
+
+
+
 
 async function loadDashboard() {
     await loadContent('#dashboard', '/dashboard/');
@@ -1117,7 +1187,7 @@ async function loadDashboard() {
 
 // Form submission functions
 
-async function submitLogin(id) {
+async function submitForm(id, url, handleResponse) {
     form = document.querySelector(`#${id}`);
     if(!form) {
         return false;
@@ -1135,43 +1205,68 @@ async function submitLogin(id) {
         formData.append(field.name, field.value);
     });
 
-    await fetch('/auth/login/', {
+    await fetch(url, {
         method: form.method,
         body: formData
     }).then((response) => {
-        if(response.ok) {
-            // Successful login
-            response.json().then((json) => {
-                updateSessionInfo(json);
-                animateDismissModal(form.querySelector('div.modal'), handleLoginEnd);
-            })
-        } else {
-            setTimeout(() => {
-                displayErrors(form, !response.ok);
-                shakeFormHeader(form);
-                enableForm(form);
-                makeAutofocus(id);
-            }, 1000)
-        }
+        handleResponse(form, response);
     });
 
     return false;
 }
 
-document.addEventListener('DOMContentLoaded', async function() {
-    // Determine the current language code from the URL
-    let langCodeMatch = window.location.pathname.match(/^\/([a-z]{2})\//);
-    let langCode = langCodeMatch ? langCodeMatch[1] : '';
+function handleLoginEnd(event) {
+    var el = document.getElementById('form-login');
+    el.remove();
+
+    loadDashboard();
+}
+
+function handleLoginResponse(form, response) {
+    if(response.ok) {
+        // Successful login
+        response.json().then((json) => {
+            updateSessionInfo(json);
+            animateDismissModal(currentModal, handleLoginEnd);
+        })
+    } else {
+        setTimeout(() => {
+            displayErrors(form, !response.ok);
+            shakeFormHeader(form);
+            enableForm(form);
+            makeAutofocus(form.id);
+        }, 1000)
+    }
+}
+
+function handleForgotEnd(event) {
+}
+
+function handleForgotResponse(form, response) {
+    console.log(response.json());
+}
+
+async function submitLogin() {
+    return await submitForm('form-login', '/auth/login/', handleLoginResponse);
+}
+
+async function submitForgotPassword() {
+    return await submitForm('form-forgot', '/auth/forgot/', handleForgotResponse);
+}
+
+
+
+
+
+
+
+
+
+
+
+document.addEventListener('DOMContentLoaded', async function(event) {
 {% if not user.is_authenticated %}
-
-    // Include the language code in the URL if present
-    let url = langCode ? `/${langCode}/auth/login/` : '/auth/login/';
-
-    await loadFormModal('#modal-container', url, initModal);
-
-    var modal = document.getElementById('modal-login');
-
-    animateRevealModal(modal);
+    loadLogin(null);
 {% else %}
     loadDashboard();
 {% endif %}
