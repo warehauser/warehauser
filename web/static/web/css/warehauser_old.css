@@ -1,0 +1,608 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins');
+
+*
+{
+    /* --bs-button-padding-x: 400px; */
+
+    --color-default: #fff;
+    --color-opaque: #a5aab0;
+    --color-disabled: rgba(255, 255, 255, 0.15);
+    --color-disabled-highlight: #888;
+    --color-background: #1d2b3a;
+    --color-icons: #00dfc4;
+    --color-error: #be4d25;
+    --color-checkbox-disabled: var(--color-disabled-highlight);
+    --color-checkbox-background-disabled: var(--color-disabled);
+    --color-checkbox-off: var(--color-default);
+    --color-checkbox-on: var(--color-default);
+    --color-checkbox-background: rgba(255, 255, 255, 0.5);
+
+    --icon-scale-factor: 0.4;
+    --form-icon-dimension: 70px;
+    --login-icon-dimension: calc(var(--form-icon-dimension) * var(--icon-scale-factor));
+
+    /* --animate-time: 500ms;
+    --animate-time-quick: 200ms; */
+
+    color: var(--color-default);
+}
+
+*, *::before, *::after
+{
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body
+{
+    display: flex;
+    flex-direction: column;
+    height: 100svh;
+    background: var(--color-background);
+    overflow-x: hidden;
+}
+
+header, footer {
+    flex: none;
+}
+
+main {
+    flex: 1;
+}
+
+main .container-lg {
+    flex: 1;
+    min-height: calc(100svh - 90px);
+}
+
+form div.error-messages {
+    overflow: hidden;
+    height: 0;
+    transition: height var(--animate-time-quick) ease;
+}
+
+form div.error-messages.show {
+    height: auto;
+}
+
+div.error
+,h1.error
+,h2.error
+,h3.error
+,h4.error
+,h5.error
+,h6.error
+,p.error
+,.error {
+    color: var(--color-error);
+}
+
+a.nav-link
+,a.navbar-brand
+{
+    display: flex;
+    align-items: center;
+    vertical-align: middle;
+}
+
+a.nav-link {
+    height: 28px;
+}
+
+a.nav-link ion-icon
+,a.navbar-brand ion-icon
+{
+    position: relative;
+}
+
+a.nav-link:hover
+,a.nav-link:focus
+,a.navbar-brand:hover
+,a.navbar-brand:focus
+{
+    outline: none;
+    text-decoration: none;
+    color: var(--color-icons);
+}
+
+a.disabled {
+    pointer-events: none; /* Prevent clicking */
+    cursor: text; /* Change the cursor to indicate it is not clickable */
+    text-decoration: none; /* Optionally, remove the underline */
+}
+
+a.disabled ion-icon {
+    cursor: pointer;
+}
+
+.card-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+}
+
+/* 
+.card.top {
+    position: fixed;
+    top: var(--hide-top);
+    left: var(--position-left);
+}
+
+.card.reveal {
+    transition-property: transform;
+    transition-duration: 200ms;
+    transition-timing-function: ease-out;
+}
+
+.card.reveal.top {
+    transform: translateY(var(--position-top));
+}
+
+.card.reveal.left {
+    transform: translateY(var(--adjust-left));
+}
+
+.card.reveal.right {
+    transform: translateY(var(--adjust-right));
+} */
+
+.tooltip {
+    --bs-tooltip-bg: var(--color-background);
+    --bs-tooltip-color: var(--bs-white);
+    --bs-tooltip-arrow-width: 0px;
+    --bs-tooltip-arrow-height: 0px;
+
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.75em;
+
+    border: 1px solid var(--color-error);
+
+    padding: 0;
+    border-radius: 0px;
+}
+
+.divider::after {
+    content: '|';
+    color: var(--color-disabled);
+    vertical-align: middle;
+    margin-left: 12px;
+    margin-right: 8px;
+}
+
+.session-info {
+    position: fixed;
+    top: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    height: var(--login-icon-dimension);
+    min-width: var(--login-icon-dimension);
+    margin-top: 12px;
+    margin-right: 5px;
+}
+
+.lock-info {
+    text-align: right;
+    overflow: hidden;
+    visibility: hidden;
+}
+
+.user-info {
+    overflow: hidden;
+}
+
+#user-settings
+{
+    margin-left: 5px;
+}
+
+.navbar-brand {
+    position: relative;
+    top: 5px;
+}
+
+.session-icon {
+    position: relative;
+    top: 5px;
+    width: var(--login-icon-dimension);
+    height: var(--login-icon-dimension);
+    color: var(--color-icons);
+}
+
+input[type="checkbox"]
+,input[type="radio"]
+{
+    display: none;
+}
+
+textarea
+{
+    resize: none;
+}
+
+.container-lg
+{
+    min-width: 360px;
+}
+
+.form-icon {
+    width: var(--form-icon-dimension);
+    height: var(--form-icon-dimension);
+    color: var(--color-icons);
+}
+
+.button-row
+{
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.input-box
+{
+    position: relative;
+}
+
+.input-box input
+,.input-box textarea
+{
+    padding: 15px 20px;
+    border: none;
+    outline: none;
+    width: 100%;
+    background: transparent;
+    border-radius: 5px;
+    color: var(--color-default);
+    border: 1px solid var(--color-opaque);
+    font-size: 1em;
+}
+
+.input-box input:not(:placeholder-shown):valid
+,.input-box textarea:not(:placeholder-shown):valid
+{
+    border-color: var(--color-icons);
+}
+
+.input-box span
+{
+    position: absolute;
+    left: 0;
+    padding: 15px 25px;
+    pointer-events: none;
+    font-size: 1em;
+    transition: 0.5s;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+
+    /* User cannot select the span */
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -ms-user-select: none;
+}
+
+.input-box input:focus ~ span
+,.input-box input:disabled ~ span
+,.input-box input:not(:placeholder-shown):valid ~ span
+,.input-box textarea:focus ~ span
+,.input-box textarea:not(:placeholder-shown):valid ~ span
+,.input-box textarea:disabled ~ span
+{
+    color: var(--color-background);
+    font-size: 0.75em;
+    transform: translateX(25px) translateY(-7px);
+    padding: 0 5px;
+    background-color: var(--color-icons);
+    border-radius: 2px;
+}
+
+.input-box.error input
+,.input-box.error input:not(:placeholder-shown):valid
+,.input-box.error textarea
+{
+    border-color: var(--color-error);
+}
+
+.input-box.error input ~ span
+,.input-box.error textarea ~ span
+{
+    color: var(--color-error);
+}
+
+.input-box.error input:focus ~ span
+,.input-box.error textarea:focus ~ span
+{
+    color: var(--color-default);
+    background-color: var(--color-error);
+}
+
+.input-box.error input:not(:placeholder-shown):valid ~ span
+,.input-box.error textarea:not(:placeholder-shown):valid ~ span
+{
+    color: var(--color-default);
+    background-color: var(--color-error);
+}
+
+.input-text-button
+{
+    position: absolute;
+    transform: translateY(-50%);
+    top: 55%;
+    right: 30px;
+}
+
+.input-box .input-text-button ion-icon {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+}
+
+.input-box input:valid ~ .input-text-button ion-icon
+{
+    color: var(--color-icons);
+}
+
+.input-box.error input:focus ~ .input-text-button ion-icon
+,.input-box.error input:valid ~ .input-text-button ion-icon
+{
+    color: var(--color-error);
+}
+
+.input-box.error .input-text-button ion-icon
+{
+    color: var(--color-error);
+}
+
+.btn
+{
+    height: 50px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.btn + .btn
+{
+    margin-top: 20px;
+}
+
+a.btn
+{
+    padding-top: 12px;
+}
+
+a:not(.btn)
+{
+    text-decoration: none;
+    color: var(--color-icons);
+}
+
+a.disabled-link
+,.input-text-button .disabled
+{
+    cursor: default;
+    color: var(--color-disabled);
+    pointer-events: none;
+    text-decoration: none;
+}
+
+a:not(.btn):focus {
+    outline: none;
+    text-decoration: underline;
+}
+
+.navbar a,
+.navbar a:focus {
+    text-decoration: none;
+}
+
+.center
+{
+    text-align: center;
+}
+
+.input-box input[type="password"]
+{
+    height: 56px;
+    font-weight: bold;
+    letter-spacing: 0.15em;
+}
+
+.label-checkbox-switch
+{
+    /* toggle in video */
+    --width: 40px;
+    --height: calc(var(--width) / 2);
+    --border-radius: calc(var(--height) / 2);
+
+    display: inline-block;
+    cursor: pointer;
+}
+
+.input-checkbox-fill
+{
+    /* toggle__fill in video */
+    position: relative;
+    width: var(--width);
+    height: var(--height);
+    border-radius: var(--border-radius);
+    background: var(--color-opaque);
+    transition: background 0.2s ease-in-out;
+}
+
+.input-checkbox-switch
+{
+    /* toggle__input in video */
+    display: inherit;
+}
+
+.input-checkbox-switch:checked ~ .input-checkbox-fill
+{
+    background: var(--color-icons);
+}
+
+.input-checkbox-switch ~ .input-checkbox-fill
+{
+    background: var(--color-checkbox-background);
+}
+
+.input-checkbox-switch:disabled ~ .input-checkbox-fill
+{
+    background: var(--color-checkbox-background-disabled);
+}
+
+.input-checkbox-fill::after
+{
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: var(--height);
+    width: var(--height);
+    background: var(--color-checkbox-off);
+    border-radius: var(--border-radius);
+    transition: transform 0.2s ease-in-out;
+}
+
+.input-checkbox-switch:checked ~ .input-checkbox-fill::after
+{
+    content: '';
+    transform: translateX(var(--height));
+    background: var(--color-checkbox-on);
+}
+
+.input-checkbox-switch:disabled ~ .input-checkbox-fill::after
+{
+    background: var(--color-checkbox-disabled);
+}
+
+.label-checkbox
+{
+    position: absolute;
+    top: 0;
+    left: calc(var(--width) + var(--bs-gutter-x) + 15px);
+}
+
+.label-checkbox-switch.error .label-checkbox
+{
+    color: var(--color-error);
+}
+
+.input-box input:required ~ .required
+,.input-box textarea:required ~ .required
+{
+    --dimension: 15px;
+
+    position: absolute;
+    top: -5px;
+    right: calc(var(--dimension)/2);
+    width: var(--dimension);
+    height: var(--dimension);
+    -moz-border-radius: 50%;
+    -webkit-border-radius: 50%;
+    border-radius: 50%;
+    background-color: var(--color-error);
+    content: '';
+}
+
+.label-radio
+{
+    text-transform: capitalize;
+    display: flex;
+    vertical-align: middle;
+    color: #fff;
+    position: relative;
+    padding-left: calc(25px + var(--bs-gutter-x));
+    margin-left: 20px;
+}
+
+.label-radio:not(:first-of-type) {
+    margin-top: 19px;
+}
+
+.label-radio span.radio-check
+{
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    border: 3px solid var(--color-checkbox-background);
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+.label-radio span.radio-check:after
+{
+    content: '';
+    height: 8px;
+    width: 8px;
+    background: var(--color-icons);
+    display: block;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%,-50%) scale(0);
+    border-radius: 50%;
+    transition: 0.1s ease-in-out 0ms;
+}
+
+.label-radio input[type='radio']:checked ~ span.radio-check
+{
+    border: 3px solid var(--color-icons);
+}
+
+.label-radio input[type='radio']:checked ~ span.radio-check:after
+{
+    transform: translate(-50%,-50%) scale(1);
+}
+
+/* form */
+
+/* input[type='text'] */
+
+/* input[type='password'] */
+
+/* textarea */
+
+/* select */
+
+/* input[type='checkbox'] */
+
+/* input[type='radio'] */
+
+/* Animations */
+
+@keyframes keyframes-shake
+{
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    50% { transform: translateX(5px); }
+    75% { transform: translateX(-5px); }
+    100% { transform: translateX(0); }
+}
+
+.shake-animation
+{
+    animation-name: keyframes-shake;
+    animation-duration: 300ms;
+    animation-iteration-count: 2;
+}
+/* 
+.animate-move {
+    transition: transform var(--animate-time) var(--animate-function);
+    transform: translate(var(--deltaX), var(--deltaY));
+}
+
+#card-form-login, #card-form-password-reset {
+    width: 360px;
+    max-width: 400px;
+}
+
+@media (max-width: 576px) {
+    .navbar-collapse {
+        display: none !important;
+    }
+} */

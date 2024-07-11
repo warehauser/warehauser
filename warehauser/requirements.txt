@@ -7,7 +7,7 @@ contourpy==1.2.1
 crispy==0.7.4
 crispy-bootstrap5==2024.2
 cycler==0.12.1
-Django==5.0.4
+Django==5.0.7
 django-cors-headers==4.3.1
 django-crispy-forms==2.1
 django-db-mutex==3.1.0

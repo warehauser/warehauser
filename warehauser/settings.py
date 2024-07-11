@@ -279,3 +279,5 @@ USE_L10N = True
 USE_TZ = True
 
 TIME_ZONE = 'Australia/Sydney'
+
+SEND_MAIL_FROM_ADDRESS = 'noreply@warehauser.org'

@@ -46,12 +46,12 @@ def validate_password(password:str) -> bool:
         # You can handle the error here or just return False
         return False
 
-def generate_otp_code() -> str:
+def generate_otp_code(length=6) -> str:
     """
     Generate a random OTP code (security code to verify password reset requests).
     """
     characters = string.ascii_letters + string.digits
-    return ''.join(random.choice(characters) for _ in range(6)).upper()
+    return ''.join(random.choice(characters) for _ in range(length)).upper()
 
 def is_valid_email_address(email:str) -> bool:
     """

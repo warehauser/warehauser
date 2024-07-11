@@ -17,35 +17,36 @@
 import json
 
 from datetime import datetime, timedelta
-from typing import Any, List
+from typing import Any#, List
 
 from django.shortcuts import render
 
 from django.conf import settings
-from django.contrib import messages
+# from django.contrib import messages
 from django.contrib.auth import login, authenticate, update_session_auth_hash
 from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.auth.models import User
-from django.core.exceptions import ObjectDoesNotExist
-# from django.core.mail import send_mail
+# from django.core.exceptions import ObjectDoesNotExist
+from django.core.mail import send_mail
 # from django.db.models import JSONField
 from django.http import HttpResponse, JsonResponse
 from django.middleware.csrf import get_token
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect#, get_object_or_404
 # from django.templatetags.static import static
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext as _
-from django.utils import translation
+# from django.utils import translation
 
 from core.models import *
 
 from .decorators import *
 from .forms import *
 from .models import *
-from core.utils import *
+from core.utils import is_valid_email_address, generate_otp_code
+
 from .renderers import _render_tags, _generate_tag
 
 BASE_TITLE = f'Warehauser - {_("Your warehouse run smoothly")}'
@@ -234,20 +235,27 @@ def auth_login_view(request):
         'attrs': {'id': 'form-login', 'action': 'javascript:submitLogin();', 'method': 'post',},
         'buttons': [{'attrs': {'type': 'submit', 'value': 'login', 'class': 'btn btn-primary col-12', 'disabled': True,}, 'content': _('Login')}],
         'modal': {
-            'attrs': {'class': 'modal', 'id': 'modal-login', 'tabindex': -1, 'offscreen': 'top',},
-            'header': {
-                'icon': 'lock-closed-outline',
-                'heading': _('Login'),
-                'slug': _('Welcome to Warehauser'),
-                # 'close': True, # use the close key to add a close icon to the modal. Not advised for form-login
-            },
-            'body': {
-            },
-            'footer': [{
-                'tag': 'div',
-                'attrs': {'class': 'row form-row w-100 mb-4 text-center'},
-                'content': [{'tag': 'a', 'attrs': {'id': 'link-forgot', 'href': 'javascript:getForgotPassword();',}, 'content': _('Forgot your password?'),}]}],
+            'attrs': {'class': 'modal', 'id': 'modal-login', 'tabindex': -1,},
         },
+        'modal-dialog': {},
+        'modal-content': {
+            'attrs': {
+                'id': 'modal-login-content',
+                'stage-parent': 'modal-login',
+                'offscreen': 'top',
+            },
+        },
+        'header': {
+            'icon': 'lock-closed-outline',
+            'heading': _('Login'),
+            'slug': _('Welcome to Warehauser'),
+            # 'close': True, # use the close key to add a close icon to the modal. Not advised for form-login
+        },
+        'body': {},
+        'footer': [{
+            'tag': 'div',
+            'attrs': {'class': 'row form-row w-100 mb-4 text-center'},
+            'content': [{'tag': 'a', 'attrs': {'id': 'link-forgot', 'href': 'javascript:getForgotPassword();',}, 'content': _('Forgot your password?'),}]}],
         'csrf': get_token(request=request),
     }
 
@@ -338,10 +346,73 @@ def auth_change_password_view(request):
 
 @anonymous_required
 def auth_forgot_password_view(request):
-    form = WarehauserAuthForgotPasswordForm(request)
-
     if request.method.lower() == 'post':
-        print(request.POST['email'])
+        form = WarehauserAuthForgotPasswordForm(data=request.POST)
+        if form.is_valid():
+            email = form.cleaned_data.get('email')
+            password = form.cleaned_data.get('password')
+            confirm = form.cleaned_data.get('confirm')
+
+            if is_valid_email_address(email) is False:
+                form.add_error(None, 'Email is not of a valid format.')
+            elif password != confirm:
+                form.add_error(None, 'Passwords do not match.')
+            else:
+                user = User.objects.filter(email=email).first()
+                if not user:
+                    # If the user with the email address supplied does not exist, return success (but do nothing! HEHEHE!)
+                    return JsonResponse({}, status=200)
+
+                otp = generate_otp_code(length=6)
+
+                data = {
+                    'otp': {
+                        'codes': {
+                            otp: {
+                                'status': 0,
+                                'type': 'forgotpwd',
+                                'dt': f'{timezone.localtime(timezone.now())}',
+                                'data': {
+                                    'password': make_password(password),
+                                },
+                            },
+                        },
+                    },
+                }
+
+                try:
+                    with db_mutex(f'core_useraux'):
+                        try:
+                            aux = UserAux.objects.get(user=user)
+                            aux.options.update(data)
+                        except Exception as e:
+                            aux = UserAux.objects.create(user=user, options=data)
+
+                        if 'attempts' not in aux.options['otp']:
+                            aux.options['otp']['attempts'] = list()
+                        aux.save()
+                except Exception as e:
+                    raise e
+
+                # Store password in session and send confirmation email...
+                content = f"""
+Hi,
+
+Here is your one time code to change your password:
+
+{otp}
+
+"""
+
+                send_mail(subject='Warehauser Password Reset Request',
+                          message=content,
+                          from_email=settings.SEND_MAIL_FROM_ADDRESS,
+                          recipient_list=[email,],
+                          fail_silently=False)
+
+            return JsonResponse({}, status=200)
+        else:
+            return JsonResponse({}, status=200)
 
     data = {
         'attrs': {'id': 'form-forgot', 'action': 'javascript:submitForgotPassword();', 'method': 'post',},
@@ -360,6 +431,7 @@ def auth_forgot_password_view(request):
         'csrf': get_token(request=request),
     }
 
+    form = WarehauserAuthForgotPasswordForm(request)
     return HttpResponse(form.as_modal(data=data))
 
 

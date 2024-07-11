@@ -84,7 +84,7 @@ class WarehauserFormMixin:
         content = []
 
         try:
-            header = data['modal']['header']
+            header = data['header']
         except KeyError as ke:
             pass
 
@@ -134,16 +134,41 @@ class WarehauserFormMixin:
     # @debug_func
     def _generate_modal_footer(self, data):
         try:
-            footer = data['modal']['footer']
+            footer = data['footer']
         except KeyError as ke:
             footer = None
         return _generate_tag(tag='div', attrs={'class': 'modal-footer',}, content=footer)
 
     # @debug_func
+    def _generate_modal_element(self, data, key, content):
+        try:
+            attrs = data[key]['attrs']
+        except KeyError as ke:
+            attrs = dict()
+
+        # Ensure the 'class' attribute exists and is a string
+        class_names = attrs.get('class', '')
+
+        # Split the class names into a list
+        class_list = class_names.split()
+
+        # Add the key if it's not already in the list
+        if key not in class_list:
+            class_list.append(key)
+
+        # Remove duplicates by converting the list to a set and back to a list
+        class_list = list(set(class_list))
+
+        # Join the list back into a space-separated string
+        attrs['class'] = ' '.join(class_list)
+
+        return _generate_tag(tag='div', attrs=attrs, content=content)
+
+    # @debug_func
     def as_modal(self, data):
         content = [self._generate_modal_header(data), self._generate_modal_body(data), self._generate_modal_footer(data)]
-        content = _generate_tag(tag='div', attrs={'class': 'modal-content'}, content=content)
-        content = _generate_tag(tag='div', attrs={'class': 'modal-dialog'}, content=content)
+        content = self._generate_modal_element(data, 'modal-content', content)
+        content = self._generate_modal_element(data, 'modal-dialog', content)
         content = _generate_tag(tag='form', attrs=data['attrs'], content=content)
         content = _generate_tag(tag='div', attrs=data['modal']['attrs'], content=content)
 

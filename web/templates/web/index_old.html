@@ -1,0 +1,1299 @@
+{% load i18n filters %}{% if user.is_authenticated %}{% setvar user.username as username %}{% setvar '' as disabled %}{% setvar 'open' as iconname %}{% else %}{% setvar _('guest') as username %}{% setvar 'disabled' as disabled %}{% setvar 'closed' as iconname %}{% endif %}<!doctype html>
+<html lang="{{ request.LANGUAGE_CODE }}">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/web/images/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="/static/web/images/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet prefetch" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    {% comment %} <link href="/static/web/css/warehauser.css" rel="stylesheet"> {% endcomment %}
+    <style>
+@import url('https://fonts.googleapis.com/css?family=Poppins');
+
+* {
+    --color-default: #fff;
+    --color-background: #1d2b3a;
+    --color-opaque: #a5aab0;
+    --color-disabled: rgba(255, 255, 255, 0.15);
+    --color-disabled-highlight: #888;
+    --color-icons: #00dfc4;
+    --color-icons-hover: #00bfa4;
+    --color-error: #be4d25;
+
+    --icon-scale-factor: 0.4;
+    --form-icon-dimension: 70px;
+    --user-icon-dimension: calc(var(--form-icon-dimension) * var(--icon-scale-factor));
+
+    {% comment %} --color-icons: #21B3C0; {% endcomment %}
+
+    --color-primary: #2143C0;
+    --color-primary-disabled: #0D78C9;
+    --color-secondary: #21B3C0;
+    --color-secondary-disabled: #21B3C0;
+
+    --bs-btn-disabled-bg: var(--color-primary-disabled);
+    --bs-btn-disabled-border-color: var(--color-primary-disabled);
+
+    {% comment %}
+    --color-error: #B9181D;
+    --color-error: #DE3B40;
+    --color-error: #F27D81;
+{% endcomment %}
+    --color-error: #F22128;
+
+{% comment %}
+    --color-warning: #DD980E;
+    --color-warning: #EFB034;
+    --color-warning: #FCB831;
+{% endcomment %}
+    --color-warning: #F6CE7E;
+
+{% comment %}
+    --color-success: #0EAA42;
+    --color-success: #1DD75B;
+    --color-success: #18EC5F;
+{% endcomment %}
+    --color-success: #6EED98;
+
+{% comment %}
+    --color-info: #0D78C9;
+    --color-info: #379AE6;
+    --color-info: #1091F4;
+{% endcomment %}
+    --color-info: #60B2F0;
+
+    /* Gray scale colours. Generally used for text and backgrounds. */
+    --color-gray-1: #dce5e5;
+    --color-gray-2: #b8c7c7;
+    --color-gray-3: #879ca1;
+    --color-gray-4: #52676b;
+    --color-gray-5: #304040;
+    --color-gray-6: #1c2326;
+    --color-gray-7: #161d1d;
+
+}
+
+*, *::before, *::after
+{
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+a:not(.btn)
+{
+    text-decoration: none;
+    color: var(--color-icons);
+}
+
+a:not(.btn):hover
+{
+    color: var(--color-icons-hover);
+}
+
+body
+{
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+    height: 100vh;
+    color: var(--color-default);
+    background: var(--color-background);
+}
+
+.btn {
+    text-transform: uppercase;
+}
+
+.btn-primary {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+header {
+    z-index: 1000;
+}
+
+.divider::after {
+    content: '|';
+    color: var(--color-disabled);
+    vertical-align: middle;
+    margin-left: 12px;
+    margin-right: 8px;
+}
+
+#session-info {
+    margin-bottom: 6px;
+}
+        
+#user-icon {
+    position: relative;
+    top: 5px;
+    width: var(--user-icon-dimension);
+    height: var(--user-icon-dimension);
+    color: var(--color-icons);
+}
+
+main {
+}
+
+#sidebar {
+    color: var(--color-default);
+    background: var(--color-background) !important;
+    border: 1px solid var(--color-disabled-highlight);
+    border-radius: 0px;
+    padding-top: 15px;
+    padding-bottom: 15px;
+    transition: width 0.3s;
+}
+
+#sidebar.collapsed {
+    width: 80px;
+}
+
+#sidebar .nav-link {
+    display: flex;
+    align-items: center;
+}
+
+#sidebar.collapsed .nav-link .link-text {
+    display: none;
+}
+
+#sidebar .nav-link ion-icon {
+    min-width: 28px !important;
+    min-height: 28px !important;
+}
+
+#sidebar .nav-link .link-text {
+    margin-left: 15px;
+    color: var(--color-default);
+}
+
+#sidebar-toggler {
+    cursor: pointer;
+    margin: 1rem 0 1rem 1rem;
+    display: flex;
+    align-items: center;
+}
+
+#sidebar-toggler ion-icon {
+    font-size: 28px !important;
+}
+
+.form-icon {
+    width: var(--form-icon-dimension);
+    height: var(--form-icon-dimension);
+    color: var(--color-icons);
+}
+
+footer {
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.navbar-brand {
+    position: relative;
+}
+
+.modal {
+    z-index: 999;
+    display: block;
+}
+
+.modal-dialog {
+    margin-top: 80px;
+}
+
+.modal#modal-login .modal-dialog
+, .modal#modal-forgot .modal-dialog
+ {
+    max-width: 360px;
+}
+
+.modal-header, .modal-content, .modal-footer {
+    border-radius: 0;
+}
+
+.modal-close-icon {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    top: 5px;
+    right: 5px;
+    color: var(--color-icons);
+    background-color: var(--color-background);
+}
+
+.modal-content {
+    border: 1px solid var(--color-disabled-highlight);
+    background-color: var(--color-background);
+    color: var(--color-default);
+}
+
+.modal-header {
+    border-bottom: 0;
+}
+
+.modal-header-slug {
+    margin-bottom: 0px;
+}
+
+.modal-body {
+    margin-top: 0px;
+}
+
+.modal-footer {
+    border-top: 0;
+}
+
+.tooltip {
+    --bs-tooltip-bg: var(--color-background);
+    --bs-tooltip-color: var(--bs-white);
+    --bs-tooltip-arrow-width: 0px;
+    --bs-tooltip-arrow-height: 0px;
+
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.75em;
+
+    border: 1px solid var(--color-icons);
+
+    padding: 0;
+    border-radius: 0px;
+}
+
+.tooltip.error {
+    border-color: var(--color-error);
+}
+
+.tooltip.warning {
+    border-color: var(--color-warning);
+}
+
+.tooltip.success {
+    border-color: var(--color-success);
+}
+
+.tooltip.info {
+    border-color: var(--color-info);
+}
+
+.input-box {
+    position: relative;
+}
+
+.input-box input
+,.input-box textarea {
+    padding: 15px 20px;
+    border: none;
+    outline: none;
+    width: 100%;
+    background: transparent;
+    border-radius: 5px;
+    color: var(--color-default);
+    border: 1px solid var(--color-opaque);
+    font-size: 1em;
+}
+
+.input-box input:not(:placeholder-shown):valid
+,.input-box textarea:not(:placeholder-shown):valid {
+    border-color: var(--color-icons);
+}
+
+.input-box span {
+    position: absolute;
+    top: 0;
+    padding: 15px 25px;
+    pointer-events: none;
+    font-size: 1em;
+    transition: 0.5s;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+
+    /* User cannot select the span */
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -ms-user-select: none;
+}
+
+body[data-dir="ltr"] .input-box span {
+    left: 0px;
+}
+
+body[data-dir="rtl"] .input-box span {
+    right: 0px;
+}
+
+.input-box input:focus ~ span
+,.input-box input:not(:placeholder-shown):valid ~ span
+,.input-box input:not(:placeholder-shown):disabled ~ span
+,.input-box textarea:focus ~ span
+,.input-box textarea:not(:placeholder-shown):valid ~ span
+,.input-box textarea:not(:placeholder-shown):disabled ~ span
+,.input-box input[type="email"]:not(:placeholder-shown) ~ span
+{
+    color: var(--color-background);
+    font-size: 0.75em;
+    transform: translateX(25px) translateY(-7px);
+    padding: 0 5px;
+    background-color: var(--color-icons);
+    border-radius: 2px;
+}
+
+body[data-dir="rtl"] .input-box input:focus ~ span
+,body[data-dir="rtl"] .input-box input:disabled ~ span
+,body[data-dir="rtl"] .input-box input:not(:placeholder-shown):valid ~ span
+,body[data-dir="rtl"] .input-box textarea:focus ~ span
+,body[data-dir="rtl"] .input-box textarea:not(:placeholder-shown):valid ~ span
+,body[data-dir="rtl"] .input-box textarea:disabled ~ span {
+    transform: translateX(-25px) translateY(-7px);
+}
+
+.input-box.error input
+,.input-box.error input:not(:placeholder-shown):valid
+,.input-box.error textarea {
+    border-color: var(--color-error);
+}
+
+.input-box.error input ~ span
+,.input-box.error textarea ~ span {
+    color: var(--color-error);
+}
+
+.input-box.error input:focus ~ span
+,.input-box.error textarea:focus ~ span {
+    color: var(--color-default);
+    background-color: var(--color-error);
+}
+
+.input-box.error input:not(:placeholder-shown):valid ~ span
+,.input-box.error textarea:not(:placeholder-shown):valid ~ span {
+    color: var(--color-default);
+    background-color: var(--color-error);
+}
+
+.input-box.error input:focus ~ .input-text-button ion-icon
+,.input-box.error input:valid ~ .input-text-button ion-icon {
+    color: var(--color-error);
+}
+
+.input-box.error .input-text-button ion-icon {
+    color: var(--color-error);
+}
+
+.input-box.warning input
+,.input-box.warning input:not(:placeholder-shown):valid
+,.input-box.warning textarea {
+    border-color: var(--color-warning);
+}
+
+.input-box.warning input ~ span
+,.input-box.warning textarea ~ span {
+    color: var(--color-warning);
+}
+
+.input-box.warning input:focus ~ span
+,.input-box.warning textarea:focus ~ span {
+    color: var(--color-background);
+    background-color: var(--color-warning);
+}
+
+.input-box.warning input:not(:placeholder-shown):valid ~ span
+,.input-box.warning textarea:not(:placeholder-shown):valid ~ span {
+    color: var(--color-default);
+    background-color: var(--color-warning);
+}
+
+.input-box.warning input:required ~ .required
+,.input-box.warning textarea:required ~ .required {
+    background-color: var(--color-warning);
+}
+
+.input-box.warning input:focus ~ .input-text-button ion-icon
+,.input-box.warning input:valid ~ .input-text-button ion-icon {
+    color: var(--color-warning);
+}
+
+.input-box.warning .input-text-button ion-icon {
+    color: var(--color-warning);
+}
+
+.input-box.success input
+,.input-box.success input:not(:placeholder-shown):valid
+,.input-box.success textarea {
+    border-color: var(--color-success);
+}
+
+.input-box.success input ~ span
+,.input-box.success textarea ~ span {
+    color: var(--color-success);
+}
+
+.input-box.success input:focus ~ span
+,.input-box.success textarea:focus ~ span {
+    color: var(--color-background);
+    background-color: var(--color-success);
+}
+
+.input-box.success input:not(:placeholder-shown):valid ~ span
+,.input-box.success textarea:not(:placeholder-shown):valid ~ span {
+    color: var(--color-default);
+    background-color: var(--color-success);
+}
+
+.input-box.success input:required ~ .required
+,.input-box.success textarea:required ~ .required {
+    background-color: var(--color-success);
+}
+
+.input-box.success input:focus ~ .input-text-button ion-icon
+,.input-box.success input:valid ~ .input-text-button ion-icon {
+    color: var(--color-success);
+}
+
+.input-box.success .input-text-button ion-icon {
+    color: var(--color-success);
+}
+
+.input-box.info input
+,.input-box.info input:not(:placeholder-shown):valid
+,.input-box.info textarea {
+    border-color: var(--color-info);
+}
+
+.input-box.info input ~ span
+,.input-box.info textarea ~ span {
+    color: var(--color-info);
+}
+
+.input-box.info input:focus ~ span
+,.input-box.info textarea:focus ~ span {
+    color: var(--color-background);
+    background-color: var(--color-info);
+}
+
+.input-box.info input:not(:placeholder-shown):valid ~ span
+,.input-box.info textarea:not(:placeholder-shown):valid ~ span {
+    color: var(--color-default);
+    background-color: var(--color-info);
+}
+
+.input-box.info input:required ~ .required
+,.input-box.info textarea:required ~ .required {
+    background-color: var(--color-info);
+}
+
+.input-box.info input:focus ~ .input-text-button ion-icon
+,.input-box.info input:valid ~ .input-text-button ion-icon {
+    color: var(--color-info);
+}
+
+.input-box.info .input-text-button ion-icon {
+    color: var(--color-info);
+}
+
+.input-box input[type="password"] {
+    height: 56px;
+    font-weight: bold;
+    letter-spacing: 0.15em;
+}
+
+.input-box input:required ~ .required
+,.input-box textarea:required ~ .required {
+    --dimension: 15px;
+
+    position: absolute;
+    top: -5px;
+    width: var(--dimension);
+    height: var(--dimension);
+    -moz-border-radius: 50%;
+    -webkit-border-radius: 50%;
+    border-radius: 50%;
+    background-color: var(--color-icons);
+    content: '';
+}
+
+body[data-dir="ltr"] .input-box input:required ~ .required
+,body[data-dir="ltr"] .input-box textarea:required ~ .required {
+    right: calc(var(--dimension)/2);
+}
+
+body[data-dir="rtl"] .input-box input:required ~ .required
+,body[data-dir="rtl"] .input-box textarea:required ~ .required {
+    left: calc(var(--dimension)/2);
+}
+
+a.disabled-link
+,.input-text-button .disabled {
+    cursor: default;
+    color: var(--color-disabled);
+    pointer-events: none;
+    text-decoration: none;
+}
+
+.navbar-text a.disabled-link {
+    color: var(--bs-navbar-color);
+}
+
+.input-text-button {
+    position: absolute;
+    transform: translateY(-50%);
+    top: 55%;
+}
+
+body[data-dir="ltr"] .input-text-button {
+    right: 30px;
+}
+
+body[data-dir="rtl"] .input-text-button {
+    left: 30px;
+}
+
+.input-box .input-text-button ion-icon {
+    position: relative;
+    width: 25px;
+    height: 25px;
+    cursor: pointer;
+}
+
+.input-box input:valid ~ .input-text-button ion-icon {
+    color: var(--color-icons);
+}
+
+.error-message {
+    display: none;
+    margin-top: 5px;
+    color: var(--color-error);
+    opacity: 0;
+    overflow: hidden;
+    height: 0;
+    transition: height 0.5s ease-in-out, opacity 0.5s ease-in-out;
+}
+
+.container-lg {
+    min-width: 360px;
+}
+
+/* Define the keyframes */
+@keyframes keyframesTransform {
+    from {
+        transform: translate(var(--translate-from-x), var(--translate-from-y));
+    }
+    to {
+        transform: translate(var(--translate-to-x), var(--translate-to-y));
+    }
+}
+
+@keyframes keyframes-shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    50% { transform: translateX(5px); }
+    75% { transform: translateX(-5px); }
+    100% { transform: translateX(0); }
+}
+
+/* animation rules */
+.animate-transform {
+    animation: keyframesTransform var(--animate-time) var(--animate-func) var(--animate-delay) var(--animate-direction);
+}
+
+.shake-animation {
+    animation-name: keyframes-shake;
+    animation-duration: 300ms;
+    animation-iteration-count: 2;
+}
+
+/* media rules */
+@media (max-width: 576px) {
+    .navbar-collapse {
+        display: none !important;
+    }
+    #welcomeText {
+        display: none;
+    }
+}
+    </style>
+</head>
+<body data-dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
+    <header id="header" class="p-0 text-bg-dark sticky-top">
+        <div class="container-lg">
+            <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+                <div class="container-fluid">
+                    <a class="navbar-brand" href="/">Warehauser</a>
+                    <ul class="navbar-nav ms-auto">
+                        <li id="session-info" class="nav-item">
+{% url 'auth_user_profile_view' as urlprofile %}
+{% with url=urlprofile %}
+{% if LANGUAGE_BIDI %}
+                            <span id="username" class="navbar-text">
+                                <a id="link-username" class="nav-text{% if not user.is_authenticated %} disabled-link{% endif %}" href="{{ url }}">
+                                    {{ username }}
+                                </a>
+                            </span>
+                            <span id="welcomeText" class="navbar-text">{% trans _('Welcome,') %}</span>
+{% else %}
+                            <span id="welcomeText" class="navbar-text">{% trans _('Welcome,') %}</span>
+                            <span id="username" class="navbar-text">
+                                <a id="link-username" class="nav-text{% if not user.is_authenticated %} disabled-link{% endif %}" href="{{ url }}">
+                                    {{ username }}
+                                </a>
+                            </span>
+{% endif %}
+{% endwith %}
+                            <span id="session-info-divider" class="divider"></span>
+                            <a id="link-logout" class="nav-text {{ disabled }}" href="{% url 'auth_logout_view' %}"{% if user.is_authenticated %} title="{% trans "Logout" %}"{% else %} title="{% trans "Login" %}"{% endif %}><ion-icon id="user-icon" name="lock-{{ iconname }}-outline" class="md hydrated"></ion-icon></a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+        </div>
+    </header>
+    <main>
+        <div id="modal-container" class="text-center fade show"></div>
+        <div id="dashboard" class="container-lg"></div>
+    </main>
+    <footer id="footer" class="fixed-bottom text-bg-dark bg-dark">
+        <div class="container-lg d-flex justify-content-center align-items-center">{% blocktrans %}Welcome to Warehauser{% endblocktrans %}</div>
+    </footer>
+
+    <!-- JQuery JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- ION ICON JS -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+    <!-- Custom JS -->
+    <script>
+// Determine the current language code from the URL
+const langCode = getNonENLangCode();
+
+const modalContainer = document.getElementById('modal-container');
+const animationRevealModalTime = '500ms';
+
+let show_hide_timeouts = {};
+let currentModal = null;
+
+function getNonENLangCode() {
+    let langCodeMatch = window.location.pathname.match(/^\/([a-z]{2})\//);
+    let langCode = langCodeMatch ? langCodeMatch[1] : null;
+
+    if (langCode == 'en') {
+        return null;
+    }
+
+    return langCode;
+}
+
+async function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function passwordShowHide(toggle, id, milliseconds = 0) {
+    let $toggle = $(toggle);
+    let $input = $('#' + id);
+    if ($input.attr('type') === 'password') {
+        $input.attr('type', 'text');
+        $toggle.attr('name', 'eye-outline');
+        $input.focus();
+
+        if (milliseconds > 0) {
+            // Automatically reset the input type to password after specified milliseconds
+            show_hide_timeouts[id] = setTimeout(() => {
+                $input.attr('type', 'password');
+                $toggle.attr('name', 'eye-off-outline');
+                delete show_hide_timeouts[id];
+            }, milliseconds);
+        }
+    } else {
+        if (show_hide_timeouts[id] !== undefined) {
+            clearTimeout(show_hide_timeouts[id]);
+            delete show_hide_timeouts[id];
+        }
+        $input.attr('type', 'password');
+        $toggle.attr('name', 'eye-off-outline');
+        $input.focus();
+    }
+}
+
+function initModal(ctnt) {
+    var ctntElement = typeof ctnt === 'string' ? document.querySelector(ctnt) : ctnt;
+
+    ctntElement.querySelectorAll('div.modal').forEach(function(modal) {
+        var content = modal.querySelector('.modal-content');
+
+        // Save the original CSS properties
+        var originalCss = {
+            visibility: content.style.visibility,
+            display: content.style.display,
+            position: content.style.position,
+            top: content.style.top,
+            left: content.style.left
+        };
+
+        // Apply new CSS properties to make the content invisible and above the top of the screen
+        content.style.visibility = 'hidden';
+        content.style.display = 'block';
+        content.style.position = 'absolute';
+
+        // Get the bounding rect
+        var rect = content.getBoundingClientRect();
+
+        modal.classList.add('d-none');
+
+        // Restore the original CSS properties
+        content.style.visibility = originalCss.visibility;
+        content.style.display = originalCss.display;
+        content.style.position = originalCss.position;
+        content.style.top = originalCss.top;
+        content.style.left = originalCss.left;
+
+        var fromx = 0;
+        var fromy = 0;
+
+        var offscreen = modal.getAttribute('offscreen').trim().toLowerCase();
+        switch(offscreen) {
+            case 'top':
+                fromy = (rect.top + rect.height + 1) * (-1);
+                break;
+            case 'left':
+                fromx = (rect.left + window.innerWidth + 1) * (-1);
+                break;
+            case 'right':
+                fromx = rect.left + window.innerWidth + 1;
+                break;
+            default:
+                break;
+        }
+
+        content.style.setProperty('--translate-from-x', fromx + 'px');
+        content.style.setProperty('--translate-from-y', fromy + 'px');
+    });
+
+    ctntElement.querySelectorAll('form').forEach(function(form) {
+        // Remove any existing CSRF token fields
+        var csrfField = form.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (csrfField) {
+            csrfField.remove();
+        }
+
+        // Append a new CSRF token field at the end of the form
+        var newCsrfField = document.createElement('input');
+        newCsrfField.setAttribute('type', 'hidden');
+        newCsrfField.setAttribute('name', 'csrfmiddlewaretoken');
+        newCsrfField.setAttribute('value', '{{ csrf_token }}');
+        form.appendChild(newCsrfField);
+
+        // Add listeners to all the required fields within this form
+        form.querySelectorAll('input[required]').forEach(function(input) {
+            input.addEventListener('input', function() {
+                var formIsValid = true;
+
+                // Check if all required fields within this form are filled
+                form.querySelectorAll('input[required]').forEach(function(requiredInput) {
+                    if (requiredInput.value === '') {
+                        formIsValid = false;
+                        return false; // Exit the loop early if any field is empty
+                    }
+                });
+
+                // Enable or disable all buttons within the form based on form validity
+                form.querySelectorAll('button[type="submit"]').forEach(function(button) {
+                    button.disabled = !formIsValid;
+                });
+            });
+        });
+    });
+
+    // Enable tooltips
+    ctntElement.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(tooltipElement) {
+        var tooltip = new bootstrap.Tooltip(tooltipElement);
+
+        tooltipElement.addEventListener('show.bs.tooltip', function() {
+            var parent = tooltipElement.parentNode;
+            if (parent && parent.classList.contains('error')) {
+                setTimeout(function() {  // Delay to ensure tooltip is created
+                    var tipElement = tooltipElement.getAttribute('aria-describedby');
+                    var tooltipDom = document.getElementById(tipElement);
+
+                    if (tooltipDom) {
+                        tooltipDom.classList.add('error');
+                    }
+                }, 0);
+            }
+        });
+    });
+}
+
+function showErrorMessage(id, err) {
+    // Get the error message div by ID
+    var errorDiv = document.getElementById(id);
+    var parentDiv = errorDiv.parentElement;
+
+    // Make the input box error
+    parentDiv.classList.add('error');
+
+    // Set the error message content
+    errorDiv.textContent = err;
+
+    // Initially hide the error message content
+    errorDiv.style.display = 'block';
+    errorDiv.style.height = 'auto'; // temporarily set height to auto to measure
+    var autoHeight = errorDiv.scrollHeight; // get the height of the div when content is displayed
+    errorDiv.style.height = '0px'; // reset to 0 before starting animation
+
+    // Use a timeout to ensure the previous styles are applied
+    setTimeout(() => {
+        // Expand the div to its full height
+        errorDiv.style.height = autoHeight + 'px';
+    }, 10);
+
+    // After the height animation is done, show the error message with a fade-in effect
+    setTimeout(() => {
+        errorDiv.style.opacity = '1';
+    }, 510); // slightly longer than the height transition to ensure it is fully expanded
+}
+
+function handleAnimationRevealModalEnd(event) {
+    var el = event.target;
+
+    // Remove the animate-transform class
+    el.classList.remove('animate-transform');
+
+    // Remove this event listener
+    el.removeEventListener('animationend', handleAnimationRevealModalEnd);
+
+    // Find the input with autofocus and focus it
+    var autofocusInput = el.querySelector('input[autofocus]');
+    if (autofocusInput) {
+        autofocusInput.focus();
+    }
+}
+
+function handleAnimationDismissModalEnd(event) {
+    var el = event.target;
+
+    // Remove the animate-transform class
+    el.classList.remove('animate-transform');
+
+    // Remove this event listener
+    el.removeEventListener('animationend', handleAnimationDismissModalEnd);
+
+    el.classList.add('d-none');
+}
+
+function animateTransformElement(el, tox, toy, time, func, delay, direction, handler) {
+    // Set CSS variables on the element
+    el.style.setProperty('--translate-to-x', tox);
+    el.style.setProperty('--translate-to-y', toy);
+    el.style.setProperty('--animate-time', time);
+    el.style.setProperty('--animate-func', func);
+    el.style.setProperty('--animate-delay', delay);
+    el.style.setProperty('--animate-direction', direction);
+
+    // Add a listener for animation end to clean up
+    if (handler) {
+        el.addEventListener('animationend', handler);
+    }
+
+    // Add the animate-transform class to start the animation
+    el.classList.add('animate-transform');
+}
+
+function animateRevealModal(modal) {
+    modal.classList.remove('d-none');
+    animateTransformElement(
+        modal.querySelector('div.modal-content'),
+        '0px', '0px', animationRevealModalTime, 'ease-out', '0ms', 'forwards',
+        handleAnimationRevealModalEnd
+    );
+}
+
+function animateDismissModal(modal, handler = null) {
+    if (handler == null) {
+        handler = handleAnimationDismissModalEnd
+    }
+
+    animateTransformElement(
+        modal.querySelector('div.modal-content'),
+        '0px', '0px', animationRevealModalTime, 'ease-out', '0ms', 'reverse', handler
+    );
+}
+
+function animateDismissForm(modal, endHandler) {
+    modal.querySelectorAll('form').forEach(function(form) {
+        disableForm(form);
+    });
+    animateDismissModal(modal, endHandler);
+}
+
+function makeAutofocus(containerId) {
+    const container = document.getElementById(containerId)
+    if (!container) return
+
+    const autoFocusElements = container.querySelectorAll('[autofocus]');
+    if (autoFocusElements.length > 0) {
+        autoFocusElements[0].focus()
+        autoFocusElements[0].select()
+    }
+}
+
+function preventDefault(event) {
+    event.preventDefault()
+}
+
+function disableLink(link) {
+    const hasFocus = document.activeElement === link;
+
+    link.classList.add('disabled-link');
+    link.setAttribute('tabindex', -1);
+    link.addEventListener('click', preventDefault)
+
+    if (hasFocus) {
+        link.blur();
+    }
+}
+
+function disableLinkById(id) {
+    disableLink(document.getElementById(id))
+}
+
+function enableLink(link) {
+    link.classList.remove('disabled-link');
+    link.removeAttribute('tabindex');
+    link.removeEventListener('click', preventDefault)
+}
+
+function enableLinkById(id) {
+    enableLink(document.getElementById(id))
+}
+
+function disableForm(form) {
+    let elements = form.querySelectorAll('#' + form.id + ' input, #' + form.id + ' select, #' + form.id + ' textarea, #' + form.id + ' button')
+    elements.forEach(function(element) {
+        element.disabled = true
+        element.parentElement.classList.remove('error')
+    })
+
+    elements = form.querySelectorAll('#' + form.id + ' a');
+    elements.forEach((link) => {
+        disableLink(link)
+    });
+
+    elements = form.querySelectorAll('#' + form.id + ' .input-text-button ion-icon')
+    elements.forEach((button) => {
+        button.classList.add('disabled');
+    });
+}
+
+function disableFormById(id) {
+    disableForm(document.getElementById(id))
+}
+
+function enableForm(form) {
+    let elements = document.querySelectorAll('#' + form.id + ' input, #' + form.id + ' select, #' + form.id + ' textarea, #' + form.id + ' button')
+    elements.forEach(function(element) {
+        element.disabled = false
+    })
+
+    elements = form.querySelectorAll('#' + form.id + ' a');
+    elements.forEach((link) => {
+        enableLink(link)
+    });
+
+    elements = document.querySelectorAll('#' + form.id + ' .input-text-button ion-icon')
+    elements.forEach((button) => {
+        button.classList.remove('disabled');
+    });
+}
+
+function enableFormById(id) {
+    enableForm(document.getElementById(id))
+}
+
+function displayErrors(form, b) {
+    error_span = form.querySelector('div.error')
+    if(b) {
+        error_span.classList.remove('invisible')
+    } else {
+        error_span.classList.add('invisible')
+    }
+}
+
+function endShakeAnimation(e) {
+    target = e.target;
+    target.classList.remove('shake-animation')
+    target.removeEventListener('animationend', endShakeAnimation)
+}
+
+function shakeFormHeader(form) {
+    let formHeader = form.querySelector('ion-icon')
+    formHeader.addEventListener('animationend', endShakeAnimation)
+    formHeader.classList.add('shake-animation')
+}
+
+function updateSessionInfo(json, lock = false) {
+    const usernameElement = document.getElementById('link-username');
+    const userIconElement = document.getElementById('user-icon');
+
+    usernameElement.textContent = json['user'];
+
+    if(lock) {
+        usernameElement.classList.add('disabled-link');
+        userIconElement.setAttribute('name', 'lock-closed-outline');
+    } else {
+        usernameElement.classList.remove('disabled-link');
+        userIconElement.setAttribute('name', 'lock-open-outline');
+    }
+}
+
+
+// Loading functions
+async function loadContent(sel, url, init = null) {
+    let container = document.querySelector(sel);
+
+    try {
+        // Fetch the content from the URL
+        let response = await fetch(url);
+
+        // Check if the response is okay
+        if (!response.ok) {
+            throw new Error(`HTTP error status: ${response.status}`);
+        }
+
+        // Get the response text
+        let content = await response.text();
+        
+        // Insert the content into the selected container
+        container.innerHTML = content;
+
+        // Force reflow
+        document.body.offsetHeight;
+
+        // Initialize the content if an init function is provided
+        if (init) {
+            init(container);
+        }
+    } catch (error) {
+        console.error('Error loading content:', error);
+        container.innerHTML = '<p>Error loading content</p>'; // Optionally show an error message in the container
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+async function loadModal(event, url) {
+    if(event) {
+        handleAnimationDismissModalEnd(event);
+        await delay(200);
+    }
+
+    if(langCode) {
+        url = `/${langCode}${url}`
+    }
+
+    await loadContent('#modal-container', url, initModal);
+
+    currentModal = document.querySelector('div.modal');
+
+    animateRevealModal(currentModal);
+}
+
+
+
+
+
+
+async function loadLogin(event) {
+    loadModal(event, '/auth/login/');
+}
+
+async function loadForgotPassword(event) {
+    loadModal(event, '/auth/forgot/');
+}
+
+async function loadOTP(event, uid) {
+    loadModal(event, `/auth/accept/${uid}/`);
+}
+
+
+
+
+async function getForgotPassword() {
+    animateDismissForm(currentModal, loadForgotPassword);
+}
+
+async function cancelForm(endHandler) {
+    animateDismissForm(currentModal, endHandler);
+}
+
+
+
+
+
+
+
+
+
+
+async function loadDashboard() {
+    await loadContent('#dashboard', '/dashboard/');
+
+    var sidbarToggler = document.getElementById('sidebar-toggler');
+    if(sidbarToggler) {
+        sidbarToggler.addEventListener('click', function() {
+        var sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('collapsed');
+
+        var togglerIcon = document.querySelector('#sidebar-toggler ion-icon');
+        if (sidebar.classList.contains('collapsed')) {
+            togglerIcon.setAttribute('name', 'ellipsis-vertical-outline');
+        } else {
+            togglerIcon.setAttribute('name', 'ellipsis-horizontal-outline');
+        }
+    })};
+}
+
+
+// Form submission functions
+
+async function submitForm(id, url, handleResponse) {
+    form = document.querySelector(`#${id}`);
+    if(!form) {
+        return false;
+    }
+
+    disableFormById(id);
+    displayErrors(form, false);
+
+    formData = new FormData();
+    fields = form.querySelectorAll('input, textarea, select')
+    fields.forEach((field) => {
+        field.parentElement.classList.remove('error');
+        field.disabled = true;
+
+        formData.append(field.name, field.value);
+    });
+
+    await fetch(url, {
+        method: form.method,
+        body: formData
+    }).then((response) => {
+        handleResponse(form, response);
+    });
+
+    return false;
+}
+
+function handleLoginEnd(event) {
+    var el = document.getElementById('form-login');
+    el.remove();
+
+    loadDashboard();
+}
+
+function handleLoginResponse(form, response) {
+    if(response.ok) {
+        // Successful login
+        response.json().then((json) => {
+            updateSessionInfo(json);
+            animateDismissModal(currentModal, handleLoginEnd);
+        })
+    } else {
+        setTimeout(() => {
+            displayErrors(form, !response.ok);
+            shakeFormHeader(form);
+            enableForm(form);
+            makeAutofocus(form.id);
+        }, 1000)
+    }
+}
+
+function handleForgotEnd(event) {
+    loadOTP(event,)
+}
+
+async function handleForgotResponse(form, response) {
+    let json = await response.json();
+
+    if(response.ok) {
+        animateDismissModal(currentModal, handleForgotEnd);
+    } else {
+        if(json.errors) {
+            for(let id in json.errors) {
+                showErrorMessage(id, json.error[id]);
+            }
+        }
+        enableForm(form);
+    }
+}
+
+async function submitLogin() {
+    return await submitForm('form-login', '/auth/login/', handleLoginResponse);
+}
+
+async function submitForgotPassword() {
+    return await submitForm('form-forgot', '/auth/forgot/', handleForgotResponse);
+}
+
+
+
+
+
+
+
+
+
+
+
+document.addEventListener('DOMContentLoaded', async function(event) {
+{% if not user.is_authenticated %}
+    loadLogin(null);
+{% else %}
+    loadDashboard();
+{% endif %}
+
+    var textDirection = document.body.getAttribute('data-dir');
+
+    var inputs = document.querySelectorAll('input[type="text"], input[type="password"], textarea');
+    inputs.forEach(function(input) {
+        input.setAttribute('dir', textDirection);
+    });
+});
+    </script>
+</body>
+</html>
