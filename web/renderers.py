@@ -18,8 +18,6 @@ from bs4 import BeautifulSoup
 
 from django.utils.safestring import mark_safe
 
-from .utils import debug_func
-
 def _render_tags(tags:list):
     """
     Renders HTML tags from a list of tag dictionaries.

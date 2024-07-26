@@ -20,6 +20,8 @@ import logging
 import re
 import json
 
+from django.apps import apps
+
 from datetime import datetime
 from core.models import *
 

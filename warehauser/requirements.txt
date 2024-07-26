@@ -1,5 +1,6 @@
 asgiref==3.7.2
 async-timeout==4.0.3
+attrs==23.2.0
 beautifulsoup4==4.12.3
 certifi==2024.7.4
 charset-normalizer==3.3.2
@@ -15,12 +16,15 @@ django-environ==0.11.2
 django-extensions==3.2.3
 django-filter==23.5
 django-group-access==1.1.17
+django-jsonform==2.22.0
 djangorestframework==3.14.0
 fabio==2024.4.0
 fonttools==4.51.0
 h5py==3.10.0
 hdf5plugin==4.3.0
 idna==3.6
+jsonschema==4.23.0
+jsonschema-specifications==2023.12.1
 kiwisolver==1.4.5
 lxml==5.2.1
 matplotlib==3.8.4
@@ -38,7 +42,9 @@ PyQt5-sip==12.13.0
 python-dateutil==2.8.2
 python-dotenv==1.0.1
 pytz==2024.1
+referencing==0.35.1
 requests==2.31.0
+rpds-py==0.19.0
 schedule==1.2.1
 silx==2.1.0
 six==1.16.0

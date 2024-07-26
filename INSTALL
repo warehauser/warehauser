@@ -46,11 +46,6 @@ Create groups in the shell by running these commands:
     g1 = Group.objects.create(name='admin')
     g2 = Group.objects.create(name='user')
 
-Create users while in the shell by running these commands:
-
-    from django.contrib.auth.models import User
-    User.objects.create(username='<username>', email='<email address>', password='<password>', is_superuser=True)
-
 Note you can use whatever group names you like, but remember them for the next step and you need two unique groups as default.
 
 (Replace the group names with the names of the groups you created in step 9 if different.)
@@ -58,9 +53,6 @@ Note you can use whatever group names you like, but remember them for the next s
 10. Create a superuser. In warehauser we assign all privileges via groups but the admin groups should still have is_superuser flag set to True as well to be compatible with third party libraries such as django-gaurdian.
 
     python manage.py createsuperuser
-    python manage.py addtogroup <username> <group>
-
-where <username> is the username you created in the createsuperuser command above, and replace <group> with the name of the group created above for admins.
 
 Create as many user accounts as you need by repeating these steps:
 
@@ -70,7 +62,7 @@ Optionally add any groups:
 
     python manage.py addtogroup <username> <groupname>
 
-where again <username> is the username you created in the createsuperuser command above, and replace warehause_user with the name of the group created above for users.
+where again <username> is the username you created in the createsuperuser command above, and replace <groupname> with the name of the group created above for users (ie 'admin', 'user').
 
 Internationalization Quick Guide
 --------------------------------

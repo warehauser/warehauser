@@ -14,6 +14,7 @@
 
 # utils.py
 
+from datetime import datetime
 from enum import IntEnum
 import re
 import random
@@ -130,3 +131,19 @@ def dict_copy_and_update(d:dict, u:dict) -> dict:
     result = d.copy() if d is not None else dict()
     result.update(u if u is not None else dict())
     return result
+
+def debug_func(func):
+    def func_mod(*args, **kwargs):
+        print(f'{func.__name__}({args}, {kwargs}) called at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}.')
+        result = func(*args, **kwargs)
+        print(f'Result at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} is: {result}')
+        return result
+    return func_mod
+
+@lambda _: _()
+def server_start_time() -> str:
+    """
+    Returns a string of the time the server started running (approx and rounded to the second) and this value is immutable.
+    """
+    date = datetime.now()
+    return f'{date:%T}'

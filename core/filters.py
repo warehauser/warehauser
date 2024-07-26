@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# filters.py
+
 from django_filters import rest_framework as filters
 
 from core.models import *
@@ -28,13 +30,14 @@ KEYS_OPTIONS_EVENTDEF      = ['values',]
 KEYS_OPTIONS_EVENT         = ['values',]
 
 FILTER_FIELDS_STANDARD     = {
-    'id': ['exact', 'lt', 'lte', 'gt', 'gte',],
+    'id':          ['exact', 'lt', 'lte', 'gt', 'gte',],
     'external_id': ['exact', 'isnull',],
-    'key': ['iexact',],
-    'created_at': ['exact', 'lt', 'lte', 'gt', 'gte',],
-    'updated_at': ['exact', 'isnull', 'lt', 'lte', 'gt', 'gte',],
-    'options': ['exact', 'isnull',],
-    'is_virtual': ['exact',],
+    'key':         ['iexact',],
+    'created_at':  ['exact', 'lt', 'lte', 'gt', 'gte',],
+    'updated_at':  ['exact', 'isnull', 'lt', 'lte', 'gt', 'gte',],
+    'schema':      ['exact', 'isnull',],
+    'options':     ['exact', 'isnull',],
+    'is_virtual':  ['exact',],
 }
 
 FILTER_FIELDS_DEF_STANDARD = {

@@ -47,7 +47,7 @@ from .forms import *
 from .models import *
 from core.utils import is_valid_email_address, generate_otp_code
 
-from .renderers import _render_tags, _generate_tag
+from .renderers import _render_tags, _render_bs4, _generate_tag
 
 BASE_TITLE = f'Warehauser - {_("Your warehouse run smoothly")}'
 
@@ -64,7 +64,272 @@ def generate_button_attributes(attrs:dict) -> dict:
 
     return dfts
 
+
 # Create your views here.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class DefaultFormHandler:
+    def __init__(self, request) -> None:
+        super().__init__()
+        self.request = request
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # @debug_func
+    def _generate_html_input(self, name:str, field):
+        attrs = {'id': name.lower(), 'name': name.lower(), 'type': field.widget.input_type,}
+        attrs.update(field.widget.attrs)
+        label = field.label
+
+        tags:list = list()
+
+        tags.append(_generate_tag(tag='input',
+                            attrs=attrs,
+                            content=None))
+
+        tags.append(_generate_tag(tag='span',
+                                attrs={
+                                    'class': 'label',
+                                },
+                                content=_(label),
+                                ))
+
+        if field.widget.__class__.__name__.lower() == 'passwordinput':
+            toggle_icon = _generate_tag(tag='ion-icon',
+                                        attrs={
+                                            'id': f'{name}-toggle',
+                                            'name': 'eye-off-outline',
+                                            'onclick': f'passwordShowHide(this, \'{name}\', 4000);',
+                                        },
+                                        content='')
+            tags.append(_generate_tag(tag='div', attrs={'class': 'input-text-button',}, content=toggle_icon))
+
+        if field.widget.attrs.get('required', False):
+            tags.append(_generate_tag(tag='div',
+                        attrs={
+                                'class': 'required',
+                                'data-bs-toggle': 'tooltip',
+                                'data-bs-placement': 'left',
+                                'data-bs-title': 'Required',
+                        },
+                        content=''))
+
+        tags.append(_generate_tag(tag='div',
+                      attrs={
+                          'class': 'error error-message',
+                          'id': f'error-{name}',
+                          },
+                       content=''))
+
+        npt_box = _generate_tag(tag='div',
+                                attrs={'class': 'input-box',},
+                                content=tags)
+
+        tags = _generate_tag(tag='div',
+                           attrs={'class': 'row form-row mt-3',},
+                           content=npt_box)
+
+        return tags
+
+    # @debug_func
+    def _generate_modal_header(self, data):
+        content = []
+
+        try:
+            header = data['header']
+        except KeyError as ke:
+            pass
+
+        if header:
+            if 'icon' in header:
+                value = header['icon']
+                content.append(_generate_tag(tag='ion-icon', attrs={'class': 'form-icon mt-4', 'name': value,}, content=''))
+
+            if 'heading' in header:
+                value = header['heading']
+                if value:
+                    content.append(_generate_tag(tag='h2', attrs=None, content=value))
+
+            if 'slug' in header:
+                value = header['slug']
+                content.append(_generate_tag(tag='p', attrs={'class': 'modal-header-slug',}, content=value))
+
+            if 'close' in header:
+                id = data['attrs']['id']
+                try:
+                    href = header['close']['href']
+                except KeyError as ke:
+                    pass
+
+                content.append(_generate_tag(tag='a', attrs={'href': href,},
+                                             content=_generate_tag(tag='ion-icon', attrs={'class': 'modal-close-icon', 'name': 'close-circle-outline', 'role': 'img',}, content='')))
+
+        content = _generate_tag(tag='div', attrs={'class': 'w-100 text-center'}, content=content)
+        content = _generate_tag(tag='div', attrs={'class': 'modal-header'}, content=content)
+
+        return content
+
+    # @debug_func
+    def _generate_button(self, button):
+        attrs = button['attrs'] if button and 'attrs' in button else {}
+        content = button['content'] if button and 'content' in button else ''
+        content = _generate_tag(tag='button', attrs=attrs, content=content)
+        content = _generate_tag(tag='div', attrs={'class': 'button-row'}, content=content)
+        return _generate_tag(tag='div', attrs={'class': 'row form-row mt-4'}, content=content)
+
+    # @debug_func
+    def _generate_modal_body(self, data):
+        content = [self._generate_html_input(name, field) for name, field in self.fields.items()]
+        content = content + [self._generate_button(button) for button in data['buttons']]
+        return _generate_tag(tag='div', attrs={'class': 'modal-body',}, content=content)
+
+    # @debug_func
+    def _generate_modal_footer(self, data):
+        try:
+            footer = data['footer']
+        except KeyError as ke:
+            footer = None
+        return _generate_tag(tag='div', attrs={'class': 'modal-footer',}, content=footer)
+
+    # @debug_func
+    def _generate_modal_element(self, data, key, content):
+        try:
+            attrs = data[key]['attrs']
+        except KeyError as ke:
+            attrs = dict()
+
+        # Ensure the 'class' attribute exists and is a string
+        class_names = attrs.get('class', '')
+
+        # Split the class names into a list
+        class_list = class_names.split()
+
+        # Add the key if it's not already in the list
+        if key not in class_list:
+            class_list.append(key)
+
+        # Remove duplicates by converting the list to a set and back to a list
+        class_list = list(set(class_list))
+
+        # Join the list back into a space-separated string
+        attrs['class'] = ' '.join(class_list)
+
+        return _generate_tag(tag='div', attrs=attrs, content=content)
+
+    # @debug_func
+    def as_modal(self):
+        data = self.request.data
+        content = [self._generate_modal_header(data), self._generate_modal_body(data), self._generate_modal_footer(data)]
+        content = self._generate_modal_element(data, 'modal-content', content)
+        content = self._generate_modal_element(data, 'modal-dialog', content)
+        content = _generate_tag(tag='input', attrs={'type': 'hidden', 'name': 'csrf_token', 'value': self.request.get_token(),}, content=content)
+        content = _generate_tag(tag='form', attrs=data['attrs'], content=content)
+        content = _generate_tag(tag='div', attrs=data['modal']['attrs'], content=content)
+
+        return _render_bs4(_render_tags([content]))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    def get(self) -> HttpResponse:
+        return HttpResponse(status=501, reason='GET method not implemented.')
+
+    def post(self) -> JsonResponse:
+        return JsonResponse(status=501, reason='POST method not implemented.')
+
+    def patch(self) -> JsonResponse:
+        return JsonResponse(status=501, reason='PATCH method not implemented.')
+
+    def delete(self) -> JsonResponse:
+        return JsonResponse(status=501, reason='DELETE method not implemented.')
+
+    def head(self) -> JsonResponse:
+        return JsonResponse(status=501, reason='HEAD method not implemented.')
+
+    def handle(self) -> None:
+        match self.request.method.lower():
+            case 'get':
+                return self.get()
+            case 'post':
+                return self.post()
+            case 'patch':
+                return self.patch()
+            case 'delete':
+                return self.delete()
+            case 'head':
+                return self.head()
+
+        return JsonResponse(status=501, reason=f'{self.request.method} method not implemented.')
+
+class AuthLoginFormHandler(DefaultFormHandler):
+    def get(self) -> HttpResponse:
+        form = WarehauserAuthLoginForm(auto_id="%s")
+        htm = self.as_modal(self.request.data)
+        return HttpResponse(mark_safe(htm), content_type='text/html')
+
+    def post(self) -> JsonResponse:
+        response = dict()
+        # set HTTP response code to 200
+        # send response to requester
+        return JsonResponse(response)
+
+def app_form_router(request, app, name):
+    router = (app.title() + name.title()).replace(' ', '')
+    match router:
+        case 'AuthLogin':
+            return AuthLoginFormHandler(request).handle(request=request)
+        # case '???':... etc
+
+    return HttpResponse(status=404, reason=f'Form {name} for app {app} not found.')
+
+def form_router(request, name):
+    return HttpResponse(status=404, reason=f'Form {name} not found.')
+
+
+
+
+
 
 def home_view(request):
 

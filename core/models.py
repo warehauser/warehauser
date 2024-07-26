@@ -18,6 +18,9 @@ import importlib
 import logging
 import uuid
 
+import jsonschema
+from jsonschema import validate, ValidationError
+
 from db_mutex.db_mutex import db_mutex
 
 from django.db import models
@@ -46,6 +49,7 @@ class WarehauserAbstractModel(models.Model):
         key         (string):   human readable description field naming this model object. Default is None.
         created_at  (datetime): date and time this model object was first saved to the database. Auto generated and not editable.
         updated_at  (datetime): date and time this model object was last saved to the database. Auto generated at save time.
+        schema      (json):     optional dictionary of a json schema object to define the options field (sic).
         options     (json):     optional dictionary of key value pairs of arbitrary data.
         is_virtual  (bool):     True if this model object should have status set to DESTROY after first use is complete. Default is False.
 
@@ -56,6 +60,7 @@ class WarehauserAbstractModel(models.Model):
     key         = models.CharField(max_length=CHARFIELD_MAX_LENGTH, null=True, blank=True, default=None,)
     created_at  = models.DateTimeField(auto_now_add=True, null=False, blank=False, editable=False,)
     updated_at  = models.DateTimeField(auto_now_add=False, null=True, blank=True,)
+    schema      = models.JSONField(null=True, blank=True,)
     options     = models.JSONField(null=True, blank=True,)
     is_virtual  = models.BooleanField(null=False, blank=False, default=False,)
 
@@ -149,6 +154,17 @@ class WarehauserAbstractModel(models.Model):
             self.options[key] = value
         pass
 
+    def _validate_options(self):
+        """
+        Validates the options field against the schema field if the schema is not None. Called at time of save().
+        """
+        if self.schema:
+            try:
+                validate(instance=self.options, schema=self.schema)
+            except ValidationError as e:
+                raise ValidationError({'options': f"Invalid options data: {e.message}"})
+        pass
+
     def clean_fields(self, exclude:list=None):
         """
         Check field data is safe to save to the database/ backend. This operation is delegated to the callback for this model object.
@@ -165,9 +181,12 @@ class WarehauserAbstractModel(models.Model):
         for field in [field for field in self._meta.fields if field.name not in exclude]:
             # Generate method name for field
             method_name = f'clean_{field.name}'
+
             # Check if method exists and call it
             if hasattr(self.callback, method_name):
                 getattr(self.callback, method_name)(self)
+
+        self._validate_options()
         pass
 
     def save(self, *args, **kwargs):

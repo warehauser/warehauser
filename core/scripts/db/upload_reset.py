@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# upload_reset.py
+
 from core.scripts.db.lib import *
 
 if __name__ == "__main__":

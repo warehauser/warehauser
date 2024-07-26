@@ -13,20 +13,3 @@
 # limitations under the License.
 
 # utils.py
-
-from datetime import datetime
-
-def debug_func(func):
-    def func_mod(*args, **kwargs):
-        print(f'{func.__name__}({args}, {kwargs}) called at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}.')
-        result = func(*args, **kwargs)
-        print(f'Result is: {result}')
-        return result
-    return func_mod
-
-@lambda _: _()
-def server_start_time() -> str:
-    date = datetime.now()
-    return f'{date:%T}'
-
-# print(server_start_time) will print the time the server started running (approx and rounded to the second) and this value is immutable

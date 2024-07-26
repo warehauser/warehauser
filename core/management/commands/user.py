@@ -1,6 +1,24 @@
+# Copyright 2024 warehauser @ github.com
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     https://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# user.py
+
 import json
 from typing import Callable
+import getpass
 
+from django.contrib.auth import authenticate
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User, Group
 from rest_framework.authtoken.models import Token
@@ -23,6 +41,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('username', type=str, nargs='?', help=_('The username of the user to manage'))
+        parser.add_argument('-u', '--superuser', type=str, nargs='?', help=_('The username of the superuser'))
         parser.add_argument('-p', '--password', type=str, help=_('Password for the new user or to update an existing user'))
         parser.add_argument('-e', '--email', type=str, help=_('Email address for the new user or to update an existing user'))
         parser.add_argument('-g', '--groups', type=str, help=_('Comma-separated list of groups to add or remove'))
@@ -42,6 +61,17 @@ class Command(BaseCommand):
         active = kwargs.get('active')
         create_token = kwargs.get('token')
         output_json = kwargs.get('json')
+
+        if not superuser_username:
+            superuser_username = input("Enter superuser username: ")
+
+        superuser_password = getpass.getpass("Enter superuser password: ")
+
+        superuser = authenticate(username=superuser_username, password=superuser_password)
+
+        if superuser is None or not superuser.is_superuser:
+            self._output("Invalid superuser credentials", output_json, key='error', func=self.style.ERROR)
+            return
 
         if not username:
             self.list_users(output_json)

@@ -1,4 +1,21 @@
+// Copyright 2024 warehauser @ github.com
+
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+
+//      https://www.apache.org/licenses/LICENSE-2.0
+
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
+// warehauser.js
+
 const langCode = getNonENLangCode();
+const stagingArea = document.getElementById('staging-area');
 const modalContainer = document.getElementById('modal-container');
 const animateDuration = 500;
 
@@ -108,7 +125,7 @@ function prepareRevealElement(el, toEl, handler = handleAnimateEnd) {
             break;
     }
 
-    // move element from staging to new area...
+    // move element from source parent to destination parent...
     moveElement(el, toEl);
 }
 
@@ -116,19 +133,19 @@ function initModal(modal, handler = handleAnimateEnd) {
     modal = typeof modal === 'string' ? document.querySelector(modal) : modal;
     var content = modal.querySelector('.modal-content');
 
-    modalContainer.querySelectorAll('form').forEach(function(form) {
+    stagingArea.querySelectorAll('form').forEach(function(form) {
         // Remove any existing CSRF token fields
-        var csrfField = form.querySelector('input[name="csrfmiddlewaretoken"]');
-        if (csrfField) {
-            csrfField.remove();
-        }
+        // var csrfField = form.querySelector('input[name="csrfmiddlewaretoken"]');
+        // if (csrfField) {
+        //     csrfField.remove();
+        // }
 
-        // Append a new CSRF token field at the end of the form
-        var newCsrfField = document.createElement('input');
-        newCsrfField.setAttribute('type', 'hidden');
-        newCsrfField.setAttribute('name', 'csrfmiddlewaretoken');
-        newCsrfField.setAttribute('value', '{{ csrf_token }}');
-        form.appendChild(newCsrfField);
+        // // Append a new CSRF token field at the end of the form
+        // var newCsrfField = document.createElement('input');
+        // newCsrfField.setAttribute('type', 'hidden');
+        // newCsrfField.setAttribute('name', 'csrfmiddlewaretoken');
+        // newCsrfField.setAttribute('value', '{{ csrf_token }}');
+        // form.appendChild(newCsrfField);
 
         // Add listeners to all the required fields within this form
         form.querySelectorAll('input[required]').forEach(function(input) {

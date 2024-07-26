@@ -32,19 +32,13 @@ class ModelCallback:
     # def clean_external_id(self, model):
     #     pass
 
-    # def clean_parent(self, model):
+    # def clean_key(self, model):
     #     pass
 
     # def clean_options(self, model):
     #     pass
 
-    # def clean_status(self, model):
-    #     pass
-
-    # def clean_key(self, model):
-    #     pass
-
-    # def clean_value(self, model):
+    # def clean_schema(self, model):
     #     pass
 
 class WarehauseDefCallback(ModelCallback):

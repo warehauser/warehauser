@@ -68,7 +68,6 @@ from .utils import *
 #         BoundField.css_classes.patched = True
 
 
-
 # Authentication views
 
 # Model view sets

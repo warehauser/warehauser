@@ -15,17 +15,19 @@
 # client.py
 
 import json
+import getpass
 
-from django.core.management.base import BaseCommand#, CommandError
+from django.contrib.auth import authenticate
+from django.core.management.base import BaseCommand
 from django.contrib.auth.models import Group, User
 from django.utils.translation import gettext as _
-# from django.core.exceptions import ObjectDoesNotExist
 
 class Command(BaseCommand):
     help = _('Manage clients (groups starting with "client_*")')
 
     def add_arguments(self, parser):
         parser.add_argument('client', type=str, nargs='?', help=_('The name of the client to manage (without the "client_" prefix)'))
+        parser.add_argument('-u', '--superuser', type=str, nargs='?', help=_('The username of the superuser'))
         parser.add_argument('-u', '--users', type=str, help=_('Comma-separated list of existing usernames to add or remove'))
         parser.add_argument('-r', '--remove', action='store_true', help=_('Remove the specified users from the client'))
         parser.add_argument('-d', '--delete', action='store_true', help=_('Delete the client'))
@@ -37,6 +39,17 @@ class Command(BaseCommand):
         remove = kwargs.get('remove')
         delete = kwargs.get('delete')
         output_json = kwargs.get('json')
+
+        if not superuser_username:
+            superuser_username = input("Enter superuser username: ")
+
+        superuser_password = getpass.getpass("Enter superuser password: ")
+
+        superuser = authenticate(username=superuser_username, password=superuser_password)
+
+        if superuser is None or not superuser.is_superuser:
+            self._output("Invalid superuser credentials", output_json, key='error', func=self.style.ERROR)
+            return
 
         if not client_name:
             self.list_clients(output_json)
