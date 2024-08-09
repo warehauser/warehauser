@@ -18,7 +18,7 @@ import importlib
 import logging
 import uuid
 
-import jsonschema
+# import jsonschema
 from jsonschema import validate, ValidationError
 
 from db_mutex.db_mutex import db_mutex

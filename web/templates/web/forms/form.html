@@ -1,0 +1,7 @@
+{% load filters %}{% load simple_tags %}<form{% with attrs=data.form.attrs %}{% for key, value in attrs.items %} {{ key }}="{{ value }}"{% endfor %}{% endwith %}>
+    {% csrf_token %}
+{% for field in form %}
+    {% render_field form field %}
+{% endfor %}
+    {% render_tags data.form.buttons %}
+</form>

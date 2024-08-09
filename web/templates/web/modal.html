@@ -1,0 +1,30 @@
+{% load i18n %}{% load filters %}{% load simple_tags %}
+<div{% with attrs=data.modal.attrs %}{% for key, value in attrs.items %} {{ key }}="{{ value }}"{% endfor %}{% endwith %}>
+  <div class="modal-dialog" role="document">
+    <div{% with attrs=data.modal.content.attrs %}{% for key, value in attrs.items %} {{ key }}="{{ value }}"{% endfor %}{% endwith %}>
+{% with header=data.modal.content.header %}
+      <div class="modal-header">
+        <div class="w-100 text-center">
+{% if header|has_key:"icon" %}
+          <ion-icon class="form-icon mt-4" name="{{ header.icon }}"></ion-icon>
+{% endif %}
+{% if header|has_key:"heading" %}
+          <h2 class="modal-title">{{ header.heading }}</h2>
+{% endif %}
+{% if header|has_key:"slug" %}
+          <p class="modal-header-slug">{{ header.slug }}</p>
+{% endif %}
+        </div>
+      </div>
+{% endwith %}
+      <div class="modal-body">
+        {% include "web/forms/form.html" with form=form data=data %}
+      </div>
+{% with footer=data.modal.content.footer %}
+      <div class="modal-footer">
+        {{ footer }}
+      </div>
+{% endwith %}
+    </div>
+  </div>
+</div>

@@ -1,10 +1,10 @@
-{% load i18n filters %}{% if user.is_authenticated %}{% setvar user.username as username %}{% setvar '' as disabled %}{% setvar 'open' as iconname %}{% else %}{% setvar _('guest') as username %}{% setvar 'disabled' as disabled %}{% setvar 'closed' as iconname %}{% endif %}<!doctype html>
+{% load i18n filters simple_tags %}{% if user.is_authenticated %}{% setvar user.username as username %}{% setvar '' as disabled %}{% setvar 'open' as iconname %}{% else %}{% setvar _('guest') as username %}{% setvar 'disabled' as disabled %}{% setvar 'closed' as iconname %}{% endif %}<!doctype html>
 <html lang="en">
 <head>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dynamic Element Example</title>
+    <title>{{ title }}</title>
     <link rel="icon" href="/static/web/images/favicon.ico" type="image/x-icon">
     <link rel="shortcut icon" href="/static/web/images/favicon.ico" type="image/x-icon">
     <link rel="stylesheet prefetch" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
@@ -61,28 +61,17 @@
     <script type="text/javascript">
 
 document.addEventListener('DOMContentLoaded', async () => {
+//    await loadUrl('#staging-area', '/auth/login/');
 
-await loadUrl('#staging-area', '/auth/login/');
+//    let modal = document.getElementById('modal-login');
+//    initModal(modal);
+//    animateRevealElement(modal, modalContainer);
 
-// await delay(1000);
-// moveElement('#hello', '#modal-container');
-// await delay(5000);
-// moveElement('#hello', '#staging-area');
-// await delay(5000);
-// moveElement('#hello', '#modal-container');
-// await delay(5000);
-// moveElement('#hello', '#staging-area');
-// await delay(5000);
+    await loadUrl('#staging-area', '/testform/');
 
-let modal = document.getElementById('modal-login');
-initModal(modal);
-let modalContent = modal.querySelector('.modal-content');
-
-animateRevealElement(modalContent, modalContainer);
-// await delay(2000);
-// animateDismissElement(modalContent);
-
-
+    let modal = document.getElementById('modal-testform');
+    initModal(modal);
+    animateRevealElement(modal, modalContainer);
 });
 </script>
 </body>

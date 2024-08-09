@@ -30,6 +30,8 @@ urlpatterns = [
     path('auth/accept/<int:user>/', views.auth_otp_accept_view, name='auth_otp_accept_manual_view'),
     path('', views.home_view, name='home_view'),
     path('dashboard/', views.dashboard_view, name='dashboard_view'),
-    path('auth/modal/<str:name>/', views.app_form_router, {'app': 'auth'}, name='auth_app_form_router_view'),
-    path('modal/<str:name>/', views.form_router, name='form_router_view'),
+    # path('auth/modal/<str:name>/', views.app_form_router, {'app': 'auth'}, name='auth_app_form_router_view'),
+    # path('modal/<str:name>/', views.form_router, name='form_router_view'),
+
+    path('testform/', views.testform, name='testform'),
 ]

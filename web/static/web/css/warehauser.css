@@ -239,6 +239,76 @@ header {
 
 
 
+/* Input radio buttons */
+.radio-group {
+    border: 1px solid var(--color-opaque);
+    border-radius: 5px;
+    margin-top: 15px;
+    padding: 10px;
+    padding-top: 20px;
+}
+
+.radio-heading {
+    position: absolute;
+    font-size: 0.75em;
+    top: 0px;
+    left: 0px;
+    transform: translateX(13px) translateY(-9px);
+    padding: 0px 5px;
+    text-transform: uppercase;
+    border: 1px solid var(--color-opaque);
+    background-color: var(--color-background);
+}
+
+input[type="radio"] {
+    display: none;
+}
+
+.label-radio {
+    position: relative;
+    color: var(--color-default);
+    font-family: "Poppins", sans-serif;
+    font-size: 1em;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: inline-flex;
+    gap: 1em;
+    border: 1px solid var(--color-opaque);
+    border-radius: 0.5em;
+    padding: 1em 1em;
+}
+
+.label-radio:before {
+    content: "";
+    height: 1.2em;
+    width: 1.2em;
+    border: 3px solid var(--color-opaque);
+    border-radius: 50%;
+}
+
+input[type="radio"]:checked + .label-radio:before {
+    /* height: 1em;
+    width: 1em; */
+    border: 6px solid var(--color-background);
+    /* var(--color-icons); */
+    border-radius: 50%;
+}
+
+input[type="radio"]:checked + .label-radio {
+    background-color: var(--color-icons);
+    border-color: var(--color-icons);
+    color: var(--color-default);
+}
+
+
+
+
+
+
+
+
+
 
 
 
@@ -373,7 +443,7 @@ body[data-dir="rtl"] .input-box span {
 ,.input-box textarea:focus ~ span
 ,.input-box textarea:not(:placeholder-shown):valid ~ span
 ,.input-box textarea:not(:placeholder-shown):disabled ~ span
-,.input-box input[type="email"]:not(:placeholder-shown) ~ span
+,.input-box input[type="email"]:valid:not(:placeholder-shown) ~ span
 {
     color: var(--color-background);
     font-size: 0.75em;

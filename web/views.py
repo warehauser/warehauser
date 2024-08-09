@@ -90,22 +90,6 @@ def generate_button_attributes(attrs:dict) -> dict:
 
 
 class DefaultFormHandler:
-    def __init__(self, request) -> None:
-        super().__init__()
-        self.request = request
-
-
-
-
-
-
-
-
-
-
-
-
-
     # @debug_func
     def _generate_html_input(self, name:str, field):
         attrs = {'id': name.lower(), 'name': name.lower(), 'type': field.widget.input_type,}
@@ -163,6 +147,14 @@ class DefaultFormHandler:
         return tags
 
     # @debug_func
+    def _generate_button(self, button):
+        attrs = button['attrs'] if button and 'attrs' in button else {}
+        content = button['content'] if button and 'content' in button else ''
+        content = _generate_tag(tag='button', attrs=attrs, content=content)
+        content = _generate_tag(tag='div', attrs={'class': 'button-row'}, content=content)
+        return _generate_tag(tag='div', attrs={'class': 'row form-row mt-4'}, content=content)
+
+    # @debug_func
     def _generate_modal_header(self, data):
         content = []
 
@@ -199,14 +191,6 @@ class DefaultFormHandler:
         content = _generate_tag(tag='div', attrs={'class': 'modal-header'}, content=content)
 
         return content
-
-    # @debug_func
-    def _generate_button(self, button):
-        attrs = button['attrs'] if button and 'attrs' in button else {}
-        content = button['content'] if button and 'content' in button else ''
-        content = _generate_tag(tag='button', attrs=attrs, content=content)
-        content = _generate_tag(tag='div', attrs={'class': 'button-row'}, content=content)
-        return _generate_tag(tag='div', attrs={'class': 'row form-row mt-4'}, content=content)
 
     # @debug_func
     def _generate_modal_body(self, data):
@@ -248,67 +232,59 @@ class DefaultFormHandler:
         return _generate_tag(tag='div', attrs=attrs, content=content)
 
     # @debug_func
-    def as_modal(self):
-        data = self.request.data
-        content = [self._generate_modal_header(data), self._generate_modal_body(data), self._generate_modal_footer(data)]
-        content = self._generate_modal_element(data, 'modal-content', content)
-        content = self._generate_modal_element(data, 'modal-dialog', content)
-        content = _generate_tag(tag='input', attrs={'type': 'hidden', 'name': 'csrf_token', 'value': self.request.get_token(),}, content=content)
-        content = _generate_tag(tag='form', attrs=data['attrs'], content=content)
-        content = _generate_tag(tag='div', attrs=data['modal']['attrs'], content=content)
+    def as_modal(self, request):
+        form = WarehauserAuthLoginForm(auto_id="%s")
+        content = [self._generate_modal_header(form), self._generate_modal_body(form), self._generate_modal_footer(form)]
+        content = self._generate_modal_element(form, 'modal-content', content)
+        content = self._generate_modal_element(form, 'modal-dialog', content)
+        content = _generate_tag(tag='input', attrs={'type': 'hidden', 'name': 'csrf_token', 'value': request.get_token(),}, content=content)
+        content = _generate_tag(tag='form', attrs=form['attrs'], content=content)
+        content = _generate_tag(tag='div', attrs=form['modal']['attrs'], content=content)
 
         return _render_bs4(_render_tags([content]))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-    def get(self) -> HttpResponse:
+    # @debug_func
+    def get(self, request) -> HttpResponse:
         return HttpResponse(status=501, reason='GET method not implemented.')
 
-    def post(self) -> JsonResponse:
+    # @debug_func
+    def post(self, request) -> JsonResponse:
         return JsonResponse(status=501, reason='POST method not implemented.')
 
-    def patch(self) -> JsonResponse:
+    # @debug_func
+    def patch(self, request) -> JsonResponse:
         return JsonResponse(status=501, reason='PATCH method not implemented.')
 
-    def delete(self) -> JsonResponse:
+    # @debug_func
+    def delete(self, request) -> JsonResponse:
         return JsonResponse(status=501, reason='DELETE method not implemented.')
 
-    def head(self) -> JsonResponse:
+    # @debug_func
+    def head(self, request) -> JsonResponse:
         return JsonResponse(status=501, reason='HEAD method not implemented.')
 
-    def handle(self) -> None:
-        match self.request.method.lower():
+    # @debug_func
+    def handle(self, request) -> None:
+        match request.method.lower():
             case 'get':
-                return self.get()
+                return self.get(request)
             case 'post':
-                return self.post()
+                return self.post(request)
             case 'patch':
-                return self.patch()
+                return self.patch(request)
             case 'delete':
-                return self.delete()
+                return self.delete(request)
             case 'head':
-                return self.head()
+                return self.head(request)
 
         return JsonResponse(status=501, reason=f'{self.request.method} method not implemented.')
 
 class AuthLoginFormHandler(DefaultFormHandler):
-    def get(self) -> HttpResponse:
-        form = WarehauserAuthLoginForm(auto_id="%s")
-        htm = self.as_modal(self.request.data)
+    def get(self, request) -> HttpResponse:
+        htm = self.as_modal(request)
         return HttpResponse(mark_safe(htm), content_type='text/html')
 
-    def post(self) -> JsonResponse:
+    def post(self, request) -> JsonResponse:
         response = dict()
         # set HTTP response code to 200
         # send response to requester
@@ -318,18 +294,114 @@ def app_form_router(request, app, name):
     router = (app.title() + name.title()).replace(' ', '')
     match router:
         case 'AuthLogin':
-            return AuthLoginFormHandler(request).handle(request=request)
+            return AuthLoginFormHandler().handle(request)
         # case '???':... etc
 
     return HttpResponse(status=404, reason=f'Form {name} for app {app} not found.')
 
 def form_router(request, name):
+    match name:
+        case 'AuthLogin':
+            return AuthLoginFormHandler().handle(request)
     return HttpResponse(status=404, reason=f'Form {name} not found.')
 
 
 
 
+def testform(request):
+    testform = ExampleForm(auto_id="%s")
+    context = {
+        "title": generate_page_title('Test form'),
+        "form": testform,
 
+        "data": {
+            "modal": {
+                "attrs": {
+                    "id": "modal-testform",
+                    "class": "modal",
+                    "offscreen": "top",
+                },
+                "content": {
+                    "attrs": {
+                        "id": "modal-content-testform",
+                        "class": "modal-content",
+                    },
+                    "header": {
+                        "icon": "lock-closed-outline",
+                        "heading": _("Testing"),
+                        "slug": _("This is a test!"),
+                        # "close": True,
+                    },
+                    "footer": mark_safe(f'<div class="row form-row w-100 mb-5 text-center"><a id="link-forgot" href="#">Forgot your password?</a></div>'),
+                },
+            },
+            "form": {
+                "attrs": {
+                    "id": "form-testform",
+                    "method": "post",
+                    "action": "javascript:submit_form(this,'/testform/');",
+                },
+                "buttons": [
+                    _generate_button({'attrs': {'type': 'submit', 'value': 'login', 'class': 'btn btn-primary col-12', 'disabled': True,}, 'content': _('Login')}),
+                ],
+            },
+        },
+    }
+
+    return render(request=request, template_name="web/modal.html", context=context)
+
+
+
+
+# @debug_func
+def _generate_button(button):
+    attrs = button['attrs'] if button and 'attrs' in button else {}
+    content = button['content'] if button and 'content' in button else ''
+    content = _generate_tag(tag='button', attrs=attrs, content=content)
+    content = _generate_tag(tag='div', attrs={'class': 'button-row'}, content=content)
+    return _generate_tag(tag='div', attrs={'class': 'row form-row mt-4'}, content=content)
+
+@anonymous_required
+def auth_login_view(request):
+    login_form = WarehauserAuthLoginForm(auto_id="%s")
+    context = {
+        'title': generate_page_title('Welcome'),
+        "form": login_form,
+        "data": {
+            "modal": {
+                "attrs": {
+                    "id": "modal-login",
+                    "class": "modal",
+                    "offscreen": "top",
+                },
+                "content": {
+                    "attrs": {
+                        "id": "modal-content-login",
+                        "class": "modal-content",
+                    },
+                    "header": {
+                        "icon": "lock-open-outline",
+                        "heading": _("Login"),
+                        "slug": _("Welcome to Warehauser"),
+                        # "close": True,
+                    },
+                    "footer": mark_safe(f'<div class="row form-row w-100 mb-5 text-center"><a id="link-forgot" href="#">Forgot your password?</a></div>'),
+                },
+            },
+            "form": {
+                "attrs": {
+                    "id": "form-login",
+                    "method": "post",
+                    "action": "javascript:submit_form(this,'/auth/login/');",
+                },
+                "buttons": [
+                    _generate_button({'attrs': {'type': 'submit', 'value': 'login', 'class': 'btn btn-primary col-12', 'disabled': True,}, 'content': _('Login')}),
+                ],
+            },
+        },
+    }
+
+    return render(request=request, template_name="web/modal.html", context=context)
 
 def home_view(request):
 
@@ -473,7 +545,7 @@ from django.contrib.auth import authenticate, login
 from .forms import WarehauserAuthLoginForm
 
 @anonymous_required
-def auth_login_view(request):
+def auth_login_view_old(request):
     if request.method.lower() == 'post':
         form = WarehauserAuthLoginForm(auto_id="%s", data=request.POST)
         if form.is_valid():

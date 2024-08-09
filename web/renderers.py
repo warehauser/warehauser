@@ -116,7 +116,10 @@ def _render_tags(tags:list):
         else:
             return f'<{tag}{attr_str}>{content}</{tag}>'
 
-    html = ''.join(_render_tag(tag_dict) for tag_dict in tags)
+    if isinstance(tags, list) == False:
+        return mark_safe(_render_tag(tags))
+
+    html = ''.join(_render_tag(tag) for tag in tags)
     return mark_safe(html)
 
 def _generate_tag(tag, attrs, content):

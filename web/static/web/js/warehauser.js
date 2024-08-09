@@ -131,22 +131,8 @@ function prepareRevealElement(el, toEl, handler = handleAnimateEnd) {
 
 function initModal(modal, handler = handleAnimateEnd) {
     modal = typeof modal === 'string' ? document.querySelector(modal) : modal;
-    var content = modal.querySelector('.modal-content');
 
     stagingArea.querySelectorAll('form').forEach(function(form) {
-        // Remove any existing CSRF token fields
-        // var csrfField = form.querySelector('input[name="csrfmiddlewaretoken"]');
-        // if (csrfField) {
-        //     csrfField.remove();
-        // }
-
-        // // Append a new CSRF token field at the end of the form
-        // var newCsrfField = document.createElement('input');
-        // newCsrfField.setAttribute('type', 'hidden');
-        // newCsrfField.setAttribute('name', 'csrfmiddlewaretoken');
-        // newCsrfField.setAttribute('value', '{{ csrf_token }}');
-        // form.appendChild(newCsrfField);
-
         // Add listeners to all the required fields within this form
         form.querySelectorAll('input[required]').forEach(function(input) {
             input.addEventListener('input', function() {
@@ -169,7 +155,7 @@ function initModal(modal, handler = handleAnimateEnd) {
     });
 
     // Enable tooltips
-    modalContainer.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(tooltipElement) {
+    modal.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(tooltipElement) {
         var tooltip = new bootstrap.Tooltip(tooltipElement);
 
         tooltipElement.addEventListener('show.bs.tooltip', function() {
@@ -286,6 +272,7 @@ async function loadUrl(container, url) {
         url = `/${langCode}${url}`
     }
 
+//console.log(url);
     try {
         // Fetch the content from the URL
         let response = await fetch(url);
