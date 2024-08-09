@@ -1,4 +1,4 @@
-asgiref==3.7.2
+asgiref==3.8.1
 async-timeout==4.0.3
 attrs==23.2.0
 beautifulsoup4==4.12.3
@@ -8,7 +8,7 @@ contourpy==1.2.1
 crispy==0.7.4
 crispy-bootstrap5==2024.2
 cycler==0.12.1
-Django==5.0.7
+Django==5.1
 django-cors-headers==4.3.1
 django-crispy-forms==2.1
 django-db-mutex==3.1.0
