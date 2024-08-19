@@ -1,7 +1,10 @@
-{% load filters %}{% load simple_tags %}<form{% with attrs=data.form.attrs %}{% for key, value in attrs.items %} {{ key }}="{{ value }}"{% endfor %}{% endwith %}>
+{% load filters %}{% load simple_tags %}<form {% render_attrs form.attrs %}>
     {% csrf_token %}
-{% for field in form %}
+{% for field in form.obj %}
     {% render_field form field %}
 {% endfor %}
-    {% render_tags data.form.buttons %}
+{% render_tags form.buttons %}
+    <div class="row mt-3">
+        <div id="error-{{ form.attrs.id }}" class="error error-message"></div>
+    </div>
 </form>

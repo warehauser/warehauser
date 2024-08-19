@@ -16,10 +16,10 @@
 
 from django import template
 from django.template.loader import render_to_string
-from django.forms import CheckboxInput, TextInput, EmailInput, URLInput, NumberInput, PasswordInput, RadioSelect, Textarea, Select, HiddenInput, DateInput, TimeInput, DateTimeInput
+from django.forms import CheckboxInput, CheckboxSelectMultiple, ClearableFileInput, TextInput, EmailInput, URLInput, NumberInput, PasswordInput, RadioSelect, Textarea, Select, HiddenInput, DateInput, TimeInput, DateTimeInput
 from django.utils.translation import gettext as _
 
-from web.renderers import _render_tags
+from web.renderers import _render_tags, _render_attrs
 
 register = template.Library()
 
@@ -40,10 +40,12 @@ def render_field(form, field):
         return render_to_string(f'web/forms/fields/date.html', context)
     elif isinstance(widget, TimeInput):
         return render_to_string(f'web/forms/fields/time.html', context)
-    elif isinstance(widget, RadioSelect):
-        return render_to_string(f'web/forms/fields/radio.html', context)
+    elif isinstance(widget, CheckboxSelectMultiple):
+        return render_to_string(f'web/forms/fields/checkboxmultiple.html', context)
     elif isinstance(widget, CheckboxInput):
         return render_to_string(f'web/forms/fields/checkbox.html', context)
+    elif isinstance(widget, RadioSelect):
+        return render_to_string(f'web/forms/fields/radio.html', context)
     elif isinstance(widget, TextInput):
         return render_to_string(f'web/forms/fields/text.html', context)
     elif isinstance(widget, EmailInput):
@@ -58,6 +60,8 @@ def render_field(form, field):
         return render_to_string(f'web/forms/fields/textarea.html', context)
     elif isinstance(widget, Select):
         return render_to_string(f'web/forms/fields/select.html', context)
+    elif isinstance(widget, ClearableFileInput):
+        return render_to_string(f'web/forms/fields/file.html', context)
     elif isinstance(widget, HiddenInput):
         return render_to_string(f'web/forms/fields/hidden.html', context)
     else:
@@ -66,3 +70,7 @@ def render_field(form, field):
 @register.simple_tag
 def render_tags(tag):
     return _render_tags(tag)
+
+@register.simple_tag
+def render_attrs(data: dict):
+    return _render_attrs(data)

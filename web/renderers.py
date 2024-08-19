@@ -18,6 +18,17 @@ from bs4 import BeautifulSoup
 
 from django.utils.safestring import mark_safe
 
+def _render_attrs(data:dict):
+    # Initialize an empty list to hold the rendered attributes
+    result = []
+
+    # Iterate through the dictionary, rendering each key-value pair
+    for key, val in data.items():  # Use `items()` to iterate over key-value pairs
+        result.append(f'{key}="{val}"')
+
+    # Join all rendered attributes with a space and mark it safe for HTML rendering
+    return mark_safe(' '.join(result))
+
 def _render_tags(tags:list):
     """
     Renders HTML tags from a list of tag dictionaries.

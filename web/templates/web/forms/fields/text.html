@@ -1,15 +1,15 @@
 {% load i18n %}{% load filters %}{% load simple_tags %}<div class="row form-row mt-3">
-    <div class="input-box">
-        {{ field }}
+    <div class="input-box{% if field.errors %} error{% endif %}">
+            {{ field }}
         <span id="label-{{ field.id_for_label }}" class="label">{% trans field.label %}</span>
 {% if text_btn %}
         <div class="input-text-button">
             <ion-icon id="toggle-{{field.id_for_label}}" name="{{ text_btn }}" onclick="javascript:{{ text_btn_onclick }}"></ion-icon>
         </div>
 {% endif %}
-{% if field.field.widget.attrs|has_key:"required" %}
+{% if field.field.required %}
         <div class="required" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="Required"></div>
 {% endif %}
-        <div id="error-{{ field.id_for_label }}" class="error error-message"></div>
+        <div id="error-{{ field.id_for_label }}" class="error error-message">{% for error in field.errors %}<p>{{ error }}</p>{% endfor %}</div>
     </div>
 </div>

@@ -22,23 +22,18 @@ from typing import Any#, List
 from django.shortcuts import render
 
 from django.conf import settings
-# from django.contrib import messages
 from django.contrib.auth import login, authenticate, update_session_auth_hash
 from django.contrib.auth import logout as auth_logout
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.auth.models import User
-# from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
-# from django.db.models import JSONField
 from django.http import HttpResponse, JsonResponse
 from django.middleware.csrf import get_token
-from django.shortcuts import render, redirect#, get_object_or_404
-# from django.templatetags.static import static
+from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext as _
-# from django.utils import translation
 
 from core.models import *
 
@@ -66,29 +61,6 @@ def generate_button_attributes(attrs:dict) -> dict:
 
 
 # Create your views here.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 class DefaultFormHandler:
     # @debug_func
     def _generate_html_input(self, name:str, field):
@@ -153,6 +125,33 @@ class DefaultFormHandler:
         content = _generate_tag(tag='button', attrs=attrs, content=content)
         content = _generate_tag(tag='div', attrs={'class': 'button-row'}, content=content)
         return _generate_tag(tag='div', attrs={'class': 'row form-row mt-4'}, content=content)
+
+    # @debug_func
+    def _generate_submit_button(self, id, val, content, disabled:bool=False):
+        attrs = {
+            'id': id,
+            'type': 'submit',
+            'class': 'btn btn-primary col-12',
+            'value': val,
+        }
+
+        if disabled:
+            attrs['disabled'] = True
+
+        return self._generate_button({'attrs': attrs, 'content': content})
+
+    # @debug_func
+    def _generate_cancel_button(self, id, disabled:bool=False):
+        attrs = {
+            'id': id,
+            'type': 'submit',
+            'class': 'btn btn-secondary col-12',
+        }
+
+        if disabled:
+            attrs['disabled'] = True
+
+        return self._generate_button({'attrs': attrs, 'content': _('Cancel')})
 
     # @debug_func
     def _generate_modal_header(self, data):
@@ -244,201 +243,431 @@ class DefaultFormHandler:
         return _render_bs4(_render_tags([content]))
 
     # @debug_func
-    def get(self, request) -> HttpResponse:
+    def get(self, request, *args, **kwargs) -> HttpResponse:
         return HttpResponse(status=501, reason='GET method not implemented.')
 
     # @debug_func
-    def post(self, request) -> JsonResponse:
+    def post(self, request, *args, **kwargs) -> JsonResponse:
         return JsonResponse(status=501, reason='POST method not implemented.')
 
     # @debug_func
-    def patch(self, request) -> JsonResponse:
+    def patch(self, request, *args, **kwargs) -> JsonResponse:
         return JsonResponse(status=501, reason='PATCH method not implemented.')
 
     # @debug_func
-    def delete(self, request) -> JsonResponse:
+    def delete(self, request, *args, **kwargs) -> JsonResponse:
         return JsonResponse(status=501, reason='DELETE method not implemented.')
 
     # @debug_func
-    def head(self, request) -> JsonResponse:
+    def head(self, request, *args, **kwargs) -> JsonResponse:
         return JsonResponse(status=501, reason='HEAD method not implemented.')
 
     # @debug_func
-    def handle(self, request) -> None:
+    def handle(self, request, *args, **kwargs) -> None:
         match request.method.lower():
             case 'get':
-                return self.get(request)
+                return self.get(request, *args, **kwargs)
             case 'post':
-                return self.post(request)
+                return self.post(request, *args, **kwargs)
             case 'patch':
-                return self.patch(request)
+                return self.patch(request, *args, **kwargs)
             case 'delete':
-                return self.delete(request)
+                return self.delete(request, *args, **kwargs)
             case 'head':
-                return self.head(request)
+                return self.head(request, *args, **kwargs)
 
-        return JsonResponse(status=501, reason=f'{self.request.method} method not implemented.')
+        return JsonResponse(status=501, reason=f'{request.method} method not implemented.')
 
 class AuthLoginFormHandler(DefaultFormHandler):
-    def get(self, request) -> HttpResponse:
-        htm = self.as_modal(request)
-        return HttpResponse(mark_safe(htm), content_type='text/html')
-
-    def post(self, request) -> JsonResponse:
-        response = dict()
-        # set HTTP response code to 200
-        # send response to requester
-        return JsonResponse(response)
-
-def app_form_router(request, app, name):
-    router = (app.title() + name.title()).replace(' ', '')
-    match router:
-        case 'AuthLogin':
-            return AuthLoginFormHandler().handle(request)
-        # case '???':... etc
-
-    return HttpResponse(status=404, reason=f'Form {name} for app {app} not found.')
-
-def form_router(request, name):
-    match name:
-        case 'AuthLogin':
-            return AuthLoginFormHandler().handle(request)
-    return HttpResponse(status=404, reason=f'Form {name} not found.')
-
-
-
-
-def testform(request):
-    testform = ExampleForm(auto_id="%s")
-    context = {
-        "title": generate_page_title('Test form'),
-        "form": testform,
-
-        "data": {
-            "modal": {
-                "attrs": {
-                    "id": "modal-testform",
-                    "class": "modal",
-                    "offscreen": "top",
-                },
-                "content": {
-                    "attrs": {
-                        "id": "modal-content-testform",
-                        "class": "modal-content",
-                    },
-                    "header": {
-                        "icon": "lock-closed-outline",
-                        "heading": _("Testing"),
-                        "slug": _("This is a test!"),
-                        # "close": True,
-                    },
-                    "footer": mark_safe(f'<div class="row form-row w-100 mb-5 text-center"><a id="link-forgot" href="#">Forgot your password?</a></div>'),
-                },
-            },
-            "form": {
-                "attrs": {
-                    "id": "form-testform",
-                    "method": "post",
-                    "action": "javascript:submit_form(this,'/testform/');",
-                },
-                "buttons": [
-                    _generate_button({'attrs': {'type': 'submit', 'value': 'login', 'class': 'btn btn-primary col-12', 'disabled': True,}, 'content': _('Login')}),
-                ],
-            },
-        },
-    }
-
-    return render(request=request, template_name="web/modal.html", context=context)
-
-
-
-
-# @debug_func
-def _generate_button(button):
-    attrs = button['attrs'] if button and 'attrs' in button else {}
-    content = button['content'] if button and 'content' in button else ''
-    content = _generate_tag(tag='button', attrs=attrs, content=content)
-    content = _generate_tag(tag='div', attrs={'class': 'button-row'}, content=content)
-    return _generate_tag(tag='div', attrs={'class': 'row form-row mt-4'}, content=content)
-
-@anonymous_required
-def auth_login_view(request):
-    login_form = WarehauserAuthLoginForm(auto_id="%s")
-    context = {
-        'title': generate_page_title('Welcome'),
-        "form": login_form,
-        "data": {
-            "modal": {
-                "attrs": {
+    def get(self, request, *args, **kwargs) -> HttpResponse:
+        # login_form = WarehauserAuthLoginForm(auto_id="%s")
+        login_form = WarehauserAuthLoginForm()
+        context = {
+            'modal': {
+                'attrs': {
                     "id": "modal-login",
                     "class": "modal",
                     "offscreen": "top",
                 },
-                "content": {
-                    "attrs": {
-                        "id": "modal-content-login",
-                        "class": "modal-content",
-                    },
-                    "header": {
-                        "icon": "lock-open-outline",
-                        "heading": _("Login"),
-                        "slug": _("Welcome to Warehauser"),
-                        # "close": True,
-                    },
-                    "footer": mark_safe(f'<div class="row form-row w-100 mb-5 text-center"><a id="link-forgot" href="#">Forgot your password?</a></div>'),
+            },
+            'header': {
+                "icon": "lock-open-outline",
+                "heading": _("Login"),
+                "slug": _("Welcome to Warehauser"),
+                # "close": True,
+            },
+            'content': {
+                'attrs': {
+                    'id': "modal-content-login",
+                    'class': "modal-content",
                 },
             },
-            "form": {
-                "attrs": {
-                    "id": "form-login",
-                    "method": "post",
-                    "action": "javascript:submit_form(this,'/auth/login/');",
+            'footer': mark_safe(f'<div class="row form-row w-100 mb-5 text-center"><a id="link-forgot" href="javascript:loadForgot();">Forgot your password?</a></div>'),
+            'form': {
+                'obj': login_form,
+                'attrs': {
+                    'id': 'form-login',
+                    'method': 'post',
+                    'onsubmit': "submitForm(event, '#form-login', '/form/web/login/', loginSuccessHandler);",
                 },
                 "buttons": [
-                    _generate_button({'attrs': {'type': 'submit', 'value': 'login', 'class': 'btn btn-primary col-12', 'disabled': True,}, 'content': _('Login')}),
+                    self._generate_submit_button('submit-login', 'login', _('Login'), True),
                 ],
             },
-        },
-    }
+            'scripts': [
+                # { 'template': 'web/js/login.js', },
+                { 'attrs': {'id': 'script-form-login', 'src': '/static/web/js/forms/login.js',}, },
+                # { 'content': 'console.log("HELLO WORLD");', },
+            ],
+        }
+        return render(request=request, template_name='web/modal.html', context=context)
+        if request.user.id:
+            print(request.user.id)
+            json = {
+                'error': _('User already logged in'),
+            }
+            return JsonResponse(json, status=401) # 401 Unauthorized
 
-    return render(request=request, template_name="web/modal.html", context=context)
+        login_form = WarehauserAuthLoginForm(auto_id="%s")
+        context = {
+            'title': generate_page_title('Welcome'),
+            "form": login_form,
+            "data": {
+                "modal": {
+                    "attrs": {
+                        "id": "modal-login",
+                        "class": "modal",
+                        "offscreen": "top",
+                    },
+                    "content": {
+                        "attrs": {
+                            "id": "modal-content-login",
+                            "class": "modal-content",
+                        },
+                        "header": {
+                            "icon": "lock-open-outline",
+                            "heading": _("Login"),
+                            "slug": _("Welcome to Warehauser"),
+                            # "close": True,
+                        },
+                        "footer": mark_safe(f'<div class="row form-row w-100 mb-5 text-center"><a id="link-forgot" href="javascript:loadForgot();">Forgot your password?</a></div>'),
+                    },
+                },
+                "form": {
+                    "attrs": {
+                        "id": "form-login",
+                        "method": "post",
+                        "onsubmit": "submitForm(event, '#form-login', '/form/web/login/', loginSuccessHandler);",
+                    },
+                    "buttons": [
+                        _generate_button({'attrs': {'type': 'submit', 'value': 'login', 'class': 'btn btn-primary col-12', 'disabled': True,}, 'content': _('Login')}),
+                    ],
+                },
+            },
+        }
+
+        return render(request=request, template_name="web/modal.html", context=context)
+
+    def post(self, request, *args, **kwargs) -> JsonResponse:
+        if request.user.id:
+            json = {
+                'error': _('User already logged in'),
+            }
+            return JsonResponse(json, status=401) # 401 Unauthorized
+
+        # Extract data from the POST request
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        # Authenticate the user
+        if is_valid_email_address(username):
+            user = authenticate(request, email=username, password=password)
+        else:
+            user = authenticate(request, username=username, password=password)
+
+        if user is not None:
+            # login user
+            login(request, user)
+            return JsonResponse({'user': user.username}, status=200) # Successful login
+        else:
+            # Handle invalid login credentials
+            json = {
+                'error': _('Invalid credentials'),
+            }
+            return JsonResponse(json, status=401) # 401 Unauthorized
+
+
+class AuthForgotFormHandler(DefaultFormHandler):
+    def get(self, request, *args, **kwargs) -> HttpResponse:
+        forgot_form = WarehauserAuthForgotPasswordForm(auto_id="%s")
+        context = {
+            'modal': {
+                'attrs': {
+                    "id": "modal-forgot",
+                    "class": "modal",
+                    "offscreen": "top",
+                },
+            },
+            'header': {
+                "icon": "lock-open-outline",
+                "heading": _("Forgot Password"),
+                "slug": _("Let's Reset Your Password"),
+                # "close": True,
+            },
+            'content': {
+                'attrs': {
+                    'id': "modal-content-forgot",
+                    'class': "modal-content",
+                },
+            },
+            # 'footer': mark_safe(f'<div class="row form-row w-100 mb-5 text-center"><a id="link-forgot" href="javascript:loadForgot();">Forgot your password?</a></div>'),
+            'form': {
+                'obj': forgot_form,
+                'attrs': {
+                    'id': 'form-forgot',
+                    'method': 'post',
+                    'onsubmit': "submitForm(event, '#form-forgot', '/form/web/forgot/', forgotSuccessHandler);",
+                },
+                "buttons": [
+                    self._generate_submit_button('submit-forgot', 'reset', _('Reset'), True),
+                    self._generate_cancel_button('cancel-forgot', True),
+                ],
+            },
+        }
+        return render(request=request, template_name='web/modal.html', context=context)
+        context = {
+            "form": forgot_form,
+            "form_attrs": {
+                'id': 'form-forgot',
+                'method': 'post',
+                'onsubmit': "submitForm(event, '#form-forgot', '/form/web/forgot/', forgotSuccessHandler);",
+            },
+        }
+        return render(request=request, template_name='web/forms/forgot.html', context=context)
+        if request.user.id:
+            print(request.user.id)
+            json = {
+                'error': _('User already logged in'),
+            }
+            return JsonResponse(json, status=401) # 401 Unauthorized
+
+        form = WarehauserAuthForgotPasswordForm(auto_id="%s")
+        context = {
+            "title": generate_page_title('Forgot Password'),
+            "form": form,
+            "data": {
+                "modal": {
+                    "attrs": {
+                        "id": "modal-forgot",
+                        "class": "modal",
+                        "offscreen": "top",
+                    },
+                    "content": {
+                        "attrs": {
+                            "id": "modal-content-forgot",
+                            "class": "modal-content",
+                        },
+                        "header": {
+                            "icon": "lock-open-outline",
+                            "heading": _("Reset Password"),
+                            "slug": _("Regain access to your account"),
+                            "close": True,
+                        },
+                    },
+                },
+                "form": {
+                    "attrs": {
+                        "id": "form-forgot",
+                        "method": "post",
+                        "onsubmit": "submitForm(event, '#form-forgot', '/form/web/forgot/', forgotSuccessHandler);",
+                    },
+                    "buttons": [
+                        _generate_button({'attrs': {'type': 'submit', 'value': 'forgot', 'class': 'btn btn-primary col-12', 'disabled': True,}, 'content': _('Request Reset')}),
+                        _generate_button({'attrs': {'type': 'submit', 'value': 'cancel', 'class': 'btn btn-secondary col-12',}, 'content': _('Cancel')}),
+                    ],
+                },
+            },
+        }
+
+        return render(request=request, template_name="web/modal.html", context=context)
+
+    def post(self, request, *args, **kwargs) -> JsonResponse:
+        print(f'AuthForgotFormHandler.post() called')
+        form = WarehauserPasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            data = {
+                'otp': {
+                    'codes': {
+                        generate_otp_code(): {
+                            'status': 0,
+                            'type': 'passwd',
+                            'dt': f'{timezone.localtime(timezone.now())}',
+                            'data': {
+                                'old_password': make_password(form.cleaned_data.get('old_password')),
+                            },
+                        },
+                    },
+                },
+            }
+
+            try:
+                with db_mutex(f'core_useraux'):
+                    try:
+                        aux = UserAux.objects.get(user=user)
+                        aux.options.update(data)
+                    except Exception as e:
+                        aux = UserAux.objects.create(user=user, options=data)
+
+                    if 'attempts' not in aux.options['otp']:
+                        aux.options['otp']['attempts'] = list()
+                    aux.save()
+            except Exception as e:
+                raise e
+
+            user = form.save()
+            update_session_auth_hash(request, user)
+
+        return JsonResponse({}, status=200) # Successful request
+
+def app_form_router(request, app, name):
+    router = (app + '.' + name).replace(' ', '')
+    match router:
+        case 'web.login':
+            return AuthLoginFormHandler().handle(request)
+        case 'web.logout':
+            auth_logout(request=request)
+            return redirect('home_view')
+        case 'web.forgot':
+            return AuthForgotFormHandler().handle(request)
+        # case '???':... etc
+
+    return HttpResponse(status=404, reason=f'Form {name} for app {app} not found.')
+
+# def form_router(request, name):
+#     match name.lower():
+#         case 'authlogin':
+#             return AuthLoginFormHandler().handle(request)
+#     return HttpResponse(status=404, reason=f'Form {name} not found.')
+
+
+
+
+# def testform(request):
+#     testform = ExampleForm(auto_id="%s")
+#     context = {
+#         "title": generate_page_title('Test form'),
+#         "form": testform,
+
+#         "data": {
+#             "modal": {
+#                 "attrs": {
+#                     "id": "modal-testform",
+#                     "class": "modal",
+#                     "offscreen": "top",
+#                 },
+#                 "content": {
+#                     "attrs": {
+#                         "id": "modal-content-testform",
+#                         "class": "modal-content",
+#                     },
+#                     "header": {
+#                         "icon": "lock-closed-outline",
+#                         "heading": _("Testing"),
+#                         "slug": _("This is a test!"),
+#                         # "close": True,
+#                     },
+#                     "footer": mark_safe(f'<div class="row form-row w-100 mb-5 text-center"><a id="link-forgot" href="#">Forgot your password?</a></div>'),
+#                 },
+#             },
+#             "form": {
+#                 "attrs": {
+#                     "id": "form-testform",
+#                     "method": "post",
+#                     "action": "javascript:submit_form(this,'/testform/');",
+#                 },
+#                 "buttons": [
+#                     _generate_button({'attrs': {'type': 'submit', 'value': 'login', 'class': 'btn btn-primary col-12', 'disabled': True,}, 'content': _('Login')}),
+#                 ],
+#             },
+#         },
+#     }
+
+#     return render(request=request, template_name="web/modal.html", context=context)
+
+# @anonymous_required
+# def auth_login_view(request):
+#     login_form = WarehauserAuthLoginForm(auto_id="%s")
+#     context = {
+#         'title': generate_page_title('Welcome'),
+#         "form": login_form,
+#         "data": {
+#             "modal": {
+#                 "attrs": {
+#                     "id": "modal-login",
+#                     "class": "modal",
+#                     "offscreen": "top",
+#                 },
+#                 "content": {
+#                     "attrs": {
+#                         "id": "modal-content-login",
+#                         "class": "modal-content",
+#                     },
+#                     "header": {
+#                         "icon": "lock-open-outline",
+#                         "heading": _("Login"),
+#                         "slug": _("Welcome to Warehauser"),
+#                         # "close": True,
+#                     },
+#                     "footer": mark_safe(f'<div class="row form-row w-100 mb-5 text-center"><a id="link-forgot" href="#">Forgot your password?</a></div>'),
+#                 },
+#             },
+#             "form": {
+#                 "attrs": {
+#                     "id": "form-login",
+#                     "method": "post",
+#                     "onsubmit": "submit_form(event, '#form-login', '/auth/login/', loginSuccessHandler);",
+#                 },
+#                 "buttons": [
+#                     _generate_button({'attrs': {'type': 'submit', 'value': 'login', 'class': 'btn btn-primary col-12', 'disabled': True,}, 'content': _('Login')}),
+#                 ],
+#             },
+#         },
+#     }
+
+#     return render(request=request, template_name="web/modal.html", context=context)
 
 def home_view(request):
-
-    login_form = WarehauserAuthLoginForm(auto_id="%s")
-    # login_form.fields['username'].widget.attrs.update({'autocomplete': 'off', 'css_classes': 'row form-row mb-4'})
-    # login_form.fields['password'].widget.attrs.update({'autocomplete': 'off', 'css_classes': 'row form-row mb-4'})
-
-    # login_form.modalid = 'modal-login'
-    # login_form.offscreen = 'top'
-    # login_form.header = {
-    #     'icon': 'lock-closed-outline',
-    #     'heading': _('Login'),
-    #     'slug': _('Welcome to Warehauser'),
-    #     'close': True,
-    # }
-    # login_form.footer = [{'tag': 'div', 'attrs': {'class': 'row form-row w-100 mb-5 text-center'}, 'content': mark_safe('<a id="link-forgot" href="#">Forgot your password?</a>'),},]
-
-    password_reset_form = WarehauserAuthForgotPasswordForm(auto_id="%s")
-    # password_reset_form.modalid = 'modal-password-reset'
-    # password_reset_form.offscreen = 'right'
-    # password_reset_form.card = {
-    #     'classList': 'invisible',
-    #     'onload': mark_safe('animate_move_element_dismiss_right("card-form-password-reset",0,"linear")'),
-    # }
-    # password_reset_form.onsubmit = f'submit_password_reset_form(\'{password_reset_form.id}\')'
-    # password_reset_form.header = {
-    #     'icon': 'lock-closed-outline',
-    #     'heading': _('Forgot Password'),
-    #     'slug': _('Let\'s fix that'),
-    # }
-
     context = {
         'title': generate_page_title('Welcome'),
     }
 
     response = render(request, "web/index.html", context=context)
     return response
+
+@user_passes_test(lambda u: u.is_superuser)
+def client_groups_view(request):
+    # Filter groups with names starting with 'client_'
+    client_groups = Group.objects.filter(name__startswith='client_')
+    
+    # Extract the display name (the part after 'client_') and create a list of tuples
+    group_links = [(group.name, group.name.replace('client_', '')) for group in client_groups]
+    
+    context = {
+        'group_links': group_links,
+    }
+    
+    return render(request, 'client_list.html', context)
+
+def group_detail_view(request, group_name):
+    group = get_object_or_404(Group, name=group_name)
+    return render(request, 'client_detail.html', {'client': group})
+
+
+
+
+
+
+
 
 def dashboard_view(request):
     data = '''

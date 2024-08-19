@@ -1,15 +1,17 @@
-<div class="input-box">
-    <div class="radio-group">
-        <div class="radio-heading">{{ field.label }}</div>
+<div class="row form-row mt-3">
+    <div class="input-box">
+        <div class="radio-group">
+            <div class="radio-heading">{{ field.label }}</div>
 {% for radio in field %}
-        <input type="radio"
-            id="{{ radio.id_for_label }}"
-            name="{{ field.name }}"
-            value="{{ radio.data.value }}"
-            {% if radio.data.value == field.data %}checked{% endif %} />
-        <label for="{{ radio.id_for_label }}" class="label-radio">
-            {{ radio.choice_label }}
-        </label>
+            <input type="radio"
+                id="{{ radio.id_for_label }}"
+                name="{{ field.name }}"
+                value="{{ radio.data.value }}"
+                {% if radio.data.value == field.data %}checked{% endif %} />
+            <label for="{{ radio.id_for_label }}" class="label-radio">
+                {{ radio.choice_label }}
+            </label>
 {% endfor %}
+        </div>
     </div>
 </div>

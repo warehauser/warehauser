@@ -1,10 +1,1 @@
-{% load i18n %}{% load filters %}{% load simple_tags %}<div class="row form-row mt-3">
-    <div class="input-box">
-        {{ field }}
-        <span id="label-{{ field.id_for_label }}" class="label">{% trans field.label %}</span>
-        {% if field.field.widget.attrs|has_key:"required" %}
-        <div class="required" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="Required"></div>
-        {% endif %}
-        <div id="error-{{ field.id_for_label }}" class="error error-message"></div>
-    </div>
-</div>
+{% include 'web/forms/fields/text.html' %}

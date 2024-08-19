@@ -17,26 +17,3 @@
 from django import template
 
 register = template.Library()
-
-@register.filter
-def pop_key(d: dict, key: str):
-    return d.pop(key, None)
-
-@register.filter
-def pop_key_from_attrs(field, key):
-    return pop_key(field.field.widget.attrs, key)
-
-@register.filter
-def get_value_by_key(d: dict, key: str, default: str = None):
-    if default is not None:
-        if default.lower() == 'true':
-            default = True
-        elif default.lower() == 'false':
-            default = False
-    return d.get(key, default)
-
-@register.filter(name='has_key')
-def has_key(d: dict, key: str):
-    if d is None:
-        return False
-    return key in d

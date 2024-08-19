@@ -1,0 +1,8 @@
+<h1>Clients</h1>
+<ul>
+    {% for group_name, display_name in group_links %}
+        <li>
+            <a href="{% url 'group_detail' group_name %}">{{ display_name }}</a>
+        </li>
+    {% endfor %}
+</ul>

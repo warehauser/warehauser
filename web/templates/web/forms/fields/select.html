@@ -1,1 +1,12 @@
-{{ field }}
+{% load i18n %}{% load filters %}{% load simple_tags %}<div class="row form-row mt-3">
+    <div class="input-box">
+        <div class="select-group">
+            <div class="select-heading">{{ field.label }}</div>
+            <select class="form-select" aria-label="{% trans field.label %}">
+{% for choice in field.field.choices %}
+                <option value="{{ choice.0 }}" {% if field.value == choice.0 %}selected{% endif %}>{% trans choice.1 %}</option>
+{% endfor %}
+            </select>
+        </div>
+    </div>
+</div>

@@ -27,7 +27,7 @@ On Linux or MacOS:
 
     pip install -r warehauser/requirements.txt
 
-6. Create (or ensure one is created) your warehauser database. See Django documentation on supported database management systems that are supported.
+6. Create (or ensure one is created) your warehauser database. See Django documentation for supported database management systems.
 
 7. Edit your .env environment variables file to include environment secrets. Note that the Django (library used by warehauser) SECRET_KEY can be set in your environment variables or in the .env file as DJANGO_SECRET_KEY.
 

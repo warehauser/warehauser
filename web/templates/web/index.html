@@ -37,7 +37,7 @@
 {% endif %}
 {% endwith %}
                             <span id="session-info-divider" class="divider"></span>
-                            <a id="link-logout" class="nav-text {{ disabled }}" href="{% url 'auth_logout_view' %}"{% if user.is_authenticated %} title="{% trans "Logout" %}"{% else %} title="{% trans "Login" %}"{% endif %}><ion-icon id="user-icon" name="lock-{{ iconname }}-outline" class="md hydrated"></ion-icon></a>
+                            <a id="link-logout" class="nav-text {{ disabled }}" href="{% url 'auth_logout_view' %}"{% if user.is_authenticated %} title="{% trans "Logout" %}"{% else %} title="{% trans "Login" %}"{% endif %}><ion-icon id="user-icon" name="lock-{{ iconname }}-outline" class="user-icon md hydrated"></ion-icon></a>
                         </li>
                     </ul>
                 </div>
@@ -47,6 +47,7 @@
     <main>
         <div id="staging-area" class="staging text-center"></div>
         <div id="modal-container" class="text-center fade show"></div>
+        <div id="dashboard"></div>
     </main>
     <footer></footer>
 
@@ -61,17 +62,12 @@
     <script type="text/javascript">
 
 document.addEventListener('DOMContentLoaded', async () => {
-//    await loadUrl('#staging-area', '/auth/login/');
-
-//    let modal = document.getElementById('modal-login');
-//    initModal(modal);
-//    animateRevealElement(modal, modalContainer);
-
-    await loadUrl('#staging-area', '/testform/');
-
-    let modal = document.getElementById('modal-testform');
-    initModal(modal);
+{% if user.is_authenticated %}
+    await loadDashboard();
+{% else %}
+    modal = await loadModal('modal-login', '/form/web/login/');
     animateRevealElement(modal, modalContainer);
+{% endif %}
 });
 </script>
 </body>

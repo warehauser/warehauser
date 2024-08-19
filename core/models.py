@@ -18,7 +18,6 @@ import importlib
 import logging
 import uuid
 
-# import jsonschema
 from jsonschema import validate, ValidationError
 
 from db_mutex.db_mutex import db_mutex
@@ -81,7 +80,7 @@ class WarehauserAbstractModel(models.Model):
     @callback.setter
     def callback(self, callback):
         if callback is not None and not isinstance(callback, ModelCallback):
-            raise AttributeError(_('Expected an instance of') + ' ModelCallback')
+            raise AttributeError(_('Expected an instance of ModelCallback.'))
 
         self._callback = callback
 

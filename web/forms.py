@@ -21,64 +21,16 @@ from django.utils.translation import gettext as _
 
 from core.models import CHARFIELD_MAX_LENGTH
 
-
-
-
-
-from django import forms
-
-class ExampleForm(forms.Form):
-    # Basic Input Types
-    char_field = forms.CharField(widget=forms.TextInput(attrs={}))
-    password_field = forms.CharField(widget=forms.PasswordInput(attrs={}))
-    email_field = forms.EmailField(widget=forms.EmailInput(attrs={}))
-    url_field = forms.URLField(widget=forms.URLInput(attrs={}))
-    number_field = forms.IntegerField(widget=forms.NumberInput(attrs={}))
-    date_field = forms.DateField(widget=forms.DateInput(attrs={}))
-    time_field = forms.TimeField(widget=forms.TimeInput(attrs={}))
-    datetime_field = forms.DateTimeField(widget=forms.DateTimeInput(attrs={}))
-
-    # Select and Choice Fields
-    choice_field = forms.ChoiceField(choices=[('1', 'First'), ('2', 'Second'), ('3', 'Third')], widget=forms.Select)
-    multiple_choice_field = forms.MultipleChoiceField(choices=[('1', 'First'), ('2', 'Second'), ('3', 'Third')], widget=forms.CheckboxSelectMultiple)
-
-    # Boolean and Checkbox
-    boolean_field = forms.BooleanField(widget=forms.CheckboxInput)
-    favourite_color = forms.ChoiceField(choices=[('red', _('Red')), ('green', _('Green')), ('blue', _('Blue'))], widget=forms.RadioSelect)
-    
-    # File Input
-    file_field = forms.FileField(widget=forms.ClearableFileInput)
-    
-    # TextArea
-    textarea_field = forms.CharField(widget=forms.Textarea(attrs={'rows': 5, 'cols': 20}))
-
-    # SlugField
-    slug_field = forms.SlugField(widget=forms.TextInput(attrs={}))
-    
-    # Color Input
-    color_field = forms.CharField(widget=forms.TextInput(attrs={'type': 'color'}))
-    
-    # Hidden Input
-    hidden_field = forms.CharField(widget=forms.HiddenInput, initial="hidden_value")
-
-    # Custom Widget
-    custom_widget_field = forms.CharField(widget=forms.TextInput(attrs={}))
-
-
-
-
-
-
-
 class WarehauserAuthLoginForm(AuthenticationForm):
     def __init__(self, *args, **kwargs):
-        self.csrf_token = kwargs.pop('csrf_token', None)
+        kwargs['auto_id'] = False
         super().__init__(*args, **kwargs)
 
     username = forms.CharField(
         label=_('Username'),
         max_length=CHARFIELD_MAX_LENGTH,
         widget=forms.TextInput(attrs={
+            'id': 'username',
             'placeholder': '',
             'required': 'true',
             'autocomplete': 'off',
@@ -99,13 +51,14 @@ class WarehauserAuthLoginForm(AuthenticationForm):
 
 class WarehauserAuthForgotPasswordForm(forms.Form):
     def __init__(self, *args, **kwargs):
-        self.csrf_token = kwargs.pop('csrf_token', None)
+        kwargs['auto_id'] = False
         super().__init__(*args, **kwargs)
 
     email = forms.EmailField(
         label=_("Email"),
         max_length=CHARFIELD_MAX_LENGTH,
         widget=forms.EmailInput(attrs={
+            'id': 'email',
             'placeholder': '',
             'required': 'true',
             'autocomplete': 'off',
@@ -214,3 +167,43 @@ class WarehauserOTPChallengeForm(forms.Form):
         Returns a list of dicts each with a renderer class and a list of fields.
         """
         return [{'renderer': 'field_renderer_otp', 'fields': self.visible_fields()}]
+
+
+
+
+# class ExampleForm(forms.Form):
+#     # Basic Input Types
+#     char_field = forms.CharField(widget=forms.TextInput(attrs={}))
+#     password_field = forms.CharField(widget=forms.PasswordInput(attrs={}))
+#     email_field = forms.EmailField(widget=forms.EmailInput(attrs={}))
+#     url_field = forms.URLField(widget=forms.URLInput(attrs={}))
+#     number_field = forms.IntegerField(widget=forms.NumberInput(attrs={}))
+#     date_field = forms.DateField(widget=forms.DateInput(attrs={}))
+#     time_field = forms.TimeField(widget=forms.TimeInput(attrs={}))
+#     datetime_field = forms.DateTimeField(widget=forms.DateTimeInput(attrs={}))
+
+#     # File Input
+#     file_field = forms.FileField(widget=forms.ClearableFileInput)
+
+#     # Select and Choice Fields
+#     choice_field = forms.ChoiceField(choices=[('1', 'First'), ('2', 'Second'), ('3', 'Third')], widget=forms.Select)
+#     multiple_choice_field = forms.MultipleChoiceField(choices=[('1', 'First'), ('2', 'Second'), ('3', 'Third')], widget=forms.CheckboxSelectMultiple)
+
+#     # Boolean and Checkbox
+#     boolean_field = forms.BooleanField(widget=forms.CheckboxInput)
+#     favourite_color = forms.ChoiceField(choices=[('red', _('Red')), ('green', _('Green')), ('blue', _('Blue'))], widget=forms.RadioSelect)
+
+#     # TextArea
+#     textarea_field = forms.CharField(widget=forms.Textarea(attrs={'rows': 5, 'cols': 20}))
+
+#     # SlugField
+#     slug_field = forms.SlugField(widget=forms.TextInput(attrs={}))
+    
+#     # Color Input
+#     color_field = forms.CharField(widget=forms.TextInput(attrs={'type': 'color'}))
+    
+#     # Hidden Input
+#     hidden_field = forms.CharField(widget=forms.HiddenInput, initial="hidden_value")
+
+#     # Custom Widget
+#     custom_widget_field = forms.CharField(widget=forms.TextInput(attrs={}))

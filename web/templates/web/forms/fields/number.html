@@ -2,9 +2,9 @@
     <div class="input-box">
         {{ field }}
         <span id="label-{{ field.id_for_label }}" class="label">{% trans field.label %}</span>
-        {% if field.field.widget.attrs|has_key:"required" %}
+{% if field.field.required %}
         <div class="required" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="Required"></div>
-        {% endif %}
+{% endif %}
         <div id="error-{{ field.id_for_label }}" class="error error-message"></div>
     </div>
 </div>

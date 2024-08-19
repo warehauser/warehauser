@@ -1,30 +1,35 @@
-{% load i18n %}{% load filters %}{% load simple_tags %}
-<div{% with attrs=data.modal.attrs %}{% for key, value in attrs.items %} {{ key }}="{{ value }}"{% endfor %}{% endwith %}>
+{% load i18n %}{% load simple_tags %}
+<div {% render_attrs modal.attrs %}>
   <div class="modal-dialog" role="document">
-    <div{% with attrs=data.modal.content.attrs %}{% for key, value in attrs.items %} {{ key }}="{{ value }}"{% endfor %}{% endwith %}>
-{% with header=data.modal.content.header %}
+    <div {% render_attrs content.attrs %}>
       <div class="modal-header">
         <div class="w-100 text-center">
-{% if header|has_key:"icon" %}
+{% if header.icon %}
           <ion-icon class="form-icon mt-4" name="{{ header.icon }}"></ion-icon>
 {% endif %}
-{% if header|has_key:"heading" %}
+{% if header.heading %}
           <h2 class="modal-title">{{ header.heading }}</h2>
 {% endif %}
-{% if header|has_key:"slug" %}
+{% if header.slug %}
           <p class="modal-header-slug">{{ header.slug }}</p>
 {% endif %}
         </div>
       </div>
-{% endwith %}
       <div class="modal-body">
-        {% include "web/forms/form.html" with form=form data=data %}
+        {% include "web/forms/form.html" %}
       </div>
-{% with footer=data.modal.content.footer %}
-      <div class="modal-footer">
+      <div class="modal-footer">{% if footer %}
         {{ footer }}
-      </div>
-{% endwith %}
+      {% endif %}</div>
     </div>
   </div>
 </div>
+{% if scripts %}
+{% for script in scripts %}
+{% if script.template %}
+{% include script.template %}
+{% else %}
+<script{% if script.attrs %} {% render_attrs script.attrs %}{% endif %}>{% if script.content %}{{ script.content|safe }}{% endif %}</script>
+{% endif %}
+{% endfor %}
+{% endif %}

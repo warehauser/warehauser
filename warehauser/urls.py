@@ -26,7 +26,6 @@ urlpatterns = [
     path('', include('web.urls')),
 ]
 
-
 urlpatterns += i18n_patterns(
     path('', include('web.urls'))
 )

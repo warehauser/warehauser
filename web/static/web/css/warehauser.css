@@ -70,7 +70,6 @@
     --color-gray-5: #304040;
     --color-gray-6: #1c2326;
     --color-gray-7: #161d1d;
-
 }
 
 *, *::before, *::after
@@ -95,6 +94,7 @@ a:not(.btn)
 {
     text-decoration: none;
     color: var(--color-icons);
+    cursor: pointer;
 }
 
 a:not(.btn):hover
@@ -118,7 +118,7 @@ header {
     margin-bottom: 6px;
 }
         
-#user-icon {
+.user-icon {
     position: relative;
     top: 5px;
     width: var(--user-icon-dimension);
@@ -236,10 +236,28 @@ header {
     font-size: 28px !important;
 }
 
+.select-group {
+    border: 1px solid var(--color-icons);
+    border-radius: 5px;
+    padding: 10px;
+    padding-top: 20px;
+}
 
+.select-heading {
+    position: absolute;
+    font-size: 0.75em;
+    pointer-events: none;
+    cursor: pointer;
+    top: 0px;
+    left: 0px;
+    transform: translateX(25px) translateY(-9px);
+    padding: 0px 5px;
+    text-transform: uppercase;
+    border: 1px solid var(--color-icons);
+    background-color: var(--color-icons);
+    color: var(--color-background);
+}
 
-
-/* Input radio buttons */
 .radio-group {
     border: 1px solid var(--color-opaque);
     border-radius: 5px;
@@ -251,15 +269,18 @@ header {
 .radio-heading {
     position: absolute;
     font-size: 0.75em;
+    pointer-events: none;
+    cursor: pointer;
     top: 0px;
     left: 0px;
-    transform: translateX(13px) translateY(-9px);
+    transform: translateX(25px) translateY(5px);
     padding: 0px 5px;
     text-transform: uppercase;
     border: 1px solid var(--color-opaque);
     background-color: var(--color-background);
 }
 
+/* Input radio buttons */
 input[type="radio"] {
     display: none;
 }
@@ -288,10 +309,7 @@ input[type="radio"] {
 }
 
 input[type="radio"]:checked + .label-radio:before {
-    /* height: 1em;
-    width: 1em; */
     border: 6px solid var(--color-background);
-    /* var(--color-icons); */
     border-radius: 50%;
 }
 
@@ -300,17 +318,6 @@ input[type="radio"]:checked + .label-radio {
     border-color: var(--color-icons);
     color: var(--color-default);
 }
-
-
-
-
-
-
-
-
-
-
-
 
 .modal-dialog {
     margin-top: 80px;
@@ -406,8 +413,9 @@ input[type="radio"]:checked + .label-radio {
     font-size: 1em;
 }
 
-.input-box input:not(:placeholder-shown):valid
-,.input-box textarea:not(:placeholder-shown):valid {
+.input-box input:valid
+,.input-box textarea:valid
+,.radio-group.has-checked {
     border-color: var(--color-icons);
 }
 
@@ -429,6 +437,12 @@ input[type="radio"]:checked + .label-radio {
     -ms-user-select: none;
 }
 
+.radio-group.has-checked .radio-heading {
+    background-color: var(--color-icons);
+    border-color: var(--color-icons);
+    color: var(--color-background);
+}
+
 body[data-dir="ltr"] .input-box span {
     left: 0px;
 }
@@ -443,7 +457,10 @@ body[data-dir="rtl"] .input-box span {
 ,.input-box textarea:focus ~ span
 ,.input-box textarea:not(:placeholder-shown):valid ~ span
 ,.input-box textarea:not(:placeholder-shown):disabled ~ span
-,.input-box input[type="email"]:valid:not(:placeholder-shown) ~ span
+,.input-box input[type="file"].has-value ~ span
+,.input-box input[type="email"].has-value ~ span
+,.input-box input[type="url"].has-value ~ span
+,.radio-group.has-checked ~ .radio-heading
 {
     color: var(--color-background);
     font-size: 0.75em;
@@ -650,8 +667,8 @@ a.disabled-link
 
 .input-text-button {
     position: absolute;
-    transform: translateY(-50%);
-    top: 55%;
+    transform: translateY(50%);
+    top: 0;
 }
 
 body[data-dir="ltr"] .input-text-button {
@@ -673,14 +690,26 @@ body[data-dir="rtl"] .input-text-button {
     color: var(--color-icons);
 }
 
+.input-box select {
+    --bs-form-select-bg-img: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+
+    font-family: "Poppins", sans-serif;
+    font-size: 1.0em;
+    color: var(--color-default);
+    background-color: var(--color-background);
+    border-color: var(--color-opaque);
+    padding-top: 15px;
+    padding-bottom: 15px;
+}
+
 .error-message {
-    display: none;
-    margin-top: 5px;
+    /* display: none; */
+    /* margin-top: 5px; */
     color: var(--color-error);
-    opacity: 0;
-    overflow: hidden;
-    height: 0;
-    transition: height 0.5s ease-in-out, opacity 0.5s ease-in-out;
+    /* opacity: 0; */
+    /* overflow: hidden; */
+    /* height: 0; */
+    /* transition: height 0.5s ease-in-out, opacity 0.5s ease-in-out; */
 }
 
 
