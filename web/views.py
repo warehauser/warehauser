@@ -35,6 +35,8 @@ from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext as _
 
+from rest_framework.authtoken.models import Token
+
 from core.models import *
 
 from .decorators import *
@@ -61,6 +63,15 @@ def generate_button_attributes(attrs:dict) -> dict:
 
 
 # Create your views here.
+
+def home_view(request):
+    context = {
+        'title': generate_page_title('Welcome'),
+    }
+
+    response = render(request, "web/index.html", context=context)
+    return response
+
 class DefaultFormHandler:
     # @debug_func
     def _generate_html_input(self, name:str, field):
@@ -321,52 +332,6 @@ class AuthLoginFormHandler(DefaultFormHandler):
             ],
         }
         return render(request=request, template_name='web/modal.html', context=context)
-        if request.user.id:
-            print(request.user.id)
-            json = {
-                'error': _('User already logged in'),
-            }
-            return JsonResponse(json, status=401) # 401 Unauthorized
-
-        login_form = WarehauserAuthLoginForm(auto_id="%s")
-        context = {
-            'title': generate_page_title('Welcome'),
-            "form": login_form,
-            "data": {
-                "modal": {
-                    "attrs": {
-                        "id": "modal-login",
-                        "class": "modal",
-                        "offscreen": "top",
-                    },
-                    "content": {
-                        "attrs": {
-                            "id": "modal-content-login",
-                            "class": "modal-content",
-                        },
-                        "header": {
-                            "icon": "lock-open-outline",
-                            "heading": _("Login"),
-                            "slug": _("Welcome to Warehauser"),
-                            # "close": True,
-                        },
-                        "footer": mark_safe(f'<div class="row form-row w-100 mb-5 text-center"><a id="link-forgot" href="javascript:loadForgot();">Forgot your password?</a></div>'),
-                    },
-                },
-                "form": {
-                    "attrs": {
-                        "id": "form-login",
-                        "method": "post",
-                        "onsubmit": "submitForm(event, '#form-login', '/form/web/login/', loginSuccessHandler);",
-                    },
-                    "buttons": [
-                        _generate_button({'attrs': {'type': 'submit', 'value': 'login', 'class': 'btn btn-primary col-12', 'disabled': True,}, 'content': _('Login')}),
-                    ],
-                },
-            },
-        }
-
-        return render(request=request, template_name="web/modal.html", context=context)
 
     def post(self, request, *args, **kwargs) -> JsonResponse:
         if request.user.id:
@@ -395,7 +360,6 @@ class AuthLoginFormHandler(DefaultFormHandler):
                 'error': _('Invalid credentials'),
             }
             return JsonResponse(json, status=401) # 401 Unauthorized
-
 
 class AuthForgotFormHandler(DefaultFormHandler):
     def get(self, request, *args, **kwargs) -> HttpResponse:
@@ -435,61 +399,6 @@ class AuthForgotFormHandler(DefaultFormHandler):
             },
         }
         return render(request=request, template_name='web/modal.html', context=context)
-        context = {
-            "form": forgot_form,
-            "form_attrs": {
-                'id': 'form-forgot',
-                'method': 'post',
-                'onsubmit': "submitForm(event, '#form-forgot', '/form/web/forgot/', forgotSuccessHandler);",
-            },
-        }
-        return render(request=request, template_name='web/forms/forgot.html', context=context)
-        if request.user.id:
-            print(request.user.id)
-            json = {
-                'error': _('User already logged in'),
-            }
-            return JsonResponse(json, status=401) # 401 Unauthorized
-
-        form = WarehauserAuthForgotPasswordForm(auto_id="%s")
-        context = {
-            "title": generate_page_title('Forgot Password'),
-            "form": form,
-            "data": {
-                "modal": {
-                    "attrs": {
-                        "id": "modal-forgot",
-                        "class": "modal",
-                        "offscreen": "top",
-                    },
-                    "content": {
-                        "attrs": {
-                            "id": "modal-content-forgot",
-                            "class": "modal-content",
-                        },
-                        "header": {
-                            "icon": "lock-open-outline",
-                            "heading": _("Reset Password"),
-                            "slug": _("Regain access to your account"),
-                            "close": True,
-                        },
-                    },
-                },
-                "form": {
-                    "attrs": {
-                        "id": "form-forgot",
-                        "method": "post",
-                        "onsubmit": "submitForm(event, '#form-forgot', '/form/web/forgot/', forgotSuccessHandler);",
-                    },
-                    "buttons": [
-                        _generate_button({'attrs': {'type': 'submit', 'value': 'forgot', 'class': 'btn btn-primary col-12', 'disabled': True,}, 'content': _('Request Reset')}),
-                        _generate_button({'attrs': {'type': 'submit', 'value': 'cancel', 'class': 'btn btn-secondary col-12',}, 'content': _('Cancel')}),
-                    ],
-                },
-            },
-        }
-
-        return render(request=request, template_name="web/modal.html", context=context)
 
     def post(self, request, *args, **kwargs) -> JsonResponse:
         print(f'AuthForgotFormHandler.post() called')
@@ -543,133 +452,114 @@ def app_form_router(request, app, name):
 
     return HttpResponse(status=404, reason=f'Form {name} for app {app} not found.')
 
-# def form_router(request, name):
-#     match name.lower():
-#         case 'authlogin':
-#             return AuthLoginFormHandler().handle(request)
-#     return HttpResponse(status=404, reason=f'Form {name} not found.')
-
-
-
-
-# def testform(request):
-#     testform = ExampleForm(auto_id="%s")
+# @user_passes_test(lambda u: u.is_superuser)
+# def client_groups_view(request):
+#     # Filter groups with names starting with 'client_'
+#     client_groups = Group.objects.filter(name__startswith='client_')
+    
+#     # Extract the display name (the part after 'client_') and create a list of tuples
+#     group_links = [(group.name, group.name.replace('client_', '')) for group in client_groups]
+    
 #     context = {
-#         "title": generate_page_title('Test form'),
-#         "form": testform,
-
-#         "data": {
-#             "modal": {
-#                 "attrs": {
-#                     "id": "modal-testform",
-#                     "class": "modal",
-#                     "offscreen": "top",
-#                 },
-#                 "content": {
-#                     "attrs": {
-#                         "id": "modal-content-testform",
-#                         "class": "modal-content",
-#                     },
-#                     "header": {
-#                         "icon": "lock-closed-outline",
-#                         "heading": _("Testing"),
-#                         "slug": _("This is a test!"),
-#                         # "close": True,
-#                     },
-#                     "footer": mark_safe(f'<div class="row form-row w-100 mb-5 text-center"><a id="link-forgot" href="#">Forgot your password?</a></div>'),
-#                 },
-#             },
-#             "form": {
-#                 "attrs": {
-#                     "id": "form-testform",
-#                     "method": "post",
-#                     "action": "javascript:submit_form(this,'/testform/');",
-#                 },
-#                 "buttons": [
-#                     _generate_button({'attrs': {'type': 'submit', 'value': 'login', 'class': 'btn btn-primary col-12', 'disabled': True,}, 'content': _('Login')}),
-#                 ],
-#             },
-#         },
+#         'group_links': group_links,
 #     }
+    
+#     return render(request, 'client_list.html', context)
 
-#     return render(request=request, template_name="web/modal.html", context=context)
+# def group_detail_view(request, group_name):
+#     group = get_object_or_404(Group, name=group_name)
+#     return render(request, 'client_detail.html', {'client': group})
 
-# @anonymous_required
-# def auth_login_view(request):
-#     login_form = WarehauserAuthLoginForm(auto_id="%s")
-#     context = {
-#         'title': generate_page_title('Welcome'),
-#         "form": login_form,
-#         "data": {
-#             "modal": {
-#                 "attrs": {
-#                     "id": "modal-login",
-#                     "class": "modal",
-#                     "offscreen": "top",
-#                 },
-#                 "content": {
-#                     "attrs": {
-#                         "id": "modal-content-login",
-#                         "class": "modal-content",
-#                     },
-#                     "header": {
-#                         "icon": "lock-open-outline",
-#                         "heading": _("Login"),
-#                         "slug": _("Welcome to Warehauser"),
-#                         # "close": True,
-#                     },
-#                     "footer": mark_safe(f'<div class="row form-row w-100 mb-5 text-center"><a id="link-forgot" href="#">Forgot your password?</a></div>'),
-#                 },
-#             },
-#             "form": {
-#                 "attrs": {
-#                     "id": "form-login",
-#                     "method": "post",
-#                     "onsubmit": "submit_form(event, '#form-login', '/auth/login/', loginSuccessHandler);",
-#                 },
-#                 "buttons": [
-#                     _generate_button({'attrs': {'type': 'submit', 'value': 'login', 'class': 'btn btn-primary col-12', 'disabled': True,}, 'content': _('Login')}),
-#                 ],
-#             },
-#         },
-#     }
 
-#     return render(request=request, template_name="web/modal.html", context=context)
 
-def home_view(request):
+
+
+
+@login_required
+def client_detail_view(request, client):
+    print(Group.objects.filter(name=f'client_{client}'))
     context = {
-        'title': generate_page_title('Welcome'),
+        'modal': {
+            'attrs': {
+                'id': f'modal-clients',
+                'class': 'modal',
+                'offscreen': 'right',
+            },
+        },
+        'header': {
+            'icon': 'cube-outline',
+            'heading': _(f'Client {client}'),
+            'slug': _('Choose the Warehause'),
+            # "close": True,
+        },
+        'content': {
+            'attrs': {
+                'id': 'modal-content-forgot',
+                'class': 'modal-content',
+            },
+            'template': 'web/client_detail.html',
+            'data': {'client': Group.objects.filter(name=f'client_{client}').first(),
+                     'user_token': Token.objects.get(user=request.user).key,},
+        },
     }
 
-    response = render(request, "web/index.html", context=context)
-    return response
+    return render(request=request, template_name='web/modal.html', context=context)
 
-@user_passes_test(lambda u: u.is_superuser)
-def client_groups_view(request):
+@login_required
+def client_list_view(request):
+    if not request.user.is_superuser:
+        client_group = request.user.groups.filter(name__startswith='client_').first()
+
+        if client_group:
+            # If a group is found, redirect to the client detail view
+            group_name = client_group.name.replace('client_', '')
+            return client_detail_view(request, group_name)
+        else:
+            # Handle case where no group is found
+            return HttpResponse(status=401, reason=f'No client group found.')
+
+
+
+        # find the Group the user belongs to that has the name in the form of 'client_' and return client_detail_view(request, groupname)
+        pass
+
     # Filter groups with names starting with 'client_'
     client_groups = Group.objects.filter(name__startswith='client_')
     
     # Extract the display name (the part after 'client_') and create a list of tuples
     group_links = [(group.name, group.name.replace('client_', '')) for group in client_groups]
-    
+
     context = {
-        'group_links': group_links,
+        'modal': {
+            'attrs': {
+                'id': f'modal-clients',
+                'class': 'modal',
+                'offscreen': 'right',
+            },
+        },
+        'header': {
+            'icon': 'cube-outline',
+            'heading': _('Client'),
+            'slug': _('Choose the client'),
+            # "close": True,
+        },
+        'content': {
+            'attrs': {
+                'id': 'modal-content-forgot',
+                'class': 'modal-content',
+            },
+            'template': 'web/client_list.html',
+            'data': {'links': group_links,},
+        },
     }
-    
-    return render(request, 'client_list.html', context)
 
-def group_detail_view(request, group_name):
-    group = get_object_or_404(Group, name=group_name)
-    return render(request, 'client_detail.html', {'client': group})
+    return render(request=request, template_name='web/modal.html', context=context)
 
 
 
 
 
 
-
-
-def dashboard_view(request):
     data = '''
         <div class="container-fluid">
 '''

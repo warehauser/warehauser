@@ -1,8 +1,32 @@
-<h1>Clients</h1>
 <ul>
-    {% for group_name, display_name in group_links %}
+    {% for id, name in content.data.links %}
         <li>
-            <a href="{% url 'group_detail' group_name %}">{{ display_name }}</a>
+            <a href="javascript:loadClientDetails('{{ name }}');">{{ name }}</a>
         </li>
     {% endfor %}
 </ul>
+<script id="script-client-list" type="text/javascript">
+let link = '';
+
+function removeClientListScript() {
+    const scriptElement = document.getElementById('script-client-list');
+    if (scriptElement) {
+        scriptElement.remove();
+    }
+}
+
+async function loadClientDetailsHandler() {
+    modal = await loadModal('modal-clients', link);
+    animateRevealElement(modal, modalContainer);
+    makeAutofocus(modal);
+    removeClientListScript();
+}
+
+async function loadClientDetails(client) {
+    link = '/c/' + client + '/warehauses/';
+    let modal = document.querySelector('#modal-clients');
+    modal.setAttribute('offscreen', 'left');
+    animateDismissElement(modal, loadClientDetailsHandler);
+}
+</script>
+    

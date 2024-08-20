@@ -184,7 +184,7 @@ function animateDismissElement(el, handler = null) {
             toy = Math.ceil(rect.top + rect.height + 1) * (-1);
             break;
         case 'left':
-            tox = Math.ceil(rect.left + window.innerWidth + 1);
+            tox = Math.ceil((rect.left + window.innerWidth + 1) * (-1));
             break;
         case 'right':
             tox = Math.ceil(rect.left + window.innerWidth + 1);
@@ -366,18 +366,21 @@ async function loadUrl(container, url) {
         console.error('Error loading content:', error);
         container.innerHTML = '<p>Error loading content</p>';
     }
+
+    return container;
 }
 
 async function loadModal(id, url) {
-    await loadUrl('#staging-area', url);
+    const parent = await loadUrl('#staging-area', url);
 
-    let modal = document.getElementById(id);
+    let modal = parent.querySelector('.modal');
     initModal(modal);
     return modal;
 }
 
-async function loadDashboard() {
-    await loadUrl('#dashboard', '/dashboard/');
+async function loadState() {
+    const modal = await loadModal('modal-state-0', '/c/');
+    animateRevealElement(modal, modalContainer);
 }
 
 /* Form handling */

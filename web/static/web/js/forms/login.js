@@ -44,7 +44,7 @@ async function loginSuccess(json) {
     element = document.querySelector('#link-logout');
     element.classList.remove('disabled');
 
-    await loadDashboard();
+    await loadState();
 }
 
 function loginSuccessHandler(form, json) {

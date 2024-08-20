@@ -16,7 +16,11 @@
         </div>
       </div>
       <div class="modal-body">
-        {% include "web/forms/form.html" %}
+{% if form %}
+{% include "web/forms/form.html" %}
+{% elif content.template %}
+{% include content.template %}
+{% endif %}
       </div>
       <div class="modal-footer">{% if footer %}
         {{ footer }}

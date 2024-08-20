@@ -63,7 +63,7 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
 {% if user.is_authenticated %}
-    await loadDashboard();
+    await loadState();
 {% else %}
     modal = await loadModal('modal-login', '/form/web/login/');
     animateRevealElement(modal, modalContainer);
