@@ -401,7 +401,6 @@ class AuthForgotFormHandler(DefaultFormHandler):
         return render(request=request, template_name='web/modal.html', context=context)
 
     def post(self, request, *args, **kwargs) -> JsonResponse:
-        print(f'AuthForgotFormHandler.post() called')
         form = WarehauserPasswordChangeForm(request.user, request.POST)
         if form.is_valid():
             data = {
@@ -477,7 +476,6 @@ def app_form_router(request, app, name):
 
 @login_required
 def client_detail_view(request, client):
-    print(Group.objects.filter(name=f'client_{client}'))
     context = {
         'modal': {
             'attrs': {
