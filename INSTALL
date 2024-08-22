@@ -132,10 +132,24 @@ Quick Start Guide
 
     python manage.py runserver
 
-2. Navigate to the administration console in your web browser. It can be found at http://<host>:<port|8000>/admin/.
-
-2. Define your Def objects including WarehauserDef, ProductDef, and EventDef. You can use the admin console at http://<IP ADDRESS|localhost>:<PORT|8000>/admin/, log in as the warehause_admin user you created aboce, and follow the prompts to add the definition models.
-
-3. If you wish to run the scheduler then on another command line run:
+2. If you wish to run the scheduler then on another command line run:
 
     python warehauser/scheduler.py
+
+4. Define your Def objects including WarehauserDef, ProductDef, and EventDef. You can use the REST service endpoints such as:
+
+    https://<host>:<port|8000>/api/warehausedefs/
+    https://<host>:<port|8000>/api/warehauses/
+    https://<host>:<port|8000>/api/productdefs/
+    https://<host>:<port|8000>/api/products/
+    https://<host>:<port|8000>/api/eventdefs/
+    https://<host>:<port|8000>/api/events/
+
+Remember to add to the HEADERS of the REST requests the following:
+
+    Content-Type: application/json
+    Authorization: Token <token>
+
+Where token is the security token of the user you wish to use. To get that token you can use the user command:
+
+    python manage.py user -t <username>
