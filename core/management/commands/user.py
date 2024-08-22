@@ -53,6 +53,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         username = kwargs.get('username')
+        superuser_username = kwargs.get('superuser')
         password = kwargs.get('password')
         email = kwargs.get('email')
         groups = kwargs.get('groups')
