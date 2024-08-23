@@ -173,6 +173,8 @@ class WarehauserBaseViewSet(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class WarehauserDefinitionViewSet(WarehauserBaseViewSet):
+    instance_serializer_class = None
+
     def _do_spawn(self, request, *args, **kwargs):
         dfn = self.get_object()
         data = request.data
@@ -186,7 +188,7 @@ class WarehauserDefinitionViewSet(WarehauserBaseViewSet):
     def do_spawn(self, request, *args, **kwargs):
         instance = self._do_spawn(request=request)
 
-        serializer = self.serializer_class(instance)
+        serializer = self.instance_serializer_class(instance)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class WarehauserInstanceViewSet(WarehauserBaseViewSet):
@@ -197,6 +199,7 @@ class WarehauserInstanceViewSet(WarehauserBaseViewSet):
 # WAREHAUSE viewsets
 
 class WarehauseDefViewSet(WarehauserDefinitionViewSet):
+    instance_serializer_class = WarehauseSerializer
     serializer_class = WarehauseDefSerializer
     filterset_class = WarehauseDefFilter
 
@@ -208,6 +211,7 @@ class WarehauseViewSet(WarehauserInstanceViewSet):
 # PRODUCT viewsets
 
 class ProductDefViewSet(WarehauserDefinitionViewSet):
+    instance_serializer_class = ProductSerializer
     serializer_class = ProductDefSerializer
     filterset_class = ProductDefFilter
 
@@ -226,6 +230,7 @@ class ProductViewSet(WarehauserInstanceViewSet):
 # EVENT viewsets
 
 class EventDefViewSet(WarehauserDefinitionViewSet):
+    instance_serializer_class = EventSerializer
     serializer_class = EventDefSerializer
     filterset_class = EventDefFilter
 
@@ -239,7 +244,7 @@ class EventDefViewSet(WarehauserDefinitionViewSet):
         else:
             instance.save()
 
-        serializer = self.serializer_class(instance)
+        serializer = self.instance_serializer_class(instance)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class EventViewSet(WarehauserInstanceViewSet):

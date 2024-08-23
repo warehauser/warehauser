@@ -38,7 +38,6 @@ FILTER_FIELDS_STANDARD     = {
     'schema':      ['exact', 'isnull',],
     'options':     ['exact', 'isnull',],
     'is_virtual':  ['exact',],
-    'owner':       ['exact',],
 }
 
 FILTER_FIELDS_DEF_STANDARD = {
