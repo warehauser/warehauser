@@ -22,16 +22,6 @@ from django.utils.translation import gettext as _
 from .models import *
 from .utils import filter_owner_groups
 
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = get_user_model()
-        fields = ['id', 'username', 'password',]
-        extra_kwargs = {'password': {'write_only': True}}
-
-    def create(self, validated_data):
-        user = self.Meta.model.objects.create_user(**validated_data)
-        return user
-
 def to_related_representation(instance, representation, related_fields):
     for field_name in related_fields:
         related_instance = getattr(instance, field_name, None)
@@ -59,32 +49,6 @@ eventdef_related_field_serializer     = RelatedFieldSerializer(queryset=EventDef
 event_related_field_serializer        = RelatedFieldSerializer(queryset=Event.objects.all())
 
 user_related_field_serializer         = RelatedFieldSerializer(queryset=get_user_model().objects.all())
-
-class AbstractSerializer(serializers.ModelSerializer):
-    def update(self, instance, validated_data):
-        for key in validated_data:
-            if key == 'updated_at':
-                continue
-            else:
-                instance.__dict__[key] = validated_data.get(key, instance.__dict__[key])
-        instance.updated_at = timezone.now()
-        instance.save()
-        return instance
-
-class AbstractDefSerializer(AbstractSerializer):
-    def to_representation(self, instance):
-        if instance is None:
-            return None
-
-        return to_related_representation(instance, super().to_representation(instance), ['parent'])
-
-class AbstractInstSerializer(AbstractSerializer):
-    pass
-
-class GroupSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Group
-        fields = ['id', 'name']  # Adjust fields as needed
 
 # Warehause model serializers
 
