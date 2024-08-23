@@ -77,18 +77,6 @@ class AbstractDefSerializer(AbstractSerializer):
             return None
 
         return to_related_representation(instance, super().to_representation(instance), ['parent'])
-        # representation = super().to_representation(instance)
-        # related_fields = ['parent']  # Add other related field names here as needed
-
-        # for field_name in related_fields:
-        #     related_instance = getattr(instance, field_name, None)
-        #     if related_instance:
-        #         representation[field_name] = {
-        #             'id': related_instance.id,
-        #             'decr': related_instance.key
-        #         }
-
-        # return representation
 
 class AbstractInstSerializer(AbstractSerializer):
     pass
@@ -118,9 +106,9 @@ class WarehauseDefSerializer(serializers.ModelSerializer):
         extra_kwargs = {'parent': {'allow_null': True, 'required': False,},}
         depth = 1
 
-class WarehauseSerializer(serializers.ModelSerializer):#AbstractInstSerializer):
+class WarehauseSerializer(serializers.ModelSerializer):
+    owner  = serializers.PrimaryKeyRelatedField(queryset=filter_owner_groups(Group.objects))
     dfn    = warehausedef_related_field_serializer
-    # parent = warehause_related_field_serializer
     user   = user_related_field_serializer
 
     def create(self, validated_data):
@@ -150,8 +138,8 @@ class WarehauseSerializer(serializers.ModelSerializer):#AbstractInstSerializer):
 
 # Product model serializers
 
-class ProductDefSerializer(serializers.ModelSerializer):#AbstractDefSerializer):
-    parent = productdef_related_field_serializer
+class ProductDefSerializer(serializers.ModelSerializer):
+    owner = serializers.PrimaryKeyRelatedField(queryset=filter_owner_groups(Group.objects))
 
     class Meta:
         model = ProductDef
@@ -159,7 +147,8 @@ class ProductDefSerializer(serializers.ModelSerializer):#AbstractDefSerializer):
         depth = 1
         extra_kwargs = { 'parent': { 'allow_null': True, 'required': False,},}
 
-class ProductSerializer(serializers.ModelSerializer):#AbstractInstSerializer):
+class ProductSerializer(serializers.ModelSerializer):
+    owner     = serializers.PrimaryKeyRelatedField(queryset=filter_owner_groups(Group.objects))
     dfn       = productdef_related_field_serializer
     parent    = product_related_field_serializer
     warehause = warehause_related_field_serializer
@@ -185,8 +174,8 @@ class ProductSerializer(serializers.ModelSerializer):#AbstractInstSerializer):
 
 # Event model serializers
 
-class EventDefSerializer(serializers.ModelSerializer):#AbstractDefSerializer):
-    parent = eventdef_related_field_serializer
+class EventDefSerializer(serializers.ModelSerializer):
+    owner = serializers.PrimaryKeyRelatedField(queryset=filter_owner_groups(Group.objects))
 
     class Meta:
         model = EventDef
@@ -194,7 +183,8 @@ class EventDefSerializer(serializers.ModelSerializer):#AbstractDefSerializer):
         depth = 1
         extra_kwargs = { 'parent': { 'allow_null': True, 'required': False,},}
 
-class EventSerializer(serializers.ModelSerializer):#AbstractInstSerializer):
+class EventSerializer(serializers.ModelSerializer):
+    owner     = serializers.PrimaryKeyRelatedField(queryset=filter_owner_groups(Group.objects))
     dfn       = eventdef_related_field_serializer
     parent    = event_related_field_serializer
     warehause = warehause_related_field_serializer
