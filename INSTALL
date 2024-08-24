@@ -136,17 +136,19 @@ Quick Start Guide
 
     python warehauser/scheduler.py
 
-4. Define your Def objects including WarehauserDef, ProductDef, and EventDef. You can use the REST service endpoints such as:
+4. All Warehuaser models are exposed to REST API services. CREATE with POST requests (Def models only), READ with GET requests, UPDATE with PATCH requests, and DELETE with DELETE requests.
+
+Define your Def objects including WarehauserDef, ProductDef, and EventDef. You can use the REST service endpoints such as:
 
     https://<host>:<port|8000>/api/warehausedefs/
     https://<host>:<port|8000>/api/productdefs/
     https://<host>:<port|8000>/api/eventdefs/
 
-Then create instance objects using the appropriate Def object endpoint like so:
+Then CREATE instance objects of your Def objects using the appropriate Def object endpoint like so:
 
-    https://<host>:<port|8000>/api/warehausedefs/<id>/do_spawn/
-    https://<host>:<port|8000>/api/productdefs/<id>/do_spawn/
-    https://<host>:<port|8000>/api/eventdefs/<id>/do_spawn/
+    POST https://<host>:<port|8000>/api/warehausedefs/<id>/do_spawn/
+    POST https://<host>:<port|8000>/api/productdefs/<id>/do_spawn/
+    POST https://<host>:<port|8000>/api/eventdefs/<id>/do_spawn/
 
 Then read (GET), update (PATCH) and delete (DELETE) the instance objects using the following endpoints:
 
