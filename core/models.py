@@ -953,7 +953,7 @@ class Event(WarehauserAbstractInstanceModel, EventFields):
     dfn         = models.ForeignKey('EventDef', on_delete=models.CASCADE, related_name='instances', null=False, blank=False, editable=False,)
 
     warehause   = models.ForeignKey('Warehause', on_delete=models.CASCADE, related_name='events', null=True, blank=True,)
-    user        = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='events', null=False, blank=False, editable=False,)
+    user        = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='events', null=True, blank=True, editable=True,)
 
     proc_start  = models.DateTimeField(auto_now_add=False, null=True, blank=True, editable=False,)
     proc_end    = models.DateTimeField(auto_now_add=False, null=True, blank=True, editable=False,)
