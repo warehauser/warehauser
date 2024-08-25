@@ -62,21 +62,7 @@ EMAIL_WAREHAUSER_HOST=
     python manage.py makemigrations
     python manage.py migrate
 
-9. Set up users, groups and permissions. Open a Django shell via the command line by running:
-
-    python manage.py shell
-
-Create groups in the shell by running these commands:
-
-    from django.contrib.auth.models import Group
-    g1 = Group.objects.create(name='admin')
-    g2 = Group.objects.create(name='user')
-
-Note you can use whatever group names you like, but remember them for the next step and you need two unique groups as default.
-
-(Replace the group names with the names of the groups you created in step 9 if different.)
-
-10. Create a superuser. In warehauser we assign all privileges via groups but the admin groups should still have is_superuser flag set to True as well to be compatible with third party libraries such as django-gaurdian.
+9. Create a superuser. In warehauser we assign all privileges via groups but the admin groups should still have is_superuser flag set to True as well to be compatible with third party libraries such as django-gaurdian.
 
     python manage.py createsuperuser
 
@@ -84,55 +70,28 @@ Create as many user accounts as you need by repeating these steps:
 
     python manage.py createsuperuser --no-superuser
 
-Optionally add any groups:
-
-    python manage.py addtogroup <username> <groupname>
-
-where again <username> is the username you created in the createsuperuser command above, and replace <groupname> with the name of the group created above for users (ie 'admin', 'user').
-
-Internationalization Quick Guide
---------------------------------
-
-To register a new language to add to translations edit the warehauser\settings.py:
-
-LANGUAGES = [
-    ('<language code>', _('<language name>')),
-]
-
-where <language code> is the 2 letter code for your new language, and <language name> is the English name of the language. So for example:
-
-    ('en', _('English')), # for English
-    ('de', _('German')),  # for German
-
-From the warehauser project base directory run the following command:
-
-    django-admin makemessages -l <language code>
-
-A few files will be created in the warehauser project directory:
-
-    locale\<language code>\LC_MESSAGES\django.po
-
-For each language you created. Open each such file in a text editor of your choice and add translations. Each message to translate will be in the form of:
-
-    #: .\warehauser\settings.py:270
-    msgid "English"
-    msgstr ""
-
-For each add the translation string in the double quotes "" of msgstr.
-
-IMPORTANT: Some "msgid" will have "{variable}" strings. The msgstr MUST have the same "{variable}" EXACTLY as it appears in the msgid. For example:
-
-    msgid "Some text {variable.somefunc()}"
-    msgstr "<translation text for Some text> {variable.somefunc()}"
-
 Quick Start Guide
 -----------------
 
-1. When you are ready to start the warehauser server, on the command line run:
+1. Create a client Group and client User.
+
+For each client run the following command:
+
+    python manage.py client <client name>
+
+For each client user run the following commands:
+
+    python manage.py user <username> -e '<email address>' -p '<password>'
+
+Record the Auth Token supplied for later.
+
+    python manage.py user <username> -g <client name>
+
+2. When you are ready to start the warehauser server, on the command line run:
 
     python manage.py runserver
 
-2. If you wish to run the scheduler then on another command line run:
+3. If you wish to run the scheduler then on another command line run:
 
     python warehauser/scheduler.py
 
@@ -161,6 +120,6 @@ Remember to add to the HEADERS of the REST requests the following:
     Content-Type: application/json
     Authorization: Token <token>
 
-Where token is the security token of the user you wish to use. To get that token you can use the user command:
+Where token is the security token of the user you wish to use (see above). To retrieve that token you can use the user command:
 
     python manage.py user -t <username>

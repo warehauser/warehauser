@@ -1,0 +1,34 @@
+Internationalization Quick Guide
+--------------------------------
+
+To register a new language to add to translations edit the warehauser\settings.py:
+
+LANGUAGES = [
+    ('<language code>', _('<language name>')),
+]
+
+where <language code> is the 2 letter code for your new language, and <language name> is the English name of the language. So for example:
+
+    ('en', _('English')), # for English
+    ('de', _('German')),  # for German
+
+From the warehauser project base directory run the following command:
+
+    django-admin makemessages -l <language code>
+
+A few files will be created in the warehauser project directory:
+
+    locale\<language code>\LC_MESSAGES\django.po
+
+For each language you created. Open each such file in a text editor of your choice and add translations. Each message to translate will be in the form of:
+
+    #: .\warehauser\settings.py:270
+    msgid "English"
+    msgstr ""
+
+For each add the translation string in the double quotes "" of msgstr.
+
+IMPORTANT: Some "msgid" will have "{variable}" strings. The msgstr MUST have the same "{variable}" EXACTLY as it appears in the msgid. For example:
+
+    msgid "Some text {variable.somefunc()}"
+    msgstr "<translation text for Some text> {variable.somefunc()}"

@@ -15,6 +15,7 @@
 # client.py
 
 import json
+from typing import Callable
 import getpass
 
 from django.contrib.auth import authenticate
@@ -23,11 +24,23 @@ from django.contrib.auth.models import Group, User
 from django.utils.translation import gettext as _
 
 class Command(BaseCommand):
+    def _output(self, message:str, json:bool = False, key:str = 'message', func:Callable[[str], str] = None):
+        # Provide a default function if none is provided
+        if func is None:
+            func = self.style.SUCCESS
+
+        if json:
+            # Handle JSON output
+            self.stdout.write(json.dumps({key:message}, indent=4))
+        else:
+            # Handle standard output
+            self.stdout.write(func(message))
+
     help = _('Manage clients (groups starting with "client_*")')
 
     def add_arguments(self, parser):
         parser.add_argument('client', type=str, nargs='?', help=_('The name of the client to manage (without the "client_" prefix)'))
-        parser.add_argument('-u', '--superuser', type=str, nargs='?', help=_('The username of the superuser'))
+        parser.add_argument('-s', '--superuser', type=str, nargs='?', help=_('The username of the superuser'))
         parser.add_argument('-u', '--users', type=str, help=_('Comma-separated list of existing usernames to add or remove'))
         parser.add_argument('-r', '--remove', action='store_true', help=_('Remove the specified users from the client'))
         parser.add_argument('-d', '--delete', action='store_true', help=_('Delete the client'))
@@ -35,6 +48,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         client_name = kwargs.get('client')
+        superuser_username = kwargs.get('superuser')
         users = kwargs.get('users')
         remove = kwargs.get('remove')
         delete = kwargs.get('delete')

@@ -41,14 +41,14 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('username', type=str, nargs='?', help=_('The username of the user to manage'))
-        parser.add_argument('-u', '--superuser', type=str, nargs='?', help=_('The username of the superuser'))
+        parser.add_argument('-s', '--superuser', type=str, nargs='?', help=_('The username of the superuser'))
         parser.add_argument('-p', '--password', type=str, help=_('Password for the new user or to update an existing user'))
         parser.add_argument('-e', '--email', type=str, help=_('Email address for the new user or to update an existing user'))
         parser.add_argument('-g', '--groups', type=str, help=_('Comma-separated list of groups to add or remove'))
         parser.add_argument('-r', '--remove', action='store_true', help=_('Remove the specified groups from the user'))
         parser.add_argument('-d', '--delete', action='store_true', help=_('Delete the user'))
         parser.add_argument('-a', '--active', type=str, help=_('Set user active status: "true" to activate, "false" to deactivate'))
-        parser.add_argument('-t', '--token', action='store_true', help=_('Create auth token if user does not exist or display existing token'))
+        parser.add_argument('-t', '--token', action='store_true', help=_('Create auth token if user token does not exist or display existing token'))
         parser.add_argument('-j', '--json', action='store_true', help=_('Output in JSON format'))
 
     def handle(self, *args, **kwargs):
@@ -134,7 +134,7 @@ class Command(BaseCommand):
 
         if create_token:
             token = Token.objects.create(user=user)
-            message = _('Token created successfully for user \'%(username)s\': %(token)s') % ({'username': username, 'token': token.key})
+            message = _('User \'%(username)s\' created successfully. Token created successfully: %(token)s') % ({'username': username, 'token': token.key})
             self._output(message=message, json=output_json)
         else:
             message = _('User \'%(username)s\' created successfully.') % ({'username': user.username})
