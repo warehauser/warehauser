@@ -860,7 +860,7 @@ Here is your one time code to change your password:
 
                 send_mail(subject='Warehauser Password Reset Request',
                           message=content,
-                          from_email=settings.SEND_MAIL_FROM_ADDRESS,
+                          from_email=settings.EMAIL_FROM_ADDRESS,
                           recipient_list=[email,],
                           fail_silently=False)
 

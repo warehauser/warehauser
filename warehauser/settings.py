@@ -37,6 +37,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv()
 
+# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG').lower() == 'true'
 
 # Quick-start development settings - unsuitable for production
@@ -44,9 +45,6 @@ DEBUG = os.environ.get('DEBUG').lower() == 'true'
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY') or os.environ.get('DJANGO_SECRET_KEY')
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG')
 
 EMAIL_HOST=os.environ.get('EMAIL_HOST')
 EMAIL_HOST_USER=os.environ.get('EMAIL_HOST_USER')
@@ -56,6 +54,7 @@ EMAIL_USE_TLS=os.environ.get('EMAIL_USE_TLS').lower() == 'true'
 EMAIL_BACKEND=os.environ.get('EMAIL_BACKEND')
 EMAIL_FROM_ADDRESS=os.environ.get('EMAIL_FROM_ADDRESS')
 EMAIL_WAREHAUSER_HOST=os.environ.get('EMAIL_WAREHAUSER_HOST')
+TIME_ZONE=os.environ.get('TIME_ZONE')
 
 # ALLOWED_HOSTS = []
 ALLOWED_HOSTS = ['*']
@@ -279,7 +278,3 @@ LANGUAGES = [
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
-
-TIME_ZONE = 'Australia/Sydney'
-
-SEND_MAIL_FROM_ADDRESS = 'noreply@warehauser.org'
