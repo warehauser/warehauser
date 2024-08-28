@@ -74,8 +74,7 @@ INSTALLED_APPS = [
     'django_filters',
     'django_extensions',
     'db_mutex',
-    'core.apps.CoreConfig',
-    # 'core',
+    'core',
     'web',
     'corsheaders',
 ]
