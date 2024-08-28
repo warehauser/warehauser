@@ -17,16 +17,25 @@
 from django.contrib.auth.models import User
 from rest_framework.permissions import BasePermission, IsAuthenticated
 
+from .models import Client
+
 # Permission classes here.
 
 class WarehauserPermission(BasePermission):
     def has_permission(self, request, view):
-        user:User = request.user
+        user: User = request.user
         return user and user.is_authenticated
 
     def has_object_permission(self, request, view, obj):
         user = request.user
-        return user.is_staff or user.is_superuser or user.groups.filter(id=obj.owner.id).exists()
+
+        # Check if the user is staff or superuser
+        if user.is_staff or user.is_superuser:
+            return True
+
+        # Check if the user is a member of the group associated with the client's owner
+        client = Client.objects.filter(group__in=user.groups.all()).first()
+        return client and obj.owner == client
 
 class IsSuperuser(IsAuthenticated):
     """

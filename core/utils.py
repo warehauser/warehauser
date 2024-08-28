@@ -24,9 +24,6 @@ from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.exceptions import ValidationError
 
-def filter_owner_groups(groups:list):
-    return groups.filter(name__startswith='client_')
-
 def validate_password(password:str) -> bool:
     """
     Check if a password meets the strength requirements specified in Django's

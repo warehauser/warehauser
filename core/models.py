@@ -373,8 +373,8 @@ class WarehauseDef(WarehauserAbstractDefinitionModel, WarehauseFields):
     Definition model for Warehauses. Always create Warehause objects through the appropriate WarehauseDef create_instance() method.
 
     Attributes:
-        owner  (Group): the group (or client) that owns this data.
-        status (int):   the status of this WarehauseDef with available choices of core.status.WAREHAUSEDEF_STATUS_CODES.
+        owner  (Client): the client that owns this data.
+        status (int):    the status of this WarehauseDef with available choices of core.status.WAREHAUSEDEF_STATUS_CODES.
 
     Example:
         ```
@@ -385,7 +385,7 @@ class WarehauseDef(WarehauserAbstractDefinitionModel, WarehauseFields):
         model = dfn.create_instance(data=data)
         ```
     """
-    owner       = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='warehausedefs', null=False, blank=False,)
+    owner       = models.ForeignKey('Client', on_delete=models.CASCADE, related_name='warehausedefs', null=False, blank=False,)
     status      = models.IntegerField(choices=WAREHAUSEDEF_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
 
     def create_instance(self, data:dict=None, callback=None):
@@ -410,7 +410,7 @@ class Warehause(WarehauserAbstractInstanceModel, WarehauseFields):
     Warehause instance class.
 
     Attributes:
-        owner     (Group):        the group (or client) that owns this data.
+        owner     (Client):       the client that owns this data.
         parent    (Warehause):    parent Warehause or None if no parent.
         status    (int):          status of this Warehause with available choices of core.status.WAREHAUSE_STATUS_CODES.
         dfn       (WarehauseDef): WarehauseDef used to create this Warehause object.
@@ -418,7 +418,7 @@ class Warehause(WarehauserAbstractInstanceModel, WarehauseFields):
         stock_min (float):        minimum amount of Product that is required in this Warehause. If the quantity decreases past this value then request a replenishment. None if product_def is None.
         stock_max (float):        maximum amount of Product that is allowed in this Warehause. None if product_def is None.
     """
-    owner       = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='warehauses', null=False, blank=False,)
+    owner       = models.ForeignKey('Client', on_delete=models.CASCADE, related_name='warehauses', null=False, blank=False,)
     parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=True,)
     status      = models.IntegerField(choices=WAREHAUSE_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
     dfn         = models.ForeignKey('WarehauseDef', on_delete=models.CASCADE, related_name='instances', null=False, blank=False, editable=False,)
@@ -606,7 +606,7 @@ class ProductDef(WarehauserAbstractDefinitionModel, ProductFields):
     Definition model for Products. Always create Product objects through the appropriate ProductDef create_instance() method.
 
     Attributes:
-        owner      (Group):           the group (or client) that owns this data.
+        owner      (Client):          the client that owns this data.
         status     (int):             the status of this ProductDef with available choices of core.status.PRODUCT_STATUS_CODES.
         warehauses (list(Warehause)): a list of appropriate Warehauses this ProductDef can be stored. If none are listed then store at any Warehause that returns is_storage True. All Warehauses listed mean this ProductDef can be stored at that
                                       Warehause and all children Warehauses that return is_storage True
@@ -620,7 +620,7 @@ class ProductDef(WarehauserAbstractDefinitionModel, ProductFields):
         model = dfn.create_instance(data=data)
         ```
     """
-    owner       = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='productdefs', null=False, blank=False,)
+    owner       = models.ForeignKey('Client', on_delete=models.CASCADE, related_name='productdefs', null=False, blank=False,)
     status      = models.IntegerField(choices=PRODUCTDEF_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
     warehauses  = models.ManyToManyField(Warehause)
 
@@ -639,7 +639,7 @@ class Product(WarehauserAbstractInstanceModel, ProductFields):
     Product instance class.
 
     Attributes:
-        owner      (Group):      the group (or client) that owns this data.
+        owner      (Client):     the client that owns this data.
         parent     (Product):    parent Product or None if no parent. Used to conceptually arrange Products into a nesting hierarchy, ignored otherwise.
         status     (int):        status of this Product with available choices of core.status.PRODUCT_STATUS_CODES.
         dfn        (ProductDef): ProductDef used to create this Product object.
@@ -649,7 +649,7 @@ class Product(WarehauserAbstractInstanceModel, ProductFields):
         expires    (Date):       date this product expires. If None then this product has infinite shelf life. Default None.
         is_damaged (bool):       True if this product is damaged. Default False.
     """
-    owner       = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='products', null=False, blank=False,)
+    owner       = models.ForeignKey('Client', on_delete=models.CASCADE, related_name='products', null=False, blank=False,)
     parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=True,)
     status      = models.IntegerField(choices=PRODUCT_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
     dfn         = models.ForeignKey('ProductDef', on_delete=models.CASCADE, related_name='instances', null=False, blank=False, editable=False,)
@@ -908,8 +908,8 @@ class EventDef(WarehauserAbstractDefinitionModel, EventFields):
     Definition model for Events. Always create Event objects through the appropriate EventDef create_instance() method.
 
     Attributes:
-        owner  (Group): the group (or client) that owns this data.
-        status (int):   the status of this EventDef with available choices of core.status.EVENTDEF_STATUS_CODES.
+        owner  (Client): the client that owns this data.
+        status (int):    the status of this EventDef with available choices of core.status.EVENTDEF_STATUS_CODES.
 
     Example:
         ```
@@ -920,7 +920,7 @@ class EventDef(WarehauserAbstractDefinitionModel, EventFields):
         model = dfn.create_instance(data=data)
         ```
     """
-    owner       = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='eventdefs', null=False, blank=False,)
+    owner       = models.ForeignKey('Client', on_delete=models.CASCADE, related_name='eventdefs', null=False, blank=False,)
     status      = models.IntegerField(choices=EVENTDEF_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
 
     def create_instance(self, data:dict = None, callback:ModelCallback = None):
@@ -938,7 +938,7 @@ class Event(WarehauserAbstractInstanceModel, EventFields):
     Event instance class.
 
     Attributes:
-        owner      (Group):     the group (or client) that owns this data.
+        owner      (Client):    the client that owns this data.
         parent     (Event):     parent Event or None if no parent. Used to conceptually arrange Events into a nesting hierarchy, ignored otherwise.
         status     (int):       status of this Event with available choices of core.status.EVENT_STATUS_CODES.
         dfn        (EventDef):  EventDef used to create this Event object.
@@ -947,7 +947,7 @@ class Event(WarehauserAbstractInstanceModel, EventFields):
         proc_start (DateTime):  timestamp this event started processing.
         proc_end   (DateTime):  timestamp this event ended processing.
     """
-    owner       = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='events', null=False, blank=False,)
+    owner       = models.ForeignKey('Client', on_delete=models.CASCADE, related_name='events', null=False, blank=False,)
     parent      = models.ForeignKey('self', on_delete=models.CASCADE, related_name='children', null=True, blank=True,)
     status      = models.IntegerField(choices=EVENT_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
     dfn         = models.ForeignKey('EventDef', on_delete=models.CASCADE, related_name='instances', null=False, blank=False, editable=False,)
@@ -1005,6 +1005,23 @@ class Event(WarehauserAbstractInstanceModel, EventFields):
 
 # Utility models
 
+class Client(models.Model):
+    """
+    Internal use only. Used to interface client identities with data ownership.
+    """
+    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='client', null=False, blank=False,)
+
+    class Meta(WarehauserAbstractInstanceModel.Meta):
+        abstract = False
+        verbose_name = 'client'
+        verbose_name_plural = 'clients'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['group'],
+                name='unique_group_in_client'
+            )
+        ]
+
 class UserAux(models.Model):
     """
     Internal use only. Used to manage users such as manage forgotten password requests.
@@ -1023,3 +1040,12 @@ class UserAux(models.Model):
         ]
 
 # Signals
+
+# Utility functions
+
+# def filter_owner_groups(groups:list):
+#     return Client.objects.filter(group__in=groups)
+    # return groups.filter(name__startswith='client_')
+
+# def filter_owner_groups(groups: list):
+#     return set(Group.objects.filter(id__in=Client.objects.filter(group__in=groups).values_list('group', flat=True)))

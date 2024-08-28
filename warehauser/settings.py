@@ -44,7 +44,7 @@ DEBUG = os.environ.get('DEBUG').lower() == 'true'
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY') or os.environ.get('DJANGO_SECRET_KEY')
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 
 EMAIL_HOST=os.environ.get('EMAIL_HOST')
 EMAIL_HOST_USER=os.environ.get('EMAIL_HOST_USER')
@@ -74,7 +74,8 @@ INSTALLED_APPS = [
     'django_filters',
     'django_extensions',
     'db_mutex',
-    'core',
+    'core.apps.CoreConfig',
+    # 'core',
     'web',
     'corsheaders',
 ]
@@ -102,7 +103,6 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            os.path.join(BASE_DIR, 'templates'),
             os.path.join(BASE_DIR, 'core', 'templates'),
         ],
         'APP_DIRS': True,

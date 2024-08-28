@@ -15,113 +15,271 @@
 # user.py
 
 import json
-from typing import Callable
 import getpass
+
+from datetime import datetime
+from typing import Callable
 
 from django.contrib.auth import authenticate
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User, Group
+from django.db import models
+from django.forms.models import model_to_dict
 from rest_framework.authtoken.models import Token
 from django.utils.translation import gettext as _
 
+from ...models import Client
+
+class WarehauserJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if obj is None:
+            return 'None'
+        if isinstance(obj, datetime):
+            return obj.isoformat()  # Converts to ISO 8601 format string
+        if isinstance(obj, User):
+            return model_to_dict(obj, exclude=['password'])
+        if isinstance(obj, models.Model):
+            return model_to_dict(obj)
+        return super().default(obj)
+
 class Command(BaseCommand):
-    def _output(self, message:str, json:bool = False, key:str = 'message', func:Callable[[str], str] = None):
+    def _output(self, message:str, pipe = None, func:Callable[[str], str] = None):
+        """
+        Display all command results other than help message and prompts for input.
+
+        Args:
+            self    (BaseCommand): self object.
+            message (str):         String message to display.
+            func    (func):        if not None then defer to that function for formatting. Ignored if json input parameter is True. If None then default to self.style.SUCCESS.
+        """
+        if pipe is None:
+            pipe = self.stdout
+
         # Provide a default function if none is provided
         if func is None:
             func = self.style.SUCCESS
 
-        if json:
-            # Handle JSON output
-            self.stdout.write(json.dumps({key:message}, indent=4))
-        else:
-            # Handle standard output
-            self.stdout.write(func(message))
+        # Handle standard output
+        pipe.write(func(message))
+
+    def _output_success(self, message:str):
+        self._output(message=message, pipe=self.stdout, func=self.style.SUCCESS)
+
+    def _output_err(self, message:str):
+        self._output(message=message, pipe=self.stderr, func=self.style.ERROR)
 
     help = _('Manage user info, create a new user, and add/remove groups from a user.')
 
     def add_arguments(self, parser):
+        parser.add_argument('action', choices=['create', 'c', 'read', 'r', 'update', 'u', 'delete', 'd',], help=_('Action to perform. c means create, r means read, u means update, d means delete.'))
         parser.add_argument('username', type=str, nargs='?', help=_('The username of the user to manage'))
-        parser.add_argument('-s', '--superuser', type=str, nargs='?', help=_('The username of the superuser'))
-        parser.add_argument('-p', '--password', type=str, help=_('Password for the new user or to update an existing user'))
-        parser.add_argument('-e', '--email', type=str, help=_('Email address for the new user or to update an existing user'))
-        parser.add_argument('-g', '--groups', type=str, help=_('Comma-separated list of groups to add or remove'))
-        parser.add_argument('-r', '--remove', action='store_true', help=_('Remove the specified groups from the user'))
+        # parser.add_argument('-s', '--superuser', type=str, nargs='?', help=_('The username of the superuser'))
+        parser.add_argument('-a', '--add', type=str, help=_('Comma-separated list of groups to join for the user'))
         parser.add_argument('-d', '--delete', action='store_true', help=_('Delete the user'))
-        parser.add_argument('-a', '--active', type=str, help=_('Set user active status: "true" to activate, "false" to deactivate'))
-        parser.add_argument('-t', '--token', action='store_true', help=_('Create auth token if user token does not exist or display existing token'))
-        parser.add_argument('-j', '--json', action='store_true', help=_('Output in JSON format'))
+        parser.add_argument('-e', '--email', type=str, help=_('Email address for the new user or to update an existing user'))
+        parser.add_argument('-f', '--first', type=str, help=_('First name for the new user or to update an existing user'))
+        parser.add_argument('-l', '--last', type=str, help=_('Last name for the new user or to update an existing user'))
+        parser.add_argument('-p', '--password', type=str, help=_('Password for the new user or to update an existing user'))
+        parser.add_argument('-r', '--remove', action='store_true', help=_('Comma-separated list of groups to leave for the user'))
+        parser.add_argument('-A', '--active', type=str, help=_('Set user active status: "true" to activate, "false" to deactivate'))
+        parser.add_argument('-t', '--token', action='store_true', help=_('Create (if it does not already exist) Auth Token for user and display Auth Token, incompatible with -R flag'))
+        parser.add_argument('-R', '--revoke', action='store_true', help=_('Delete (if it exist) Auth Token for user, incompatible with -t flag'))
 
-    def handle(self, *args, **kwargs):
+    def _get_user(self, username):
+        user = User.objects.get(username=username, is_superuser=False, is_staff=False)
+        return user
+
+    def handle_create(self, **kwargs):
+        self._output_success(_('Create User'))
         username = kwargs.get('username')
-        superuser_username = kwargs.get('superuser')
-        password = kwargs.get('password')
-        email = kwargs.get('email')
-        groups = kwargs.get('groups')
-        remove = kwargs.get('remove')
-        delete = kwargs.get('delete')
-        active = kwargs.get('active')
-        create_token = kwargs.get('token')
-        output_json = kwargs.get('json')
+        pass
 
-        if not superuser_username:
-            superuser_username = input("Enter superuser username: ")
+    def handle_read(self, **kwargs):
+        self._output_success(_('Read User'))
+        username = kwargs.get('username')
 
-        superuser_password = getpass.getpass("Enter superuser password: ")
+        if username is None:
+            users = User.objects.filter(is_superuser=False, is_staff=False).values_list('username', flat=True)
+            self._output_success(', '.join(users))
+        else:
+            try:
+                user = self._get_user(username=username)
+                token = Token.objects.get(user=user).key if Token.objects.filter(user=user).exists() else None
+                # if token is None:
+                #     token, created = Token.objects.get_or_create(user=user)
 
-        superuser = authenticate(username=superuser_username, password=superuser_password)
+                # Get all groups of the user
+                user_groups = user.groups.all()
 
-        if superuser is None or not superuser.is_superuser:
-            self._output("Invalid superuser credentials", output_json, key='error', func=self.style.ERROR)
+                # Get all client groups
+                client_groups = Client.objects.values_list('group', flat=True)
+
+                user_info = {
+                    _('id'): user.id,
+                    _('username'): user.username,
+                    _('email'): user.email,
+                    _('first_name'): user.first_name,
+                    _('last_name'): user.last_name,
+                    _('is_active'): user.is_active,
+                    _('is_superuser'): user.is_superuser,
+                    _('is_staff'): user.is_staff,
+                    _('last_login'): user.last_login.isoformat() if user.last_login else None,
+                    _('date_joined'): user.date_joined.isoformat() if user.date_joined else None,
+                    _('groups'): ', '.join(
+                        _(f'{group.name} (client group)') if group.id in client_groups else group.name
+                        for group in user_groups
+                    ),
+                    _('auth_token'): token,
+                }
+
+                for key, value in user_info.items():
+                    prompt = key.replace('_', ' ').title()
+                    prompt = self.style.SUCCESS(f'{prompt}:'.ljust(14))
+                    if isinstance(value, bool) and not value:
+                        value = self.style.ERROR(f'{value}')
+                    elif value is None:
+                        value = self.style.HTTP_INFO(f'{value}')
+                    else:
+                        value = self.style.SUCCESS(f'{value}')
+                    self.stdout.write(f'{prompt}{value}')
+            except User.DoesNotExist:
+                message = _('User with username \'%(username)s\' does not exist.') % ({'username': username})
+                self._output_err(message=message)
+            except Token.DoesNotExist:
+                message = _('Token for user \'%(username)s\' does not exist.') % ({'username': username})
+                self._output_err(message=message)
+
+    def handle_update(self, **kwargs):
+        self._output_success(_('Update User'))
+
+        username = kwargs.get('username')
+        try:
+            if username is None:
+                raise User.DoesNotExist()
+            user = self._get_user(username=username)
+
+            flag_token = kwargs.get('token')
+            flag_revoke = kwargs.get('revoke')
+
+            if flag_token and flag_revoke:
+                message = _(f'Flags -t|--token and -R|--revoke are mutually exclusive.')
+                self._output_err(message=message)
+                return
+            elif flag_token:
+                token, created = Token.objects.get_or_create(user=user)
+            elif flag_revoke:
+                token = Token.objects.get(user=user) if Token.objects.filter(user=user).exists() else None
+                if token is not None:
+                    token.delete()
+                    token = None
+
+
+
+
+
+
+
+
+            self._output_success(flag_token)
+            self._output_success(flag_revoke)
+        except User.DoesNotExist:
+            message = _('User with username \'%(username)s\' does not exist.') % ({'username': username})
+            self._output_err(message=message)
+        pass
+
+    def handle_delete(self, **kwargs):
+        self._output_success(_('Delete User'))
+
+        username = kwargs.get('username')
+        if username is None:
+            self._output_err(_('Delete action requires a username. Use -h flag for help.'))
             return
 
-        if not username:
-            self.list_users(output_json)
-        elif delete:
-            self.confirm_and_delete_user(username, create_token, output_json)
-        elif password and email:
-            self.create_user(username, password, email, groups, create_token, output_json)
-        elif password or email or groups or active is not None:
-            self.modify_user(username, password, email, groups, remove, active, create_token, output_json)
+        try:
+            user = self._get_user(username=username)
+        except User.DoesNotExist:
+            self._output_err(_(f'No client user with username \'{username}\' found.'))
+            return
+
+        confirm = input(_('Are you sure you want to delete the user \'%(username)s\'? (y/N): ') % ({'username': user.username})).lower()
+        if confirm == 'y':
+            token = Token.objects.get(user=user)
+            token.delete()
+
+            user.delete()
+            message = _('User \'%(username)s\' deleted successfully.') % ({'username': user.username})
+            self._output_success(message=message)
         else:
-            self.show_user_info(username, create_token, output_json)
+            self._output_success(message='Deletion cancelled.')
+
+    def handle(self, *args, **kwargs):
+        action = kwargs.pop('action')
+        # superuser_username = kwargs.pop('superuser')
+        # password = kwargs.get('password')
+        # email = kwargs.get('email')
+        # groups = kwargs.get('groups')
+        # remove = kwargs.get('remove')
+        # delete = kwargs.get('delete')
+        # active = kwargs.get('active')
+        # create_token = kwargs.get('token')
+
+        # if not superuser_username:
+        #     superuser_username = input(_('Enter superuser username: '))
+
+        # superuser_password = getpass.getpass(_('Enter superuser password: '))
+
+        # superuser = authenticate(username=superuser_username, password=superuser_password)
+
+        # if superuser is None or not superuser.is_superuser:
+        #     self._output_err(_('Invalid superuser credentials'))
+        #     return
+
+        if action in ['create', 'c']:
+            self.handle_create(**kwargs)
+        elif action in ['read', 'r']:
+            self.handle_read(**kwargs)
+        elif action in ['update', 'u']:
+            self.handle_update(**kwargs)
+        elif action in ['delete', 'd']:
+            self.handle_delete(**kwargs)
+        else:
+            raise BaseException(_(f'Action {action} is not implemented.'))
+
+        return
+        if not username:
+            self.list_users(jsn)
+        else:
+            user = User.objects.filter(username=username)
+            if user is None:
+                # attempt to create user
+                self.create_user(username, email, groups, jsn)
+            else:
+                if delete:
+                    self.confirm_and_delete_user(user, jsn)
+                elif password or email or groups or active is not None:
+                    self.modify_user(username, password, email, groups, remove, active, create_token, jsn)
+                else:
+                    self.show_user_info(username, jsn)
 
     def list_users(self, output_json=False):
-        users = User.objects.all().values_list('username', flat=True)
+        users = User.objects.filter(is_superuser=False, is_staff=False).values_list('username', flat=True)
         if output_json:
             users_json = {'users': list(users)}
             self.stdout.write(json.dumps(users_json, indent=4))
         else:
             self.stdout.write(self.style.SUCCESS(', '.join(users)))
 
-    def confirm_and_delete_user(self, username, create_token, output_json=False):
-        try:
-            user = User.objects.get(username=username)
-        except User.DoesNotExist:
-            message = _('User with username \'%(username)s\' does not exist.') % ({'username': user.username})
-            self._output(message=message, json=output_json, key='error', func=self.style.ERROR)
-            return
-
-        if create_token:
-            if Token.objects.filter(user=user).exists():
-                token = Token.objects.get(user=user)
-                token.delete()
-                message = _('Token deleted successfully for user \'%(username)s\'.' % ({'username': user.username}))
-                self._output(message=message, json=output_json)
-            else:
-                message = _('No token for user \'%(username)s\' found.' % ({'username': user.username}))
-                self._output(message=message, json=output_json)
-            return
-
+    def confirm_and_delete_user(self, user, output_json=False):
         confirm = input(_('Are you sure you want to delete the user \'%(username)s\'? (y/N): ') % ({'username': user.username})).lower()
         if confirm == 'y':
-            self.delete_user(user, output_json)
+            token = Token.objects.get(user=user)
+            token.delete()
+
+            user.delete()
+            message = _('User \'%(username)s\' deleted successfully.') % ({'username': user.username})
+            self._output(message=message, json=output_json)
         else:
             self._output(message='Deletion cancelled.', json=output_json)
-
-    def delete_user(self, user, output_json=False):
-        user.delete()
-        message = _('User \'%(username)s\' deleted successfully.') % ({'username': user.username})
-        self._output(message=message, json=output_json)
 
     def create_user(self, username, password, email, group_names, create_token=False, output_json=False):
         if User.objects.filter(username=username).exists():
@@ -199,25 +357,36 @@ class Command(BaseCommand):
                 message = _('Group with name \'%(group_name)s\' does not exist.') % {'group_name': group_name}
                 self._output(message=message, json=output_json, key='error', func=self.style.ERROR)
 
-    def show_user_info(self, username, create_token, output_json=False):
+    def show_user_info(self, username, output_json=False):
         try:
             user = User.objects.get(username=username)
             token = Token.objects.get(user=user).key if Token.objects.filter(user=user).exists() else None
-            if create_token:
-                if token is None:
-                    token, created = Token.objects.get_or_create(user=user)
-                user_info = {'username': user.username, 'auth_token': token}
-            else:
-                user_info = {
-                    'username': user.username,
-                    'email': user.email,
-                    'is_active': user.is_active,
-                    'is_superuser': user.is_superuser,
-                    'is_staff': user.is_staff,
-                    'last_login': user.last_login,
-                    'auth_token': token,
-                    'groups': ', '.join(group.name for group in user.groups.all()),
-                }
+            if token is None:
+                token, created = Token.objects.get_or_create(user=user)
+
+            # Get all groups of the user
+            user_groups = user.groups.all()
+
+            # Get all client groups
+            client_groups = Client.objects.values_list('group', flat=True)
+
+            user_info = {
+                _('id'): user.id,
+                _('username'): user.username,
+                _('email'): user.email,
+                _('first_name'): user.first_name,
+                _('last_name'): user.last_name,
+                _('is_active'): user.is_active,
+                _('is_superuser'): user.is_superuser,
+                _('is_staff'): user.is_staff,
+                _('last_login'): user.last_login.isoformat() if user.last_login else None,
+                _('date_joined'): user.date_joined.isoformat() if user.date_joined else None,
+                _('groups'): ', '.join(
+                    _(f'{group.name} (client group)') if group.id in client_groups else group.name
+                    for group in user_groups
+                ),
+                _('auth_token'): token,
+            }
 
             if output_json:
                 self.stdout.write(json.dumps(user_info, indent=4))

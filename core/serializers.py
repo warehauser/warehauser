@@ -20,7 +20,6 @@ from rest_framework import serializers
 from django.utils.translation import gettext as _
 
 from .models import *
-from .utils import filter_owner_groups
 
 def to_related_representation(instance, representation, related_fields):
     for field_name in related_fields:
@@ -39,6 +38,7 @@ class RelatedFieldSerializer(serializers.PrimaryKeyRelatedField):
             return None
         return super().to_representation(value)
 
+owner_related_field_serializer        = RelatedFieldSerializer(queryset=Client.objects.all())
 warehausedef_related_field_serializer = RelatedFieldSerializer(queryset=WarehauseDef.objects.all())
 warehause_related_field_serializer    = RelatedFieldSerializer(queryset=Warehause.objects.all())
 
@@ -52,26 +52,29 @@ user_related_field_serializer         = RelatedFieldSerializer(queryset=get_user
 
 # Warehause model serializers
 
-class WarehauseDefSerializer(serializers.ModelSerializer):
-    owner = serializers.PrimaryKeyRelatedField(queryset=filter_owner_groups(Group.objects))
+class WarehauserSerializer(serializers.ModelSerializer):
+    owner = owner_related_field_serializer
 
-    def create(self, validated_data):
-        user = self.context['request'].user
-        if not user.is_superuser and not user.is_staff:
-            group = filter_owner_groups(user.groups).first()
-            if not group:
-                raise serializers.ValidationError(_(f'User \'{user.username}\' is not a member of any client group.'))
-            validated_data['owner'] = group
-        return super().create(validated_data=validated_data)
+    def validate_owner(self, value):
+        request = self.context.get('request')
+        user = request.user
 
+        if not user.is_staff and not user.is_superuser:
+            # Ensure the owner is a Client that is referenced by the user's group
+            client_groups = Client.objects.filter(group__in=user.groups.all())
+            if value not in client_groups:
+                raise serializers.ValidationError("You do not have access to this client.")
+
+        return value
+
+class WarehauseDefSerializer(WarehauserSerializer):
     class Meta:
         model = WarehauseDef
         fields = '__all__'
         extra_kwargs = {'parent': {'allow_null': True, 'required': False,},}
         depth = 1
 
-class WarehauseSerializer(serializers.ModelSerializer):
-    owner  = serializers.PrimaryKeyRelatedField(queryset=filter_owner_groups(Group.objects))
+class WarehauseSerializer(WarehauserSerializer):
     dfn    = warehausedef_related_field_serializer
     user   = user_related_field_serializer
 
@@ -102,17 +105,14 @@ class WarehauseSerializer(serializers.ModelSerializer):
 
 # Product model serializers
 
-class ProductDefSerializer(serializers.ModelSerializer):
-    owner = serializers.PrimaryKeyRelatedField(queryset=filter_owner_groups(Group.objects))
-
+class ProductDefSerializer(WarehauserSerializer):
     class Meta:
         model = ProductDef
         fields = '__all__'
         depth = 1
         extra_kwargs = { 'parent': { 'allow_null': True, 'required': False,},}
 
-class ProductSerializer(serializers.ModelSerializer):
-    owner     = serializers.PrimaryKeyRelatedField(queryset=filter_owner_groups(Group.objects))
+class ProductSerializer(WarehauserSerializer):
     dfn       = productdef_related_field_serializer
     parent    = product_related_field_serializer
     warehause = warehause_related_field_serializer
@@ -138,17 +138,14 @@ class ProductSerializer(serializers.ModelSerializer):
 
 # Event model serializers
 
-class EventDefSerializer(serializers.ModelSerializer):
-    owner = serializers.PrimaryKeyRelatedField(queryset=filter_owner_groups(Group.objects))
-
+class EventDefSerializer(WarehauserSerializer):
     class Meta:
         model = EventDef
         fields = '__all__'
         depth = 1
         extra_kwargs = { 'parent': { 'allow_null': True, 'required': False,},}
 
-class EventSerializer(serializers.ModelSerializer):
-    owner     = serializers.PrimaryKeyRelatedField(queryset=filter_owner_groups(Group.objects))
+class EventSerializer(WarehauserSerializer):
     dfn       = eventdef_related_field_serializer
     parent    = event_related_field_serializer
     warehause = warehause_related_field_serializer
@@ -178,3 +175,8 @@ class EventSerializer(serializers.ModelSerializer):
         fields = '__all__'
         depth = 1
         extra_kwargs = { 'parent': { 'allow_null': True, 'required': False,},}
+
+class ClientSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Client
+        fields = '__all__'
