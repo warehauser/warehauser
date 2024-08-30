@@ -78,8 +78,8 @@ This will create a Warehauser client called <clientname> and a User with a usern
 
 And follow the prompts. Note if you want that user to have access to the Warehauser API remember to include the --token true flag and to record the Authorization value for later.
 
-Quick Start Guide
------------------
+Starting Warehauser
+-------------------
 
 1. When you are ready to start the warehauser server, on the command line run:
 
