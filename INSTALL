@@ -45,7 +45,7 @@ and follow the prompts.
 
 10. Create a client:
 
-    python manage.py authtool client create <clientname>
+    python manage.py authtool client create <clientname> --email <admin email address>
 
 This will create a Warehauser client called <clientname> and a User with a username <clientname> (which is the admin user for that client). It is good practice to copy down the client admin user's Authorization Token displayed at the end of executing this command. You can create as many non client admin users as you like by:
 
