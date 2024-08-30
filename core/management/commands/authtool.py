@@ -17,15 +17,14 @@
 import getpass
 import sys
 
-# from datetime import datetime
+from datetime import datetime
 from argparse import ArgumentTypeError
 from typing import Callable
 
 from django.contrib.auth.models import User, Group
 from django.core.management.base import BaseCommand
 from django.db import transaction
-# from django.db import models
-# from django.forms.models import model_to_dict
+from django.forms.models import model_to_dict
 from rest_framework.authtoken.models import Token
 from django.utils.translation import gettext as _
 
@@ -39,7 +38,7 @@ class Command(BaseCommand):
         # Create subparser
         create_parser = client_subparsers.add_parser('create', aliases=['c'], help=_('Create a new client.'))
         create_parser.add_argument('clientname', type=str, help=_('The name of the client to create.'))
-        create_parser.add_argument('-e', '--email', type=str, help=_('Email address for the client\'s group admin user account.'))
+        create_parser.add_argument('-e', '--email', type=str, required=True, help=_('Email address for the client\'s group admin user account.'))
         create_parser.set_defaults(func=self._handle_client_create)
 
         # Read subparser
@@ -50,6 +49,8 @@ class Command(BaseCommand):
         # Update subparser
         update_parser = client_subparsers.add_parser('update', aliases=['u'], help=_('Update an existing client.'))
         update_parser.add_argument('clientname', type=str, help=_('The name of the client to update.'))
+        update_parser.add_argument('-e', '--email', type=str, help=_('Update user\'s email address.'))
+        update_parser.add_argument('-t', '--token', type=self.str_to_bool, nargs='?', const=True, default=None, help=_('If False delete the User\s Auth Token, if True then create the Auth Token (if it does not exist) and display it.'))
         update_parser.add_argument('-n', '--name', type=str, nargs='?', help=_('Update client\'s group name.'))
         update_parser.set_defaults(func=self._handle_client_update)
 
@@ -62,6 +63,7 @@ class Command(BaseCommand):
         create_parser.add_argument('username', type=str, help=_('The username of the user to create.'))
         create_parser.add_argument('-c', '--clientname', type=str, help=_('Join user to a client.'))
         create_parser.add_argument('-e', '--email', type=str, help=_('Update user\'s email address.'))
+        create_parser.add_argument('-t', '--token', type=self.str_to_bool, nargs='?', const=True, default=None, help=_('If False delete the User\s Auth Token, if True then create the Auth Token (if it does not exist) and display it.'))
         create_parser.add_argument('-a', '--is_active', type=self.str_to_bool, nargs='?', const=True, default=None, help=_('Set user\'s is_active status. If True, the user is active; if False, the user is inactive.'))
         create_parser.add_argument('-f', '--first', type=str, nargs='?', help=_('Update user\'s first name. Use \\blank to set to empty string.'))
         create_parser.add_argument('-l', '--last', type=str, nargs='?', help=_('Update user\'s last name. Use \\blank to set to empty string.'))
@@ -77,6 +79,7 @@ class Command(BaseCommand):
         # Update subparser
         update_parser = user_subparsers.add_parser('update', aliases=['u'], help=_('Update an existing user.'))
         update_parser.add_argument('username', type=str, help=_('The username of the user to update.'))
+        update_parser.add_argument('-t', '--token', type=self.str_to_bool, nargs='?', const=True, default=None, help=_('If False delete the User\s Auth Token, if True then create the Auth Token (if it does not exist) and display it.'))
         update_parser.add_argument('-a', '--is_active', type=self.str_to_bool, nargs='?', const=True, default=None, help=_('Set user\'s is_active status. If True, the user is active; if False, the user is inactive.'))
         update_parser.add_argument('-n', '--name', type=str, nargs='?', help=_('Update user\'s username.'))
         update_parser.add_argument('-f', '--first', type=str, nargs='?', help=_('Update user\'s first name. Use \\blank to set to empty string.'))
@@ -113,6 +116,42 @@ class Command(BaseCommand):
     def _get_client(self, clientname:str):
         return Client.objects.get(group__name=clientname)
 
+    def _dict_to_message(self, dct):
+        if dct is None:
+            return
+
+        max_key_width = max(len(str(key)) for key in dct.keys()) + 1
+
+        for key, val in dct.items():
+            key = key.replace('_', ' ').title() + ':'
+            if val is None:
+                val = self.style.WARNING('None')
+            elif isinstance(val, bool):
+                if val:
+                    val = self.style.SUCCESS('True')
+                else:
+                    val = self.style.ERROR('False')
+            elif isinstance(val, int):
+                val = self.style.HTTP_SUCCESS(f'{val}')
+            elif isinstance(val, datetime):
+                val = self.style.SUCCESS(val.isoformat())
+            elif isinstance(val, Group):
+                val = _(f'{val.name} (id: {self.style.HTTP_SUCCESS(val.id)}') + self.style.SUCCESS(')')
+
+            self._output_success(f'{key:{max_key_width}} {val}')
+
+    def _display_client(self, client):
+        info = model_to_dict(client, exclude='group')
+        info.update({'group': client.group})
+        self._output_success(self._dict_to_message(info))
+
+    def _display_user(self, user, token):
+        info = model_to_dict(user, exclude=['password'])
+        if token:
+            info.update({'Authorization': f'Token {token.key}'})
+
+        self._output_success(self._dict_to_message(info))
+
     # Client handlers
     def _handle_client_create(self, options):
         clientname = options.get('clientname')
@@ -134,15 +173,18 @@ class Command(BaseCommand):
 
                 # Set the password securely
                 user.set_password(password)
-
                 self._output_success(message=_(f'Creating client \'{clientname}\'.'))
                 group.save()
                 client.save()
 
                 self._output_success(message=_(f'Creating client \'{clientname}\' admin user \'{user.username}\'.'))
-                user.save()
+                options['token'] = True
+                user, token = self._set_user_data(clientname, user, options)
 
                 user.groups.add(group)
+
+                self._output_success('\n' + _(f'Client Admin User:'))
+                self._display_user(user, token)
         except Exception as e:
             self._output_err(_(f'Failed to create client. Error occurred: {str(e).strip()}'))
             self._output_err(message=_(f'Rolling back changes.'))
@@ -155,6 +197,7 @@ class Command(BaseCommand):
         else:
             try:
                 client = Client.objects.get(group__name=clientname)
+                self._display_client(client)
             except Client.DoesNotExist:
                 self._output_err(_(f'Client \'{clientname}\' does not exist.'))
 
@@ -169,6 +212,7 @@ class Command(BaseCommand):
                 if name is not None:
                     client.group.name = name
                 client.group.save()
+                self._display_client(client)
         except Client.DoesNotExist:
             self._output_err(_(f'Client \'{clientname}\' does not exist.'))
         except Exception as e:
@@ -185,7 +229,7 @@ class Command(BaseCommand):
         # Process updating email address...
         email = options.get('email')
         if email is not None:
-            self._output_success(_(f'Setting email address of \'{username}\' to \'{email}\'.'))
+            self._output_success(_(f'Setting email address of user \'{username}\' to \'{email}\'.'))
             user.email = email
 
         # Process updating first name...
@@ -241,6 +285,26 @@ class Command(BaseCommand):
 
         user.save()
 
+        token = None
+        gettoken = options.get('token')
+        if gettoken is not None:
+            if gettoken:
+                token, created = Token.objects.get_or_create(user=user)
+            else:
+                try:
+                    token = Token.objects.get(user=user)
+                    if token is not None:
+                        token.delete()
+                except Token.DoesNotExist:
+                    pass
+        else:
+            try:
+                token = Token.objects.get(user=user)
+            except Token.DoesNotExist:
+                pass
+
+        return user, token
+
     def _handle_user_create(self, options):
         username = options.get('username')
         clientname = options.get('clientname')
@@ -261,16 +325,16 @@ class Command(BaseCommand):
                 # Set the password securely
                 user.set_password(password)
 
-                self._set_user_data(username=username, user=user, options=options)
+                user, token = self._set_user_data(username=username, user=user, options=options)
 
                 client = Client.objects.filter(group__name=clientname).first()
                 if client:
                     user.groups.add(client.group)
-                    self._output_success(_(f"User '{username}' has been joined to client '{clientname}'"))
-                    user.save()
+                    self._output_success(_(f"User '{username}' has joined client '{clientname}'"))
                 else:
                     self._output_err(_(f"Client with group name '{clientname}' does not exist."))
 
+            self._display_user(user, token)
         except User.DoesNotExist:
             self._output_err(_(f'User \'{username}\' does not exist.'))
         except Exception as e:
@@ -294,6 +358,11 @@ class Command(BaseCommand):
                 if client and client.group not in user.groups.all():
                     self._output_err(_(f'User \'{username}\' for client \'{clientname}\' does not exist.'))
                     return
+                try:
+                    token = Token.objects.get(user=user)
+                except Token.DoesNotExist:
+                    token = None
+                self._display_user(user, token)
             except:
                 self._output_err(_(f'User \'{username}\' does not exist.'))
                 return
@@ -309,14 +378,6 @@ class Command(BaseCommand):
                 self._output_success(_(f'Users for client \'{clientname}\': {", ".join(users)}'))
             else:
                 self._output_success(_(f'Users: {", ".join(users)}'))
-
-
-
-
-
-
-
-
 
     def _handle_user_update(self, options):
         username = options.get('username')

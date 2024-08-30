@@ -450,7 +450,7 @@ class Warehause(WarehauserAbstractInstanceModel, WarehauseFields):
             'length':     float(0.0),
         }
 
-        for prod in  res['stock']:
+        for prod in res['stock']:
             measure = prod.measure()
             res['quantity'] = res['quantity'] + measure['quantity']
             res['weight']   = res['weight']   + measure['weight']
