@@ -27,9 +27,9 @@ On Linux or MacOS:
 
     pip install -r warehauser/requirements.txt
 
-6. Create (or ensure one is created) your warehauser database. See Django documentation for supported database management systems.
+6. Create (or ensure one is created) your warehauser database. See Django documentation for supported database management systems (See https://docs.djangoproject.com/en/5.1/ref/settings/#databases).
 
-7. Edit your .env environment variables file to include environment secrets. Note that the Django (library used by warehauser) DJANGO_SECRET_KEY can be set in your environment variables (prefered) or in the .env file as DJANGO_SECRET_KEY. (See https://docs.djangoproject.com/en/5.0/ref/settings/ for more information on options for settings.)
+7. Edit your .env environment variables file to include environment secrets. Note that the Django (library used by warehauser) DJANGO_SECRET_KEY can be set in your environment variables (prefered) or in the .env file as DJANGO_SECRET_KEY. (See https://docs.djangoproject.com/en/5.1/ref/settings/ for more information on options for settings.)
 
 # START OF .env FILE
 
@@ -62,40 +62,34 @@ EMAIL_WAREHAUSER_HOST=
     python manage.py makemigrations
     python manage.py migrate
 
-9. Create a superuser. In warehauser we assign all privileges via groups but the admin groups should still have is_superuser flag set to True as well to be compatible with third party libraries such as django-gaurdian.
+9. Create a Warehauser superuser. This is distinct from the database superuser.
 
     python manage.py createsuperuser
 
-Create as many user accounts as you need by repeating these steps:
+and follow the prompts.
 
-    python manage.py createsuperuser --no-superuser
+10. Create a client:
+
+    python manage.py authtool client create <clientname>
+
+This will create a Warehauser client called <clientname> and a User with a username <clientname> (which is the admin user for that client). It is good practice to copy down the client admin user's Authorization Token displayed at the end of executing this command. You can create as many non client admin users as you like by:
+
+    python user create <username> --clientname <clientname> --email <email address> [--first <first name> --last <last name>] [--token true]
+
+And follow the prompts. Note if you want that user to have access to the Warehauser API remember to include the --token true flag and to record the Authorization value for later.
 
 Quick Start Guide
 -----------------
 
-1. Create a client Group and client User.
-
-For each client run the following command:
-
-    python manage.py client <client name>
-
-For each client user run the following commands:
-
-    python manage.py user <username> -e '<email address>' -p '<password>'
-
-Record the Auth Token supplied for later.
-
-    python manage.py user <username> -g <client name>
-
-2. When you are ready to start the warehauser server, on the command line run:
+1. When you are ready to start the warehauser server, on the command line run:
 
     python manage.py runserver
 
-3. If you wish to run the scheduler then on another command line run:
+2. If you wish to run the scheduler then on another command line run:
 
     python warehauser/scheduler.py
 
-4. All Warehuaser models are exposed to REST API services. CREATE with POST requests (Def models only), READ with GET requests, UPDATE with PATCH requests, and DELETE with DELETE requests.
+3. All Warehuaser models are exposed to REST API services. CREATE with POST requests (Def models only), READ with GET requests, UPDATE with PATCH requests, and DELETE with DELETE requests.
 
 Define your Def objects including WarehauserDef, ProductDef, and EventDef. You can use the REST service endpoints such as:
 
@@ -120,6 +114,10 @@ Remember to add to the HEADERS of the REST requests the following:
     Content-Type: application/json
     Authorization: Token <token>
 
-Where token is the security token of the user you wish to use (see above). To retrieve that token you can use the user command:
+Where token is the security token of the user you wish to use (see above). To retrieve that token you can use the authtoken command:
 
-    python manage.py user -t <username>
+    python manage.py authtoken <username>
+
+To create a token for a user without one use the following command:
+
+    python manage.py authtoken <username> --create
