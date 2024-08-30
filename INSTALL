@@ -34,6 +34,7 @@ On Linux or MacOS:
 8. On the command line run:
 
     python manage.py makemigrations
+    python manage.py makemigrations core
     python manage.py migrate
 
 9. Create a Warehauser superuser. This is distinct from the database superuser.
