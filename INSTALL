@@ -29,33 +29,7 @@ On Linux or MacOS:
 
 6. Create (or ensure one is created) your warehauser database. See Django documentation for supported database management systems (See https://docs.djangoproject.com/en/5.1/ref/settings/#databases).
 
-7. Edit your .env environment variables file to include environment secrets. Note that the Django (library used by warehauser) DJANGO_SECRET_KEY can be set in your environment variables (prefered) or in the .env file as DJANGO_SECRET_KEY. (See https://docs.djangoproject.com/en/5.1/ref/settings/ for more information on options for settings.)
-
-# START OF .env FILE
-
-DEBUG=True
-# DEBUG=False
-
-# DJANGO_SECRET_KEY=
-
-DB_ENGINE=
-DB_NAME=
-DB_USER=
-DB_PASSWORD=
-DB_HOST=
-DB_PORT=
-
-# GMail settings...
-EMAIL_HOST=
-EMAIL_HOST_USER=
-EMAIL_HOST_PASSWORD=
-EMAIL_PORT=587
-EMAIL_USE_TLS=True
-EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'
-EMAIL_FROM_ADDRESS=
-EMAIL_WAREHAUSER_HOST=
-
-# END OF .env FILE
+7. Edit your .env file in the warehauser root directory to include environment specific settings. You can copy from the .env.git file as a template. Note that the Django (library used by warehauser) DJANGO_SECRET_KEY can be set in your environment variables (prefered) or in the .env file as DJANGO_SECRET_KEY. (See https://docs.djangoproject.com/en/5.1/ref/settings/ for more information on options for settings.)
 
 8. On the command line run:
 
