@@ -19,9 +19,10 @@ import sys
 
 from datetime import datetime
 from argparse import ArgumentTypeError
-from typing import Callable
 
 from django.contrib.auth.models import User, Group
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.forms.models import model_to_dict
@@ -110,47 +111,26 @@ class Command(BaseCommand):
         except KeyboardInterrupt:
             return
 
+    def set_password(self, user, prompt):
+        # Prompt for password and confirmation
+        password = getpass.getpass(prompt=_('Enter {} password: ').format(prompt))
+        password_confirm = getpass.getpass(prompt=_('Confirm {} password: ').format(prompt))
+
+        if password != password_confirm:
+            self._output_err(_('Passwords do not match.'))
+            return
+
+        # Validate the password using Django's validators
+        validate_password(password, user=user)
+
+        # Set the password securely
+        user.set_password(password)
+
     def _get_user(self, username:str):
         return User.objects.get(username=username, is_staff=False, is_superuser=False)
 
     def _get_client(self, clientname:str):
         return Client.objects.get(group__name=clientname)
-
-    def _dict_to_message(self, dct):
-        if dct is None:
-            return
-
-        max_key_width = max(len(str(key)) for key in dct.keys()) + 1
-
-        for key, val in dct.items():
-            key = key.replace('_', ' ').title() + ':'
-            if val is None:
-                val = self.style.WARNING('None')
-            elif isinstance(val, bool):
-                if val:
-                    val = self.style.SUCCESS('True')
-                else:
-                    val = self.style.ERROR('False')
-            elif isinstance(val, int):
-                val = self.style.HTTP_SUCCESS(f'{val}')
-            elif isinstance(val, datetime):
-                val = self.style.SUCCESS(val.isoformat())
-            elif isinstance(val, Group):
-                val = _(f'{val.name} (id: {self.style.HTTP_SUCCESS(val.id)}') + self.style.SUCCESS(')')
-
-            self._output_success(f'{key:{max_key_width}} {val}')
-
-    def _display_client(self, client):
-        info = model_to_dict(client, exclude='group')
-        info.update({'group': client.group})
-        self._output_success(self._dict_to_message(info))
-
-    def _display_user(self, user, token):
-        info = model_to_dict(user, exclude=['password'])
-        if token:
-            info.update({'Authorization': f'Token {token.key}'})
-
-        self._output_success(self._dict_to_message(info))
 
     # Client handlers
     def _handle_client_create(self, options):
@@ -163,16 +143,8 @@ class Command(BaseCommand):
                 client = Client(group=group)
                 user = User(username=clientname, email=email, first_name='admin', last_name=clientname, is_superuser=False, is_staff=False, is_active=True)
 
-                # Prompt for password and confirmation
-                password = getpass.getpass(prompt=_('Enter admin user\'s password: '))
-                password_confirm = getpass.getpass(prompt=_('Confirm admin user\'s password: '))
+                self.set_password(user=user, prompt='admin user\'s')
 
-                if password != password_confirm:
-                    self._output_err(_('Passwords do not match.'))
-                    return
-
-                # Set the password securely
-                user.set_password(password)
                 self._output_success(message=_(f'Creating client \'{clientname}\'.'))
                 group.save()
                 client.save()
@@ -185,6 +157,10 @@ class Command(BaseCommand):
 
                 self._output_success('\n' + _(f'Client Admin User:'))
                 self._display_user(user, token)
+        except ValidationError as e:
+            # Output the validation error messages
+            self._output_err('\n'.join(e.messages))
+            self._output_err(message=_(f'Rolling back changes.'))
         except Exception as e:
             self._output_err(_(f'Failed to create client. Error occurred: {str(e).strip()}'))
             self._output_err(message=_(f'Rolling back changes.'))
@@ -268,7 +244,7 @@ class Command(BaseCommand):
                 if not Client.objects.filter(group=group).exists():
                     user.groups.add(group)
                 else:
-                    self._output(_(f'Cannot join user \'{username}\' to group \'{group_name}\': Group is referenced by a Client.'), func=self.style.WARNING)
+                    self._output(_(f'Cannot join user \'{username}\' to group \'{group_name}\': Group is referenced by a Client.'))
 
         # Process revoking user from groups...
         groups = options.get('revoke')
@@ -281,7 +257,7 @@ class Command(BaseCommand):
                     if not Client.objects.filter(group=group).exists():
                         user.groups.remove(group)
                     else:
-                        self._output(_(f'Cannot revoke user \'{username}\' from group \'{group_name}\': Group is referenced by a Client.'), func=self.style.WARNING)
+                        self._output(_(f'Cannot revoke user \'{username}\' from group \'{group_name}\': Group is referenced by a Client.'))
 
         user.save()
 
@@ -314,16 +290,7 @@ class Command(BaseCommand):
                 # Create the user with the provided username
                 user = User(username=username)
 
-                # Prompt for password and confirmation
-                password = getpass.getpass(prompt=_('Enter password: '))
-                password_confirm = getpass.getpass(prompt=_('Confirm password: '))
-
-                if password != password_confirm:
-                    self._output_err(_('Passwords do not match.'))
-                    return
-
-                # Set the password securely
-                user.set_password(password)
+                self.set_password(user=user, prompt='user\'s')
 
                 user, token = self._set_user_data(username=username, user=user, options=options)
 
@@ -337,6 +304,10 @@ class Command(BaseCommand):
             self._display_user(user, token)
         except User.DoesNotExist:
             self._output_err(_(f'User \'{username}\' does not exist.'))
+        except ValidationError as e:
+            # Output the validation error messages
+            self._output_err('\n'.join(e.messages))
+            self._output_err(message=_(f'Rolling back changes.'))
         except Exception as e:
             self._output_err(_(f'Failed due to previous error: {str(e).strip()}'))
 
@@ -405,30 +376,65 @@ class Command(BaseCommand):
         except Exception as e:
             self._output_err(_(f'Failed due to previous error: {str(e).strip()}'))
 
-    def _output(self, message:str, pipe = None, func:Callable[[str], str] = None):
-        """
-        Display all command results other than help message and prompts for input.
+    # def _output(self, message:str, pipe = None):
+    #     """
+    #     Display all command results other than help message and prompts for input.
 
-        Args:
-            self    (BaseCommand): self object.
-            message (str):         String message to display.
-            func    (func):        if not None then defer to that function for formatting. Ignored if json input parameter is True. If None then default to self.style.SUCCESS.
-        """
-        if pipe is None:
-            pipe = self.stdout
+    #     Args:
+    #         self    (BaseCommand): self object.
+    #         message (str):         String message to display.
+    #         pipe    (Any):         Pipe to print message to.
+    #     """
+    #     if pipe is None:
+    #         pipe = self.stdout
 
-        # Provide a default function if none is provided
-        if func is None:
-            func = self.style.SUCCESS
-
-        # Handle standard output
-        pipe.write(func(message))
+    #     print(message)
+    #     pipe.write(message)
 
     def _output_success(self, message:str):
-        self._output(message=message, pipe=self.stdout, func=self.style.SUCCESS)
+        if message is None:
+            print('message is None!')
+            # message = ''
+        self.stdout.write(message)
 
     def _output_err(self, message:str):
-        self._output(message=message, pipe=self.stderr, func=self.style.ERROR)
+        self.stderr.write(message)
+
+    def _dict_to_message(self, dct):
+        if dct is None:
+            return ''
+
+        max_key_width = max(len(str(key)) for key in dct.keys()) + 1
+        lines = []
+
+        for key, val in dct.items():
+            key = key.replace('_', ' ').title() + ':'
+            if val is None:
+                val = 'None'
+            elif isinstance(val, bool):
+                if val:
+                    val = 'True'
+                else:
+                    val = 'False'
+            elif isinstance(val, datetime):
+                val = val.isoformat()
+            elif isinstance(val, Group):
+                val = _(f'{val.name} (id: {val.id})')
+
+            lines.append(f'{key:{max_key_width}} {val}')
+        return '\n'.join(lines)
+
+    def _display_client(self, client):
+        info = model_to_dict(client, exclude='group')
+        info.update({'group': client.group})
+        self._output_success(self._dict_to_message(info))
+
+    def _display_user(self, user, token):
+        info = model_to_dict(user, exclude=['password'])
+        if token:
+            info.update({'Authorization': f'Token {token.key}'})
+
+        self._output_success(self._dict_to_message(info))
 
     @staticmethod
     def str_to_bool(value):

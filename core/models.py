@@ -18,6 +18,7 @@ import importlib
 import logging
 import uuid
 
+from collections.abc import Mapping
 from jsonschema import validate, ValidationError
 
 from db_mutex.db_mutex import db_mutex
@@ -90,46 +91,6 @@ class WarehauserAbstractModel(models.Model):
             del self._callback
         except Exception as e:
             pass
-
-    def get_parents(self, include_self=False):
-        """
-        Get a list of unique model objects that are parents to self.
-
-        Args:
-            include_self (bool): True if include self in returned list.
-        
-        Returns:
-            list: a list of model objects related to self through parent relations.
-        """
-        relatives = set()
-
-        if include_self:
-            relatives.add(self)
-
-        def _traverse_up(obj):
-            nonlocal relatives
-
-            parent = obj.parent
-            if parent:
-                if relatives.add(parent):
-                    _traverse_up(obj=parent)
-
-        _traverse_up(self)
-
-        return list(relatives)
-
-    def get_status(self):
-        """
-        Get the status of this model object restricted by the status of all parents.
-
-        Returns:
-            int: status code.
-        """
-        status = self.status
-        for w in self.get_parents(include_self=False):
-            if w.status < status:
-                status = w.status
-        return status
 
     def set_option(self, key, value):
         """
@@ -224,7 +185,7 @@ class WarehauserAbstractModel(models.Model):
             raise WarehauserError(msg=_('Model object is not saved.'), code=WarehauserErrorCodes.MODEL_NOT_SAVED)
         return db_mutex(f'{self.__module__}.{self.__class__.__name__.lower()}:{self.id}')
 
-    def log(self, level, msg, extra=None):
+    def log(self, level, msg, extra:Mapping[str,object]=None):
         """
         Log a message specific to this model object.
 
@@ -328,6 +289,46 @@ class WarehauserAbstractInstanceModel(WarehauserAbstractModel):
     """
     value       = models.CharField(max_length=CHARFIELD_MAX_LENGTH, null=False, blank=False,)
 
+    def get_parents(self, include_self=False):
+        """
+        Get a list of unique model objects that are parents to self.
+
+        Args:
+            include_self (bool): True if include self in returned list.
+        
+        Returns:
+            list: a list of model objects related to self through parent relations.
+        """
+        relatives = set()
+
+        if include_self:
+            relatives.add(self)
+
+        def _traverse_up(obj):
+            nonlocal relatives
+
+            parent = obj.parent
+            if parent:
+                if relatives.add(parent):
+                    _traverse_up(obj=parent)
+
+        _traverse_up(self)
+
+        return list(relatives)
+
+    def get_status(self):
+        """
+        Get the status of this model object restricted by the status of all parents.
+
+        Returns:
+            int: status code.
+        """
+        status = self.status
+        for w in self.get_parents(include_self=False):
+            if w.status < status:
+                status = w.status
+        return status
+
     class Meta:
         abstract = True
 
@@ -374,7 +375,6 @@ class WarehauseDef(WarehauserAbstractDefinitionModel, WarehauseFields):
 
     Attributes:
         owner  (Client): the client that owns this data.
-        status (int):    the status of this WarehauseDef with available choices of core.status.WAREHAUSEDEF_STATUS_CODES.
 
     Example:
         ```
@@ -386,7 +386,6 @@ class WarehauseDef(WarehauserAbstractDefinitionModel, WarehauseFields):
         ```
     """
     owner       = models.ForeignKey('Client', on_delete=models.CASCADE, related_name='warehausedefs', null=False, blank=False,)
-    status      = models.IntegerField(choices=WAREHAUSEDEF_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
 
     def create_instance(self, data:dict=None, callback=None):
         """
@@ -607,7 +606,6 @@ class ProductDef(WarehauserAbstractDefinitionModel, ProductFields):
 
     Attributes:
         owner      (Client):          the client that owns this data.
-        status     (int):             the status of this ProductDef with available choices of core.status.PRODUCT_STATUS_CODES.
         warehauses (list(Warehause)): a list of appropriate Warehauses this ProductDef can be stored. If none are listed then store at any Warehause that returns is_storage True. All Warehauses listed mean this ProductDef can be stored at that
                                       Warehause and all children Warehauses that return is_storage True
 
@@ -621,7 +619,6 @@ class ProductDef(WarehauserAbstractDefinitionModel, ProductFields):
         ```
     """
     owner       = models.ForeignKey('Client', on_delete=models.CASCADE, related_name='productdefs', null=False, blank=False,)
-    status      = models.IntegerField(choices=PRODUCTDEF_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
     warehauses  = models.ManyToManyField(Warehause)
 
     def create_instance(self, data:dict=None, callback=None):
@@ -909,7 +906,6 @@ class EventDef(WarehauserAbstractDefinitionModel, EventFields):
 
     Attributes:
         owner  (Client): the client that owns this data.
-        status (int):    the status of this EventDef with available choices of core.status.EVENTDEF_STATUS_CODES.
 
     Example:
         ```
@@ -921,7 +917,6 @@ class EventDef(WarehauserAbstractDefinitionModel, EventFields):
         ```
     """
     owner       = models.ForeignKey('Client', on_delete=models.CASCADE, related_name='eventdefs', null=False, blank=False,)
-    status      = models.IntegerField(choices=EVENTDEF_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
 
     def create_instance(self, data:dict = None, callback:ModelCallback = None):
         if not isinstance(callback, EventCallback):

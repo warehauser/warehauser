@@ -7,17 +7,19 @@ from ...core.serializers import *
 
 # How to create a task:
 #
-# 1. Rename this file to core/tasks.py (remove the .git extension).
+# 1. Create a Client <clientname> (see python manage.py authtool client create -h)
+# 2. Create a module logic.<clientname> in <warehauser base dir>/logic/<clientname>/:
+#       * add a __init__.py empty file, and
+#       * add a tasks.py file and copy the contents of this template into that file.
+# 3. Tasks take the form of:
 #
-# 2. Tasks take the form of:
+#       def <your task name>(event: Event):
+#           # Your code here...
+#           pass
 #
-#    def <your task name>(event: Event):
-#       # Your code here...
-#       pass
-#
-# 3. create an EventDef with the proc_name = '<your task name>' using the appropriate warehauser API (default is POST /api/eventdefs/).
-# 4. create an Event via its <EventDef> using the appropriate warehauser API (default is POST /api/eventdefs/<id>/do_spawn/).
-# 5. if the Event.is_batched is False then the <your task name> function will be
+# 4. Create an EventDef with the proc_name = 'logic.<clientnamne>.tasks.<your task name|my_event_process>' using the appropriate warehauser API (default is POST /api/eventdefs/).
+# 5. Create an Event via its <EventDef> using the appropriate warehauser API (default is POST /api/eventdefs/<id>/do_spawn/).
+# 6. If the Event.is_batched is False then the <your task name> function will be
 #    executed immediately. Otherwise it will be executed when Event.process()
 #    is called.
 #

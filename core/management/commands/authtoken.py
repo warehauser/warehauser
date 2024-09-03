@@ -25,9 +25,9 @@ class Command(BaseCommand):
                 token = Token.objects.filter(user=user).first()
                 if token:
                     token.delete()
-                    self.stdout.write(self.style.SUCCESS(_('Token deleted successfully.')))
+                    self.stdout.write(_('Token deleted successfully.'))
                 else:
-                    self.stdout.write(self.style.ERROR(_('No token exists for this user.')))
+                    self.stderr.write(_('No token exists for this user.'))
             else:
                 if create:
                     token, created = Token.objects.get_or_create(user=user)
@@ -35,8 +35,8 @@ class Command(BaseCommand):
                     try:
                         token = Token.objects.get(user=user)
                     except Token.DoesNotExist:
-                        self.stderr.write(self.style.ERROR(_(f'Token for user \'{username}\' not found.')))
+                        self.stderr.write(_(f'Token for user \'{username}\' not found.'))
                         return
-                self.stdout.write(self.style.SUCCESS(f'Authorization: Token {token.key}'))
+                self.stdout.write(f'Authorization: Token {token.key}')
         except ObjectDoesNotExist:
-            self.stdout.write(self.style.ERROR(_('User does not exist.')))
+            self.stdout.write(_('User does not exist.'))
