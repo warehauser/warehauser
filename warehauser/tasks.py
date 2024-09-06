@@ -21,6 +21,7 @@ from db_mutex import DBMutexError, DBMutexTimeoutError
 from db_mutex.db_mutex import db_mutex
 from urllib.parse import urljoin
 
+from django.core.mail import send_mail
 from django.db.models import ProtectedError, Q
 from django.utils import timezone
 from django.utils.translation import gettext as _
@@ -123,7 +124,6 @@ class GarbageCollectorThread(WarehauserThread):
         except DBMutexTimeoutError as e:
             raise WarehauserError(_('Unable to secure mutex for garbagecollector.'), WarehauserErrorCodes.MUTEX_TIMEOUT_ERROR, {_('error'): e})
 
-import json
 class EmailThread(WarehauserThread):
     def _send_password_change_emails(self):
         auxs = UserAux.objects.filter(

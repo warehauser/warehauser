@@ -46,6 +46,7 @@ referencing==0.35.1
 requests==2.31.0
 rpds-py==0.19.0
 schedule==1.2.1
+sendmail==2.0
 silx==2.1.0
 six==1.16.0
 soupsieve==2.5
@@ -53,3 +54,4 @@ sqlparse==0.4.4
 typing_extensions==4.9.0
 tzdata==2023.4
 urllib3==2.2.1
+wcwidth==0.2.13

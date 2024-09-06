@@ -199,12 +199,6 @@ class WarehauserAbstractModel(models.Model):
     def __eq__(self, other) -> bool:
         return self.__dict__ == other.__dict__
 
-    def __str__(self) -> str:
-        return self.descr
-
-    def __repr__(self) -> str:
-        return f'{self.__class__.__name__}(id={self.id}, descr=\'{self.descr}\')'
-
     class Meta:
         abstract = True
         ordering = ['updated_at', 'created_at',]
@@ -279,6 +273,12 @@ class WarehauserAbstractDefinitionModel(WarehauserAbstractModel):
 
         return model
 
+    def __str__(self) -> str:
+        return self.key
+
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}(id={self.id}, key=\'{self.key}\')'
+
     class Meta:
         abstract = True
 
@@ -328,6 +328,12 @@ class WarehauserAbstractInstanceModel(WarehauserAbstractModel):
             if w.status < status:
                 status = w.status
         return status
+
+    def __str__(self) -> str:
+        return f'{self.key}=\'{self.value}\''
+
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}(id={self.id}, key=\'{self.key}\', descr=\'{self.value}\')'
 
     class Meta:
         abstract = True
@@ -895,7 +901,7 @@ class EventFields(models.Model):
         proc_name  (str):   process name (name of module.function) that this event will process or None if this event has no process.
     """
     is_batched  = models.BooleanField(null=False, blank=False, default=False,)
-    proc_name   = models.CharField(max_length=CHARFIELD_MAX_LENGTH, null=True, blank=True, editable=False,)
+    proc_name   = models.CharField(max_length=CHARFIELD_MAX_LENGTH, null=True, blank=True,)
 
     class Meta:
         abstract = True
@@ -967,6 +973,7 @@ class Event(WarehauserAbstractInstanceModel, EventFields):
 
             if '.' in proc_name:
                 base_module, proc_name = proc_name.rsplit('.', 1)
+            print(base_module)
 
             module = importlib.import_module(base_module)
             proc_func = getattr(module, proc_name)

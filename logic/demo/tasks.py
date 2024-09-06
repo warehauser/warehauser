@@ -1,7 +1,11 @@
 # tasks.py
 
-from ...core.models import *
-from ...core.serializers import *
+import logging
+
+from django.utils.translation import gettext as _
+
+from core.models import *
+from core.serializers import *
 
 # Define your process logic here.
 
@@ -26,5 +30,10 @@ from ...core.serializers import *
 # NOTE: the warehauser/scheduler.py can schedule an EventQueueThread which will
 #    process unprocessed Events that are is_batched True
 
+logger = logging.getLogger('')
+
 def my_event_process(event:Event):
-    pass
+    # Remember to set the owner of any model object you create to the owner of the event like so:
+    # client:Client = event.owner
+    # dfn:WarehauseDef = WarehauseDef(owner=client,[...])
+    logger.info(_('Hello World!'))

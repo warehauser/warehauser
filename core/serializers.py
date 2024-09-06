@@ -100,7 +100,7 @@ class WarehauseSerializer(WarehauserSerializer):
         model = Warehause
         fields = '__all__'
         depth = 1
-        extra_kwargs = { 'parent': { 'allow_null': True, 'required': False,},}
+        extra_kwargs = {'parent': { 'allow_null': True, 'required': False,},}
 
 
 # Product model serializers
@@ -110,7 +110,7 @@ class ProductDefSerializer(WarehauserSerializer):
         model = ProductDef
         fields = '__all__'
         depth = 1
-        extra_kwargs = { 'parent': { 'allow_null': True, 'required': False,},}
+        extra_kwargs = {'parent': { 'allow_null': True, 'required': False,},}
 
 class ProductSerializer(WarehauserSerializer):
     dfn       = productdef_related_field_serializer
@@ -133,7 +133,7 @@ class ProductSerializer(WarehauserSerializer):
         model = Product
         fields = '__all__'
         depth = 1
-        extra_kwargs = { 'parent': { 'allow_null': True, 'required': False,},}
+        extra_kwargs = {'parent': {'allow_null': True, 'required': False,},}
 
 
 # Event model serializers
@@ -143,7 +143,7 @@ class EventDefSerializer(WarehauserSerializer):
         model = EventDef
         fields = '__all__'
         depth = 1
-        extra_kwargs = { 'parent': { 'allow_null': True, 'required': False,},}
+        extra_kwargs = {'parent': {'allow_null': True, 'required': False,},}
 
 class EventSerializer(WarehauserSerializer):
     dfn       = eventdef_related_field_serializer
@@ -174,7 +174,7 @@ class EventSerializer(WarehauserSerializer):
         model = Event
         fields = '__all__'
         depth = 1
-        extra_kwargs = { 'parent': { 'allow_null': True, 'required': False,},}
+        extra_kwargs = {'parent': { 'allow_null': True, 'required': False,},}
 
 class ClientSerializer(serializers.ModelSerializer):
     class Meta:

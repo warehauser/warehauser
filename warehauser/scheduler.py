@@ -14,6 +14,8 @@
 
 # scheduler.py
 
+# TODO: Convert this to a BaseCommand in core app
+
 import sys
 import os
 import schedule
@@ -38,8 +40,8 @@ import tasks
 cron = [
     schedule.every().day.at("00:00").do(lambda: tasks.ArchiverThread().start()),
     schedule.every().day.at("17:00").do(lambda: tasks.GenerateReportsThread().start()),
-    schedule.every(1).minutes.do(lambda: tasks.EventQueueThread().start()),
     schedule.every(1).minutes.do(lambda: tasks.GarbageCollectorThread().start()),
+    schedule.every(10).seconds.do(lambda: tasks.EventQueueThread().start()),
     schedule.every(10).seconds.do(lambda: tasks.EmailThread().start()),
 ]
 
