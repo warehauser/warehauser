@@ -828,8 +828,7 @@ class Product(WarehauserAbstractInstanceModel, ProductFields):
             if quantity > self.quantity:
                 raise WarehauserError(msg=_('Not enough current quantity to complete the split.'), code=WarehauserErrorCodes.WAREHAUSE_STOCK_TOO_LOW, extra={'self': self})
             elif quantity == self.quantity:
-                remaining = self
-                return remaining
+                return None
 
             remainder = float(self.quantity - quantity)
             self.quantity = quantity
