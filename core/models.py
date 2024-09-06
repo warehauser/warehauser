@@ -657,7 +657,7 @@ class Product(WarehauserAbstractInstanceModel, ProductFields):
     status      = models.IntegerField(choices=PRODUCT_STATUS_CODES, default=STATUS_OPEN, null=False, blank=False,)
     dfn         = models.ForeignKey('ProductDef', on_delete=models.CASCADE, related_name='instances', null=False, blank=False, editable=False,)
 
-    warehause   = models.ForeignKey('Warehause', on_delete=models.CASCADE, related_name='stock', null=True, blank=True,)
+    warehause   = models.ForeignKey('Warehause', on_delete=models.CASCADE, related_name='stock', null=False, blank=False,)
 
     quantity    = models.FloatField(null=False, blank=False, default=1.0,)
     reserved    = models.FloatField(null=False, blank=False, default=0.0,)
@@ -742,12 +742,10 @@ class Product(WarehauserAbstractInstanceModel, ProductFields):
             self.reserved = self.reserved + quantity
         except Exception as e:
             err = e
+            raise err
         finally:
             if self.callback is not None:
                 self.callback.post_reserve(model=self, quantity=quantity, err=err)
-
-        if err:
-            raise err
 
         return quantity
 
@@ -784,12 +782,10 @@ class Product(WarehauserAbstractInstanceModel, ProductFields):
                 self.reserved = max(float(0.0), self.reserved - quantity)
         except Exception as e:
             err = e
+            raise err
         finally:
             if self.callback is not None:
                 self.callback.post_unreserve(model=self, quantity=quantity, err=err)
-
-        if err:
-            raise err
 
         return quantity
 
@@ -809,14 +805,10 @@ class Product(WarehauserAbstractInstanceModel, ProductFields):
             product.quantity = float(0.0)
         except Exception as e:
             err = e
+            raise err
         finally:
             if self.callback is not None:
                 self.callback.post_join(model=self, product=product, err=err)
-
-        if err:
-            raise err
-
-        pass
 
     def split(self, quantity=float(1.0)):
         """
@@ -837,7 +829,6 @@ class Product(WarehauserAbstractInstanceModel, ProductFields):
                 raise WarehauserError(msg=_('Not enough current quantity to complete the split.'), code=WarehauserErrorCodes.WAREHAUSE_STOCK_TOO_LOW, extra={'self': self})
             elif quantity == self.quantity:
                 product = self
-                product.warehause = None
                 return product
 
             self.quantity = float(self.quantity - quantity)
@@ -856,10 +847,6 @@ class Product(WarehauserAbstractInstanceModel, ProductFields):
                 del data['updated_at']
             except KeyError:
                 pass
-            try:
-                del data['warehause']
-            except KeyError:
-                pass
 
             data['quantity'] = quantity
 
@@ -872,15 +859,12 @@ class Product(WarehauserAbstractInstanceModel, ProductFields):
                     self.status = STATUS_DESTROY
                 else:
                     self.status = STATUS_CLOSED
-                self.warehause = None
         except Exception as e:
             err = e
+            raise err
         finally:
             if self.callback is not None:
                 self.callback.post_split(model=self, quantity=quantity, result=product, err=err)
-
-        if err:
-            raise err
 
         return product
 

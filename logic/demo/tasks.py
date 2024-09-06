@@ -36,4 +36,8 @@ def my_event_process(event:Event):
     # Remember to set the owner of any model object you create to the owner of the event like so:
     # client:Client = event.owner
     # dfn:WarehauseDef = WarehauseDef(owner=client,[...])
+
     logger.info(_('Hello World!'))
+
+    # Also remember to set the event status (see core/status.py for more info)
+    event.status = STATUS_CLOSED
