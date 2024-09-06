@@ -960,7 +960,9 @@ class Event(WarehauserAbstractInstanceModel, EventFields):
     proc_end    = models.DateTimeField(auto_now_add=False, null=True, blank=True, editable=False,)
 
     def process(self):
-        base_module = 'core.tasks'
+        # Set EVENT_LOGIC_APP to 'logic' if it's None or doesn't exist
+        event_logic_app = getattr(settings, 'EVENT_LOGIC_APP', 'logic')
+
         proc_name = str(self.proc_name)
 
         if self.callback is not None:
@@ -971,19 +973,30 @@ class Event(WarehauserAbstractInstanceModel, EventFields):
             if self.proc_name is None:
                 return None
 
-            if '.' in proc_name:
-                base_module, proc_name = proc_name.rsplit('.', 1)
-            print(base_module)
+            # Determine base_module based on whether proc_name contains a '.'
+            if '.' not in proc_name:
+                base_module = f'{event_logic_app}.{self.owner.group.name}.tasks'
+            else:
+                # Split the proc_name to check further conditions
+                proc_parts = proc_name.split('.', 1)
+                if proc_parts[0] == 'lib' or proc_parts[0] == self.owner.group.name:
+                    base_module = f'{event_logic_app}.{proc_parts[0]}'
+                    proc_name = proc_parts[1]
+                else:
+                    base_module = f'{event_logic_app}.{self.owner.group.name}.{proc_parts[0]}'
+                    proc_name = proc_parts[1]
 
+            # Load the module and function dynamically
             module = importlib.import_module(base_module)
             proc_func = getattr(module, proc_name)
 
+            # Update status and timestamps
             self.proc_start = timezone.now()
             self.status = STATUS_PROCESSING
             self.save()
 
             try:
-                proc_func(self)
+                proc_func(self)  # Call the process function
             finally:
                 self.proc_end = timezone.now()
                 self.save()
