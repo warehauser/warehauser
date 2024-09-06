@@ -831,9 +831,11 @@ class Product(WarehauserAbstractInstanceModel, ProductFields):
                 product = self
                 return product
 
-            self.quantity = float(self.quantity - quantity)
+            remainder = float(self.quantity - quantity)
+            self.quantity = quantity
 
             data = model_to_dict(self)
+            data['quantity'] = remainder
 
             try:
                 del data['id']
@@ -848,17 +850,10 @@ class Product(WarehauserAbstractInstanceModel, ProductFields):
             except KeyError:
                 pass
 
-            data['quantity'] = quantity
-
             product = Product(**data)
+            product.save()
 
-            product.log(level=logging.INFO, msg='Split product.', extra={'from': self})
-
-            if self.quantity == float(0.0):
-                if self.is_virtual:
-                    self.status = STATUS_DESTROY
-                else:
-                    self.status = STATUS_CLOSED
+            product.log(level=logging.INFO, msg='Split product.', extra={'remainder': product})
         except Exception as e:
             err = e
             raise err
