@@ -828,8 +828,8 @@ class Product(WarehauserAbstractInstanceModel, ProductFields):
             if quantity > self.quantity:
                 raise WarehauserError(msg=_('Not enough current quantity to complete the split.'), code=WarehauserErrorCodes.WAREHAUSE_STOCK_TOO_LOW, extra={'self': self})
             elif quantity == self.quantity:
-                product = self
-                return product
+                remaining = self
+                return remaining
 
             remainder = float(self.quantity - quantity)
             self.quantity = quantity
@@ -850,18 +850,18 @@ class Product(WarehauserAbstractInstanceModel, ProductFields):
             except KeyError:
                 pass
 
-            product = Product(**data)
-            product.save()
+            remaining = Product(**data)
+            remaining.save()
 
-            product.log(level=logging.INFO, msg='Split product.', extra={'remainder': product})
+            remaining.log(level=logging.INFO, msg='Split product.', extra={'remainder': remaining})
         except Exception as e:
             err = e
             raise err
         finally:
             if self.callback is not None:
-                self.callback.post_split(model=self, quantity=quantity, result=product, err=err)
+                self.callback.post_split(model=self, quantity=quantity, result=remaining, err=err)
 
-        return product
+        return remaining
 
     class Meta(WarehauserAbstractInstanceModel.Meta):
         abstract = False
