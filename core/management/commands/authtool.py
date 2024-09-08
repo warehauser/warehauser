@@ -117,8 +117,7 @@ class Command(BaseCommand):
         password_confirm = getpass.getpass(prompt=_('Confirm {} password: ').format(prompt))
 
         if password != password_confirm:
-            self._output_err(_('Passwords do not match.'))
-            return
+            raise ValueError(_('Passwords do not match.'))
 
         # Validate the password using Django's validators
         validate_password(password, user=user)

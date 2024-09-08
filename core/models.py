@@ -155,7 +155,8 @@ class WarehauserAbstractModel(models.Model):
         """
         self.clean_fields(exclude=None)
 
-        if self.id:
+        # if self.id:
+        if self.pk and self.__class__.objects.filter(pk=self.pk).exists():
             self.updated_at = timezone.now()
 
         super().save(*args, **kwargs)
