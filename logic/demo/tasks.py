@@ -41,3 +41,29 @@ def my_event_process(event:Event):
 
     # Also remember to set the event status (see core/status.py for more info)
     event.status = STATUS_CLOSED
+
+def newCustomerOrder(event:Event):
+    pass
+
+def transportEvent(event:Event):
+
+    # get the event options (JSONField) data.
+    options = event.options
+    typ_ = options.get('type', '').lower()
+
+    if typ_ == 'arrival':
+        dfn = WarehauseDef.objects.get(key='Transport')
+        event.warehause = dfn.create_instance(data=options.get('data'))
+    elif typ_ == 'depart':
+        pass
+
+    event.status = STATUS_CLOSED
+
+def inboundWarehause(event:Event):
+    pass
+
+def inboundProduct(event:Event):
+    pass
+
+def transferProduct(event:Event):
+    pass
