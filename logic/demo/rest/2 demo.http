@@ -1,0 +1,24 @@
+# demo.http
+
+# @import ./1 setup.http
+
+#
+# Get all models created in setup
+#
+
+###
+GET http://localhost:8000/api/warehausedefs/
+Content-Type: application/json
+Authorization: Token {{authtoken}}
+###
+GET http://localhost:8000/api/productdefs/
+Content-Type: application/json
+Authorization: Token {{authtoken}}
+###
+GET http://localhost:8000/api/eventdefs/
+Content-Type: application/json
+Authorization: Token {{authtoken}}
+###
+GET http://localhost:8000/api/warehauses/
+Content-Type: application/json
+Authorization: Token {{authtoken}}
