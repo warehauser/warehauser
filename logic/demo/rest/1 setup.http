@@ -1,4 +1,4 @@
-# setup.http
+# 1 setup.http
 
 # @import ./auth.http
 
@@ -13,21 +13,9 @@ Authorization: Token {{authtoken}}
 
 {
    "key": "Warehouse",
-   "external_id": null,
-   "schema": null,
-   "options": null,
-   "is_virtual": false,
    "is_mobile": false,
    "is_storage": false,
-   "is_permissive": false,
-   "max_weight": null,
-   "max_height": null,
-   "max_width": null,
-   "max_length": null,
-   "tare_weight": null,
-   "tare_height": null,
-   "tare_width": null,
-   "tare_length": null
+   "is_permissive": false
 }
 
 > {%
@@ -103,6 +91,12 @@ Authorization: Token {{authtoken}}
    wdef_transport = responseData.id;
 %}
 
+###
+GET http://localhost:8000/api/warehausedefs/
+Content-Type: application/json
+Authorization: Token {{authtoken}}
+
+
 #
 # Product Definitions
 #
@@ -114,10 +108,6 @@ Authorization: Token {{authtoken}}
 
 {
    "key": "Chocolate Bar",
-   "external_id": null,
-   "schema": null,
-   "options": null,
-   "is_virtual": false,
    "code_count": 1,
    "atomic": null,
    "is_fragile": true,
@@ -134,6 +124,11 @@ Authorization: Token {{authtoken}}
    pdef_chocolatebar = responseData.id;
 %}
 
+###
+GET http://localhost:8000/api/productdefs/
+Content-Type: application/json
+Authorization: Token {{authtoken}}
+
 #
 # Event Definitions
 #
@@ -145,10 +140,6 @@ Authorization: Token {{authtoken}}
 
 {
    "key": "PurchaseOrder",
-   "external_id": null,
-   "schema": null,
-   "options": null,
-   "is_virtual": false,
    "is_batched": false,
    "proc_name": null
 }
@@ -217,6 +208,11 @@ Authorization: Token {{authtoken}}
    edef_transfer = responseData.id;
 %}
 
+###
+GET http://localhost:8000/api/eventdefs/
+Content-Type: application/json
+Authorization: Token {{authtoken}}
+
 #
 # Initial Environment
 #
@@ -273,3 +269,8 @@ Authorization: Token {{authtoken}}
    const responseData = response.body;
    w_bin = responseData.id;
 %}
+
+###
+GET http://localhost:8000/api/warehauses/
+Content-Type: application/json
+Authorization: Token {{authtoken}}
