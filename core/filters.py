@@ -153,7 +153,7 @@ class ProductFilter(WarehauserFilterSet):
             **FILTER_FIELDS_INSTANCE_STANDARD,
             **FILTER_FIELDS_PRODUCT_COMMON,
             'quantity': ['exact', 'isnull', 'lt', 'lte', 'gt', 'gte',],
-            'reserved': ['exact', 'lt', 'lte', 'gt', 'gte', 'isnull',],
+            # 'reserved': ['exact', 'lt', 'lte', 'gt', 'gte', 'isnull',],
             'expires': ['exact', 'isnull', 'lt', 'lte', 'gt', 'gte',],
             'is_damaged': ['exact',],
         }

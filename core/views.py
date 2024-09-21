@@ -126,11 +126,6 @@ class WarehauserBaseViewSet(viewsets.ModelViewSet):
             # Set the owner field to the retrieved group
             data['owner'] = owner.id
 
-        # Retrieve the user's group that starts with 'client_'
-        # group = filter_owner_groups(request.user.groups).first()
-        # if not group:
-        #     raise ValidationError({'error': _('User is not a member of any client group.')})
-
         # return super().create(request, *args, **kwargs)
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
@@ -194,7 +189,6 @@ class WarehauserDefinitionViewSet(WarehauserBaseViewSet):
         data = request.data
 
         instance = dfn.create_instance(data)
-        instance.save()
 
         return instance
 
@@ -255,8 +249,6 @@ class EventDefViewSet(WarehauserDefinitionViewSet):
         if not instance.is_batched:
             # process immediately
             instance.process()
-        else:
-            instance.save()
 
         serializer = self.instance_serializer_class(instance)
         return Response(serializer.data, status=status.HTTP_200_OK)

@@ -16,32 +16,47 @@
 
 import logging
 
+from jsonschema import validate, ValidationError
+from django.utils import timezone
+from django.utils.translation import gettext as _
+
 from .status import STATUS_OPEN
 from .utils  import WarehauserError, WarehauserErrorCodes
 
 class ModelCallback:
+
+    def check_options(self, model):
+        """
+        Validates the options field against the schema field if the schema is not None. Called at time of save().
+        """
+        if model.schema and model.options:
+            try:
+                validate(instance=model.options, schema=model.schema)
+            except ValidationError as e:
+                raise ValidationError({'options': _(f"Invalid options data: {e.message}")})
+        pass
+
     def check_status(self, model):
         if model.get_status() != STATUS_OPEN:
-            raise WarehauserError(msg=f'{model._meta.verbose_name} status is not OPEN.', code=WarehauserErrorCodes.STATUS_ERROR, extra={'self': model, 'status': model.status})
+            raise WarehauserError(msg=_(f'{model._meta.verbose_name} status is not OPEN.'), code=WarehauserErrorCodes.STATUS_ERROR, extra={'self': model, 'status': model.status})
 
     def check_not_none(self, instance, msg='', extra=None):
         if instance is None:
             raise WarehauserError(msg=msg, code=WarehauserErrorCodes.NONE_NOT_ALLOWED, extra=extra)
 
-    # Override these clean_* methods as needed.
-    # def clean_external_id(self, model):
-    #     pass
+    def pre_save(self, model):
+        self.check_options(model=model)
 
-    # def clean_key(self, model):
-    #     pass
+        if model.pk and model.__class__.objects.filter(pk=model.pk).exists():
+            model.updated_at = timezone.now()
 
-    # def clean_options(self, model):
-    #     pass
+    def post_save(self, model, err):
+        pass
 
-    # def clean_schema(self, model):
-    #     pass
+class ModelDefCallback(ModelCallback):
+    pass
 
-class WarehauseDefCallback(ModelCallback):
+class WarehauseDefCallback(ModelDefCallback):
     """
     Callback class for WarehauseDefs.
     """
@@ -51,7 +66,7 @@ class WarehauseDefCallback(ModelCallback):
     def post_create_instance(self, dfn, data, model, err):
         pass
 
-class ProductDefCallback(ModelCallback):
+class ProductDefCallback(ModelDefCallback):
     """
     Callback class for ProductDefs.
     """
@@ -61,7 +76,7 @@ class ProductDefCallback(ModelCallback):
     def post_create_instance(self, dfn, data, model, err):
         pass
 
-class EventDefCallback(ModelCallback):
+class EventDefCallback(ModelDefCallback):
     """
     Callback class for EventDefs.
     """
@@ -114,7 +129,7 @@ class WarehauseCallback(ModelCallback):
         if model.is_permissive is False:
             stock = model.get_stock(dfn=product.dfn)
             if stock is None and len(model.stock.all()) != 0:
-                raise WarehauserError(msg=f'warehause is not permissive and is already occupied with a different product type', code=WarehauserErrorCodes.DFN_NOT_ALLOWED, extra={'warehause': model, 'product': product, 'stock': stock})
+                raise WarehauserError(msg=_(f'warehause is not permissive and is already occupied with a different product type'), code=WarehauserErrorCodes.DFN_NOT_ALLOWED, extra={'warehause': model, 'product': product, 'stock': stock})
 
     def check_pre_receive_compatible_product(self, model, product):
         # If this warehause has mapped productdefs then the product must be in that list.
@@ -125,29 +140,29 @@ class WarehauseCallback(ModelCallback):
             # This warehause will only accept certain productdefs.
             if product.dfn not in allowed_productdefs:
                 # The product is not allowed in this warehause
-                raise WarehauserError(f'warehause cannot accept unmapped product {product} ProductDef {product.dfn}.', WarehauserErrorCodes.WAREHAUSE_PRODUCTDEF_NOT_MAPPED, extra={'productdefs': allowed_productdefs})
+                raise WarehauserError(_(f'warehause cannot accept unmapped product {product} ProductDef {product.dfn}.'), WarehauserErrorCodes.WAREHAUSE_PRODUCTDEF_NOT_MAPPED, extra={'productdefs': allowed_productdefs})
 
-    def check_pre_dispatch_quantity(self, model, dfn, quantity, stock):
-        if quantity <= float(0.0):
-            raise WarehauserError(msg=f'quantity must be positive.', code=WarehauserErrorCodes.BAD_PARAMETER, extra={'self': model, 'quantity': quantity})
-        if stock and stock.quantity < quantity:
-            raise WarehauserError(msg=f'Not enough stock to forfill dispatch.', code=WarehauserErrorCodes.WAREHAUSE_STOCK_TOO_LOW, extra={'self': model, 'stock': stock, 'quantity': quantity})
+    # def check_pre_dispatch_quantity(self, model, dfn, quantity, stock):
+    #     if quantity <= float(0.0):
+    #         raise WarehauserError(msg=_(f'quantity must be positive.'), code=WarehauserErrorCodes.BAD_PARAMETER, extra={'self': model, 'quantity': quantity})
+    #     if stock and stock.quantity < quantity:
+    #         raise WarehauserError(msg=_(f'Not enough stock to forfill dispatch.'), code=WarehauserErrorCodes.WAREHAUSE_STOCK_TOO_LOW, extra={'self': model, 'stock': stock, 'quantity': quantity})
 
-    def check_pre_dispatch_compatible_dfn(self, model, dfn, quantity, stock):
+    def check_pre_dispatch_compatible_dfn(self, model, dfn, quantity):
         if not model.is_permissive:
             if dfn is None:
-                raise WarehauserError(msg=f'warehause is permissive and dfn is None.', code=WarehauserErrorCodes.NONE_NOT_ALLOWED, extra={'self': model})
+                raise WarehauserError(msg=_(f'warehause is permissive and dfn is None.'), code=WarehauserErrorCodes.NONE_NOT_ALLOWED, extra={'self': model})
             found = None
             for s in model.stock.all():
                 if s.dfn == dfn:
                     found = s
                     break
             if found is None:
-                raise WarehauserError(msg=f'warehause does not contain any product of type dfn supplied.', code=WarehauserErrorCodes.WAREHAUSE_NOT_CONTAINS, extra={'self': model, 'dfn.id': dfn.id})
+                raise WarehauserError(msg=_(f'warehause does not contain any product of type dfn supplied.'), code=WarehauserErrorCodes.WAREHAUSE_NOT_CONTAINS, extra={'self': model, 'dfn.id': dfn.id})
 
     def pre_receive(self, model, product):
         self.check_status(model=model)
-        self.check_not_none(instance=product, msg=f'product is None.')
+        self.check_not_none(instance=product, msg=_(f'product is None.'))
         self.check_pre_receive_permissive(model=model, product=product)
         self.check_pre_receive_compatible_product(model=model, product=product)
         self.check_has_capacity(model=model, product=product)
@@ -155,54 +170,43 @@ class WarehauseCallback(ModelCallback):
     def post_receive(self, model, product, stock, err):
         pass
 
-    def pre_dispatch(self, model, dfn, quantity, stock):
+    def pre_dispatch(self, model, dfn, quantity):
         self.check_status(model=model)
-        self.check_pre_dispatch_quantity(model=model, dfn=dfn, quantity=quantity, stock=stock)
-        self.check_pre_dispatch_compatible_dfn(model=model, dfn=dfn, quantity=quantity, stock=stock)
+        # self.check_pre_dispatch_quantity(model=model, dfn=dfn, quantity=quantity, stock=product)
+        self.check_pre_dispatch_compatible_dfn(model=model, dfn=dfn, quantity=quantity)
 
     def post_dispatch(self, model, dfn, quantity, stock, product, err):
         pass
 
-
 # Product callback
 class ProductCallback(ModelCallback):
+    def pre_save(self, model):
+        super().pre_save(model=model)
+
+        warehause = model.warehause
+        if not warehause.is_storage:
+            raise ValueError(_(f'Product {model.id} warehause {warehause.id} is_storage is False.'))
+        elif not warehause.is_permissive:
+            if model.__class__.objects.filter(warehause=warehause).exclude(dfn=model.dfn).exists():
+                raise ValueError(_(f'Product {model.id} warehause {warehause.id} is_permissive is False and is storing conflicting product.'))
+
+        pass
+
     def check_status(self, model):
         if model.status != STATUS_OPEN:
-            raise WarehauserError(msg=f'{model.Meta.verbose_name} status is not OPEN.', code=WarehauserErrorCodes.STATUS_ERROR, extra={'self': model, 'status': model.status})
-
-    def pre_reserve(self, model, quantity):
-        self.check_status(model=model)
-
-        if quantity is None or quantity <= 0:
-            raise WarehauserError(msg=f'quantity must be a positive value.', code=WarehauserErrorCodes.BAD_PARAMETER, extra={'self': model, 'quantity': quantity})
-        if model.id is None:
-            raise WarehauserError(msg=f'Product is not saved and therefor cannot reserve.', code=WarehauserErrorCodes.MODEL_NOT_SAVED, extra={'self': model, 'quantity': quantity})
-
-    def post_reserve(self, model, quantity, err):
-        pass
-
-    def pre_unreserve(self, model, quantity):
-        self.check_status(model=model)
-
-        if quantity is not None and quantity <= 0:
-            raise WarehauserError(msg=f'quantity must be a positive value.', code=WarehauserErrorCodes.BAD_PARAMETER, extra={'self': model, 'quantity': quantity})
-        if model.id is None:
-            raise WarehauserError(msg=f'Product is not saved and therefor cannot reserve.', code=WarehauserErrorCodes.MODEL_NOT_SAVED, extra={'self': model, 'quantity': quantity})
-
-    def post_unreserve(self, model, quantity, err):
-        pass
+            raise WarehauserError(msg=_(f'{model.Meta.verbose_name} status is not OPEN.'), code=WarehauserErrorCodes.STATUS_ERROR, extra={'self': model, 'status': model.status})
 
     def pre_join(self, model, product):
         self.check_status(model)
-        self.check_not_none(instance=product, msg=f'product is None.', extra={'self': model})
+        self.check_not_none(instance=product, msg=_(f'product is None.'), extra={'self': model})
 
         # Make sure the ProductDefs of self and product are the same.
         if model.dfn != product.dfn:
-            raise WarehauserError('self.dfn value does not match product.dfn.', WarehauserErrorCodes.DFN_MISMATCH, {'self.dfn': model.dfn, 'product.dfn': product.dfn})
+            raise WarehauserError(_('self.dfn value does not match product.dfn.'), WarehauserErrorCodes.DFN_MISMATCH, {'self.dfn': model.dfn, 'product.dfn': product.dfn})
 
         # If the stock expires before the self stock expires then log error and raise exception
         if model.expires != product.expires:
-            msg = 'Not allowed to mix stock with mismatching expires.'
+            msg = _('Not allowed to mix stock with mismatching expires.')
             data = {'self.expires': model.expires, 'product.expires': product.expires}
 
             model.log(level=logging.ERROR, msg=msg, extra=data)
@@ -213,15 +217,15 @@ class ProductCallback(ModelCallback):
 
     def pre_split(self, model, quantity):
         self.check_status(model)
-        self.check_not_none(instance=model, msg=f'quantity is None.', extra={'self': model})
+        self.check_not_none(instance=model, msg=_(f'quantity is None.'), extra={'self': model})
 
         if quantity > model.quantity:
-            raise WarehauserError(msg=f'Not enough quantity in warehause to perform split.',
+            raise WarehauserError(msg=_(f'Not enough quantity in warehause to perform split.'),
                                   code=WarehauserErrorCodes.WAREHAUSE_QUANTITY_LOW,
                                   extra={'self': model, 'quantity': quantity})
 
         if quantity <= float(0.0):
-            raise WarehauserError(msg=f'quantity must be a positive float value.',
+            raise WarehauserError(msg=_(f'quantity must be a positive float value.'),
                                   code=WarehauserErrorCodes.BAD_PARAMETER,
                                   extra={'self': model, 'quantity': quantity})
 

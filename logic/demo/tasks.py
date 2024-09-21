@@ -30,7 +30,7 @@ from core.serializers import *
 # NOTE: the warehauser/scheduler.py can schedule an EventQueueThread which will
 #    process unprocessed Events that are is_batched True
 
-logger = logging.getLogger('')
+logger = logging.getLogger(__name__)
 
 def my_event_process(event:Event):
     # Remember to set the owner of any model object you create to the owner of the event like so:
@@ -42,28 +42,64 @@ def my_event_process(event:Event):
     # Also remember to set the event status (see core/status.py for more info)
     event.status = STATUS_CLOSED
 
-def newCustomerOrder(event:Event):
-    pass
+def prepare_json(clazz, options):
+    data = dict()
 
-def transportEvent(event:Event):
+    if 'data' in options:
+        # Loop through the model fields
+        for field in clazz._meta.get_fields():
+            fieldname = field.name
 
-    # get the event options (JSONField) data.
+            if fieldname in options['data']:
+                # if the field is a foreign key...
+                if isinstance(field, models.ForeignKey):
+                    # Get the related model
+                    related_model = field.related_model
+                    # Convert UUID (string) into actual object
+                    if options['data'][fieldname] is None:
+                        data[fieldname] = None
+                    else:
+                        data[fieldname] = related_model.objects.get(id=options['data'][fieldname])
+                elif isinstance(field, models.ManyToOneRel) or isinstance(field, models.ManyToManyRel):
+                    pass
+                else:
+                    data[fieldname] = options['data'][fieldname]
+
+    return data
+
+def inbound(event:Event):
     options = event.options
-    typ_ = options.get('type', '').lower()
 
-    if typ_ == 'arrival':
-        dfn = WarehauseDef.objects.get(key='Transport')
-        event.warehause = dfn.create_instance(data=options.get('data'))
-    elif typ_ == 'depart':
-        pass
+    if options['type'] == 1:
+        # Inbound a new Warehause...
+        dfn = WarehauseDef.objects.get(id=options['dfn'])
 
-    event.status = STATUS_CLOSED
+        data = prepare_json(Warehause, options)
 
-def inboundWarehause(event:Event):
+        warehause = dfn.create_instance(data=data, callback=None)
+
+        event.set_option(key='result', value={'id': str(warehause.id),})
+    elif options['type'] == 2:
+        # Inbound a new Product...
+        dfn = ProductDef.objects.get(id=options['dfn'])
+
+        data = prepare_json(Product, options)
+
+        product = dfn.create_instance(data=data, callback=None)
+
+        event.set_option(key='result', value={'id': str(product.id),})
+
+def outbound(event:Event):
     pass
 
-def inboundProduct(event:Event):
-    pass
+def transfer(event:Event):
+    options = event.options
 
-def transferProduct(event:Event):
-    pass
+    quantity = options['quantity']
+    product:Product = Product.objects.get(id=options['product_id'])
+    warehause:Warehause = Warehause.objects.get(id=options['warehause_id'])
+
+    transfered = product.split(quantity=quantity)
+    product.warehause.dispatch()
+    product.warehause = warehause
+    product.save()

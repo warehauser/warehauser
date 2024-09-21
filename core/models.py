@@ -17,17 +17,19 @@
 import importlib
 import logging
 import uuid
+import json, pprint
 
 from collections.abc import Mapping
-from jsonschema import validate, ValidationError
+from typing import Optional, Union
 
 from db_mutex.db_mutex import db_mutex
 
 from django.db import models
+from django.db.models import ForeignKey, QuerySet
+from django.db.models.fields.related import ManyToOneRel
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
-from django.forms.models import model_to_dict
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
@@ -39,6 +41,8 @@ try:
     CHARFIELD_MAX_LENGTH = settings.CHARFIELD_MAX_LENGTH
 except Exception as e:
     CHARFIELD_MAX_LENGTH = 1024
+
+logger = logging.getLogger(__name__)
 
 class WarehauserAbstractModel(models.Model):
     """
@@ -67,12 +71,8 @@ class WarehauserAbstractModel(models.Model):
     _callback   = None
 
     def __init__(self, *args, **kwargs):
-        callback = kwargs.pop('callback', None)  # Get the 'callback' argument if provided
         super().__init__(*args, **kwargs)  # Call the parent class constructor
-        
-        # Set the callback if provided
-        if callback is not None:
-            self.callback = callback
+        self.logs = []
 
     @property
     def callback(self):
@@ -114,52 +114,87 @@ class WarehauserAbstractModel(models.Model):
             self.options[key] = value
         pass
 
-    def _validate_options(self):
-        """
-        Validates the options field against the schema field if the schema is not None. Called at time of save().
-        """
-        if self.schema:
-            try:
-                validate(instance=self.options, schema=self.schema)
-            except ValidationError as e:
-                raise ValidationError({'options': f"Invalid options data: {e.message}"})
-        pass
-
-    def clean_fields(self, exclude:list=None):
-        """
-        Check field data is safe to save to the database/ backend. This operation is delegated to the callback for this model object.
-
-        Args:
-            exclude (list): the array of strings of names of fields to not clean.
-        """
-        if self._callback is None:
-            return
-
-        if not exclude:
-            exclude = list()
-
-        for field in [field for field in self._meta.fields if field.name not in exclude]:
-            # Generate method name for field
-            method_name = f'clean_{field.name}'
-
-            # Check if method exists and call it
-            if hasattr(self.callback, method_name):
-                getattr(self.callback, method_name)(self)
-
-        self._validate_options()
-        pass
-
     def save(self, *args, **kwargs):
         """
-        Overridden from super().save(). If this model object has been saved the updated_at field is updated to the current date and time.
+        Overridde super().save(). If this model object has been saved the updated_at field is updated to the current date and time.
         """
-        self.clean_fields(exclude=None)
+        if self.callback is not None:
+            if hasattr(self.callback, 'pre_save') and callable(self.callback.pre_save):
+                self.callback.pre_save(model=self)
 
-        # if self.id:
-        if self.pk and self.__class__.objects.filter(pk=self.pk).exists():
-            self.updated_at = timezone.now()
+        err:Exception = None
+        try:
+            super().save(*args, **kwargs)
+        except Exception as e:
+            err = e
+            raise e
+        finally:
+            if self.callback is not None:
+                if hasattr(self.callback, 'post_save') and callable(self.callback.post_save):
+                    self.callback.post_save(model=self, err=err)
 
-        super().save(*args, **kwargs)
+    def delete(self, *args, **kwargs):
+        """
+        Override super().delete() to log pending message(s) before the object is deleted.
+        """
+        # Log the delete action with an appropriate log level and message
+        self.log(logging.INFO, _(f"Deleting product {repr(self)}"), {'product_id': self.id})
+        self.flush_logs()
+
+        # Call the original delete method to delete the object from the database
+        super().delete(*args, **kwargs)
+
+    def flush_logs(self):
+        """
+        Log all pending message(s) and clear the log queue.
+        """
+        # Loop through all logs and log them using the logging module
+        for log in self.logs:
+            # Log the message with the specified level, message, and extras
+            if 'extra' in log:
+                logger.log(level=log['level'], msg=log['msg'], extra=log['extra'])
+            else:
+                logger.log(level=log['level'], msg=log['msg'])
+
+        # Clear the logs after logging
+        self.logs.clear()
+
+    def log(self, level, msg, extra:Optional[Mapping[str, object]]=None):
+        """
+        Log a message specific to this model object.
+
+        Args:
+            level (int):    one of logging.CRITICAL|DEBUG|INFO|ERROR.
+            msg   (string): message string to log.
+            extra (dict):   optional dictionary of extra information to log. Default is None.
+        """
+        # Define valid logging levels
+        valid_levels = {logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR, logging.CRITICAL}
+
+        # Throw an error if the level or msg is None, or if level is not valid
+        if level is None or msg is None:
+            raise ValueError(_("Both 'level' and 'msg' must be provided and cannot be None."))
+
+        if level not in valid_levels:
+            raise ValueError(_(f"Invalid logging level: {level}. Must be one of {valid_levels}."))
+
+        # Ensure extra is a mutable dictionary and record the current datetime
+        if extra is None:
+            extra = {}
+        elif not isinstance(extra, dict):
+            extra = dict(extra)  # Convert to a mutable dictionary if not already
+
+        # Add the current date and time to the extra dictionary
+        if 'dt' not in extra:
+            extra['dt'] = timezone.now()
+
+        log_entry = {
+            'level': level,
+            'msg': msg,
+            'extra': extra
+        }
+
+        self.logs.append(log_entry)
 
     def mutex(self):
         """
@@ -186,19 +221,20 @@ class WarehauserAbstractModel(models.Model):
             raise WarehauserError(msg=_('Model object is not saved.'), code=WarehauserErrorCodes.MODEL_NOT_SAVED)
         return db_mutex(f'{self.__module__}.{self.__class__.__name__.lower()}:{self.id}')
 
-    def log(self, level, msg, extra:Mapping[str,object]=None):
-        """
-        Log a message specific to this model object.
-
-        Args:
-            level (int):    one of logging.CRITICAL|DEBUG|INFO|ERROR.
-            msg   (string): message string to log.
-            extra (dict):   optional dictionary of extra information to log. Default is None.
-        """
-        logging.log(level=level, msg=msg, extra=extra)
-
     def __eq__(self, other) -> bool:
-        return self.__dict__ == other.__dict__
+        if isinstance(other, self.__class__):
+            for field in [f.name for f in self._meta.fields if f.name not in ['id', 'created_at', 'updated_at']]:
+                if getattr(self, field) != getattr(other, field):
+                    self.log(level=logging.DEBUG, msg=_(f'{self.__class__.__name__}.__eq__() FALSE: self.{field} = {getattr(self, field)}, other.{field} = {getattr(other,field)}'))
+                    return False
+            return True
+        return False
+
+    def __hash__(self):
+        return hash(self.id)
+
+    def __del__(self):
+        self.flush_logs()
 
     class Meta:
         abstract = True
@@ -253,24 +289,27 @@ class WarehauserAbstractDefinitionModel(WarehauserAbstractModel):
 
         return validated
 
-    def _create_instance(self, clazz, data:dict, callback:ModelCallback):
+    def _create_instance(self, clazz:'WarehauserAbstractInstanceModel', data:dict, callback:ModelCallback, save:bool = True):
         if self.callback:
-            self.callback.pre_create_instance(dfn=self, data=data)
+            if hasattr(self.callback, 'pre_create_instance') and callable(self.callback.pre_create_instance):
+                self.callback.pre_create_instance(dfn=self, data=data)
 
         err: Exception = None
         try:
             data = self._merge_dfn_defaults(data)
+            model = clazz.objects.create(**data)
             if isinstance(callback, ModelCallback):
-                data['callback'] = callback
-            model:WarehauserAbstractModel = clazz(**data)
+                model.callback = callback
         except Exception as e:
             err = e
+            raise e
         finally:
             if self.callback:
-                self.callback.post_create_instance(dfn=self, data=data, model=model, err=err)
+                if hasattr(self.callback, 'post_create_instance') and callable(self.callback.post_create_instance):
+                    self.callback.post_create_instance(dfn=self, data=data, model=model, err=err)
 
-        if err:
-            raise err
+        if save:
+            model.save()
 
         return model
 
@@ -334,7 +373,7 @@ class WarehauserAbstractInstanceModel(WarehauserAbstractModel):
         return f'{self.key}=\'{self.value}\''
 
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}(id={self.id}, key=\'{self.key}\', descr=\'{self.value}\')'
+        return f'{self.__class__.__name__}(id={self.id}, key=\'{self.key}\', value=\'{self.value}\')'
 
     class Meta:
         abstract = True
@@ -394,7 +433,7 @@ class WarehauseDef(WarehauserAbstractDefinitionModel, WarehauseFields):
     """
     owner       = models.ForeignKey('Client', on_delete=models.CASCADE, related_name='warehausedefs', null=False, blank=False,)
 
-    def create_instance(self, data:dict=None, callback=None):
+    def create_instance(self, data:dict=None, callback=None, save:bool = True):
         """
         Create an instance of this definition.
 
@@ -404,7 +443,7 @@ class WarehauseDef(WarehauserAbstractDefinitionModel, WarehauseFields):
         """
         if not isinstance(callback, WarehauseCallback):
             callback = WarehauseCallback()
-        return super()._create_instance(clazz=Warehause, data=data, callback=callback)
+        return super()._create_instance(clazz=Warehause, data=data, callback=callback, save=save)
 
     class Meta(WarehauserAbstractDefinitionModel.Meta):
         abstract = False
@@ -481,30 +520,90 @@ class Warehause(WarehauserAbstractInstanceModel, WarehauseFields):
             mapped_productdefs.add(pdefs)
         return mapped_productdefs
 
-    def get_stock(self, dfn=None, all=False):
+    def reserve(self, dfn:'ProductDef', quantity:float) -> 'Product':
         """
-        Get the non depleted stock for with Warehause of a dfn type.
+        Reserve a specified quantity of product from stock.
+
+        This method fetches available stock of the given product definition (`dfn`), 
+        splits the specified quantity from the stock, saves both the remaining stock 
+        and the reserved portion, and returns the reserved portion.
+
+        Args:
+            dfn (ProductDef): The product definition to reserve stock from.
+            quantity (float): The quantity of the product to reserve.
+
+        Returns:
+            Product: The reserved product with the specified quantity, or None if stock not found.
+
+        Raises:
+            Exception: If the quantity exceeds available stock or is not positive.
+        """
+        if dfn is None:
+            raise ValueError('dfn must be specified.')
+
+        stock:Product = self.get_stock(dfn=dfn)
+        if not stock:
+            return None
+
+        reserved:Product = stock.split(quantity=quantity)
+
+        # Save the objects
+        stock.save()
+        reserved.save()
+
+        return reserved
+
+    def unreserve(self, product: 'Product'):
+        """
+        Unreserve a product by joining it back to its parent.
+
+        This method handles the process of unreserving a product, which involves:
+        - Checking if the given product is None or has no parent. If either condition is true, the method will return early.
+        - If the product has a parent, it will be joined back to the parent using the `join` method.
+
+        Args:
+            product (Product): The product to be unreserved. This product should have a parent.
+
+        Returns:
+            None
+        """
+        if product is None:
+            return
+
+        parent: Product = product.parent
+        if parent is None:
+            return
+
+        parent.join(product=product)
+        parent.save()
+
+    def get_stock(self, dfn:'ProductDef'=None, seed_only:bool=True) -> Union['Product', QuerySet]:
+        """
+        Get the non depleted non reserved stock for with Warehause of a dfn type.
 
         Args:
             dfn (ProductDef, optional): the type of Product to search for.
-            all (bool, optional):       False (default) if you only want the first non depleted stock. Otherwise return all non depleted stock.
-        
+            seed_only (bool, optional): Get the seed (unreserved stock only) if True (default), otherwise get all False
+
         Returns:
-            QuerySet: the QuerySet of the non depleted Product objects matching the search criteria.
+            Product: the seed Product object (if exists) matching the search criteria.
         """
-        stock = self.stock.all()  # Get all stock objects related to this Warehause
+        res = self.stock
+
+        if seed_only:
+            res = res.filter(parent__isnull=True)
 
         if dfn is None:
-            # Filter out depleted stock if dfn is not provided
-            stock = stock.exclude(quantity=float(-1.0)).order_by('dfn', 'created_at')
-        else:
-            # Filter by both dfn and non-depleted stock if dfn is provided
-            stock = stock.filter(dfn=dfn).exclude(quantity=float(-1.0)).order_by('created_at')
+            # Filter for non-depleted stock where quantity is non negative and parent is None
+            return res.filter(quantity__gte=0.0).order_by('dfn', 'created_at')
 
-        if all:
-            return stock
-        else:
-            return stock.first()
+        res = res.filter(dfn=dfn, quantity__gte=0.0)
+        if res.count() == 0:
+            return None
+        if res.count() == 1:
+            return res.first()
+
+        return res.order_by('dfn', 'created_at')
 
     def receive(self, product):
         """
@@ -515,7 +614,8 @@ class Warehause(WarehauserAbstractInstanceModel, WarehauseFields):
         """
         product:Product = product
         if self.callback:
-            self.callback.pre_receive(model=self, product=product)
+            if hasattr(self.callback, 'pre_receive') and callable(self.callback.pre_receive):
+                self.callback.pre_receive(model=self, product=product)
 
         err = None
 
@@ -528,16 +628,15 @@ class Warehause(WarehauserAbstractInstanceModel, WarehauseFields):
                 stock = product
         except Exception as e:
             err = e
+            raise e
         finally:
             if self.callback:
-                self.callback.post_receive(model=self, product=product, stock=stock, err=err)
-
-        if err:
-            raise err
+                if hasattr(self.callback, 'post_receive') and callable(self.callback.post_receive):
+                    self.callback.post_receive(model=self, product=product, stock=stock, err=err)
 
         return stock
 
-    def dispatch(self, dfn, quantity=float(1.0)):
+    def dispatch(self, dfn, quantity=float(1.0), save_stock:bool=True):
         """
         Dispatch a quantity of product of a given definition.
 
@@ -545,26 +644,26 @@ class Warehause(WarehauserAbstractInstanceModel, WarehauseFields):
             dfn      (ProductDef): definition of the Product to dispatch.
             quantity (float):      quantity of product to dispatch in arbitrary units.
         """
+        if self.callback:
+            if hasattr(self.callback, 'pre_dispatch') and callable(self.callback.pre_dispatch):
+                self.callback.pre_dispatch(model=self, dfn=dfn, quantity=quantity)
+
         stock:Product = self.get_stock(dfn=dfn)
 
-        if self.callback:
-            self.callback.pre_dispatch(model=self, dfn=dfn, quantity=quantity, stock=stock)
-
         err = None
-
         try:
-            product = stock.split(quantity=quantity)
+            if stock is None:
+                raise WarehauserError(msg=_(f'ProductDef not found in Warehause'), code=WarehauserErrorCodes.WAREHAUSE_STOCK_NOT_FOUND, extra={'self': self, 'dfn': dfn})
+            product:Product = stock.split(quantity=quantity)
+            if save_stock:
+                stock.save()
         except Exception as e:
             err = e
+            raise e
         finally:
             if self.callback:
-                self.callback.post_dispatch(model=self, dfn=dfn, quantity=quantity, stock=stock, product=product, err=err)
-
-        if err:
-            raise err
-
-        if product == stock:
-            return product, None
+                if hasattr(self.callback, 'post_dispatch') and callable(self.callback.post_dispatch):
+                    self.callback.post_dispatch(model=self, dfn=dfn, quantity=quantity, product=product, stock=stock, err=err)
 
         return product, stock
 
@@ -628,10 +727,10 @@ class ProductDef(WarehauserAbstractDefinitionModel, ProductFields):
     owner       = models.ForeignKey('Client', on_delete=models.CASCADE, related_name='productdefs', null=False, blank=False,)
     warehauses  = models.ManyToManyField(Warehause)
 
-    def create_instance(self, data:dict=None, callback=None):
+    def create_instance(self, data:dict=None, callback=None, save:bool = True):
         if not isinstance(callback, ProductCallback):
             callback = ProductCallback()
-        return super()._create_instance(clazz=Product, data=data, callback=callback)
+        return super()._create_instance(clazz=Product, data=data, callback=callback, save=save)
 
     class Meta(WarehauserAbstractDefinitionModel.Meta):
         abstract = False
@@ -661,7 +760,6 @@ class Product(WarehauserAbstractInstanceModel, ProductFields):
     warehause   = models.ForeignKey('Warehause', on_delete=models.CASCADE, related_name='stock', null=False, blank=False,)
 
     quantity    = models.FloatField(null=False, blank=False, default=1.0,)
-    reserved    = models.FloatField(null=False, blank=False, default=0.0,)
 
     expires     = models.DateField(null=True, blank=True, default=None,)
     is_damaged  = models.BooleanField(null=False, blank=False, default=False,)
@@ -710,158 +808,114 @@ class Product(WarehauserAbstractInstanceModel, ProductFields):
             'quantity': float(self.quantity),
         }
 
-    def reserve(self, quantity=float(1.0)):
-        """
-        Reserve a quantity of this product. Note this should most likely be done with self.mutex() acquired.
-
-        Args:
-            quantity (float, optional): quantity of product to reserve. Default is float(1.0).
-        
-        Returns:
-            float: quantity of product actually reserved.
-        
-        Example:
-            ```
-            reserve = float(1.0)
-            try:
-                with product.mutex():
-                    # Put thread unsafe code here...
-                    reserve = product.reserve(quantity=reserve)
-            except Exception as e:
-                # Handle exception here...
-            ```
-        """
-        if self.callback is not None:
-            self.callback.pre_reserve(model=self, quantity=quantity)
-
-        err = None
-        try:
-            unreserved = self.quantity - self.reserved
-            if quantity > unreserved:
-                quantity = unreserved
-
-            self.reserved = self.reserved + quantity
-        except Exception as e:
-            err = e
-            raise err
-        finally:
-            if self.callback is not None:
-                self.callback.post_reserve(model=self, quantity=quantity, err=err)
-
-        return quantity
-
-    def unreserve(self, quantity:float=None):
-        """
-        Unreserve a quantity of this product. Note this should most likely be done with self.mutex() acquired.
-
-        Args:
-            quantity (float, optional): quantity of product to reserve. None means unreserve all. Default is None.
-        
-        Returns:
-            float: quantity of product actually reserved.
-        
-        Example:
-            ```
-            unreserve = float(1.0)
-            try:
-                with product.mutex():
-                    # Put thread unsafe code here...
-                    unreserve = product.unreserve(unreserve)
-            except Exception as e:
-                # Handle exception here...
-            ```
-        """
-        if self.callback is not None:
-            self.callback.pre_unreserve(model=self, quantity=quantity)
-
-        err = None
-        try:
-            if quantity is None or quantity > self.reserved:
-                quantity = self.reserved
-                self.reserved = float(0.0)
-            else:
-                self.reserved = max(float(0.0), self.reserved - quantity)
-        except Exception as e:
-            err = e
-            raise err
-        finally:
-            if self.callback is not None:
-                self.callback.post_unreserve(model=self, quantity=quantity, err=err)
-
-        return quantity
-
     def join(self, product):
         """
-        Join two products of the same definition together.
-        
+        Join product to self if it is of the same ProductDef, and delete product.
+        Note if multiple processes or threads can access this object you should consider acquiring a product.mutex() first.
+
         Args:
             product (Product): the other product to mix in with self.
+
+        Example:
+            ```
+            try:
+                # slf = some product!
+                with slf.mutex():
+                    # Put thread unsafe code here...
+                    slf.join(product)
+            except Exception as e:
+                # Handle exception here...
+            ```
         """
         if self.callback is not None:
-            self.callback.pre_join(model=self, product=product)
+            if hasattr(self.callback, 'pre_join') and callable(self.callback.pre_join):
+                self.callback.pre_join(model=self, product=product)
 
         err:Exception = None
         try:
             self.quantity = self.quantity + product.quantity
-            product.quantity = float(0.0)
+
+            # Delete the product
+            product.delete()
         except Exception as e:
             err = e
-            raise err
+            raise e
         finally:
             if self.callback is not None:
-                self.callback.post_join(model=self, product=product, err=err)
+                if hasattr(self.callback, 'post_join') and callable(self.callback.post_join):
+                    self.callback.post_join(model=self, product=product, err=err)
 
-    def split(self, quantity=float(1.0)):
+    def split(self, quantity=float(1.0)) -> 'Product':
         """
-        Remove a quantity of product out of this instance and return a new identical product object of the same quantity. 
+        Remove a quantity of product out of this instance and returns a copy product object but with the specified quantity. 
+        Note: If multiple processes or threads can access this object, consider acquiring a product.mutex() first.
 
         Args:
-            quantity (float, optional): quantity to remove. Default is float(1.0)
-        
+            quantity (float, optional): Quantity to remove. Default is float(1.0).
+
         Returns:
-            Product: the new product of required quantity.
+            Product: The new product with the specified quantity.
+
+        Example:
+            ```
+            try:
+                # product = some product!
+                with product.mutex():
+                    # Put thread unsafe code here...
+                    new_product = product.split(1.0)
+            except Exception as e:
+                # Handle exception here...
+            ```
         """
         if self.callback is not None:
-            self.callback.pre_split(model=self, quantity=quantity)
+            if hasattr(self.callback, 'pre_split') and callable(self.callback.pre_split):
+                self.callback.pre_split(model=self, quantity=quantity)
 
-        err:Exception = None
+        err: Exception = None
         try:
             if quantity > self.quantity:
-                raise WarehauserError(msg=_('Not enough current quantity to complete the split.'), code=WarehauserErrorCodes.WAREHAUSE_STOCK_TOO_LOW, extra={'self': self})
-            elif quantity == self.quantity:
-                return None
+                raise ValueError(_(f'Quantity {quantity} exceeds product self.quantity {self.quantity}'))
 
             remainder = float(self.quantity - quantity)
-            self.quantity = quantity
+            self.quantity = remainder
 
-            data = model_to_dict(self)
-            data['quantity'] = remainder
+            # Prepare data for the new Product instance
+            data = {
+                'id': None,
+                'quantity': quantity,
+            }
 
-            try:
-                del data['id']
-            except KeyError:
-                pass
-            try:
-                del data['created_at']
-            except KeyError:
-                pass
-            try:
-                del data['updated_at']
-            except KeyError:
-                pass
+            for field in self._meta.get_fields(): # This is getting the 
+                field_name = field.name
+                if isinstance(field, ForeignKey):
+                    if field_name not in ['parent',]:
+                        # Handle foreign key fields
+                        data[field_name] = getattr(self, field_name)
+                elif not isinstance(field, ManyToOneRel) and field_name not in ['id', 'created_at', 'updated_at', 'quantity']:
+                    # Handle other fields
+                    data[field_name] = getattr(self, field_name)
 
-            remaining = Product(**data)
-            remaining.save()
+            # Create the new Product instance
+            split = Product(**data)
 
-            remaining.log(level=logging.INFO, msg='Split product.', extra={'remainder': remaining})
+            # Set the parent for the new product
+            split.parent = self
+
+            # Logging
+            self.log(level=logging.INFO, msg=_('Split product.'), extra={'self': self, 'split': split})
+
         except Exception as e:
             err = e
-            raise err
+            raise e
         finally:
             if self.callback is not None:
-                self.callback.post_split(model=self, quantity=quantity, result=remaining, err=err)
+                if hasattr(self.callback, 'post_split') and callable(self.callback.post_split):
+                    self.callback.post_split(model=self, quantity=quantity, result=split, err=err)
 
-        return remaining
+        return split
+
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}(id={self.id}, key=\'{self.key}\', value=\'{self.value}\', quantity={self.quantity})'
 
     class Meta(WarehauserAbstractInstanceModel.Meta):
         abstract = False
@@ -903,10 +957,16 @@ class EventDef(WarehauserAbstractDefinitionModel, EventFields):
     """
     owner       = models.ForeignKey('Client', on_delete=models.CASCADE, related_name='eventdefs', null=False, blank=False,)
 
-    def create_instance(self, data:dict = None, callback:ModelCallback = None):
+    def create_instance(self, data:dict = None, callback:ModelCallback = None, save:bool = True):
         if not isinstance(callback, EventCallback):
             callback = EventCallback()
-        return super()._create_instance(clazz=Event, data=data, callback=callback)
+        event:Event = super()._create_instance(clazz=Event, data=data, callback=callback, save=save)
+
+        # If the event object is_batched is False then process immediately...
+        if not event.is_batched:
+            event.process()
+
+        return event
 
     class Meta(WarehauserAbstractDefinitionModel.Meta):
         abstract = False
@@ -945,7 +1005,8 @@ class Event(WarehauserAbstractInstanceModel, EventFields):
         proc_name = str(self.proc_name)
 
         if self.callback is not None:
-            self.callback.pre_process(event=self)
+            if hasattr(self.callback, 'pre_process') and callable(self.callback.pre_process):
+                self.callback.pre_process(event=self)
 
         err: Exception = None
         try:
@@ -954,19 +1015,14 @@ class Event(WarehauserAbstractInstanceModel, EventFields):
 
             # Determine base_module based on whether proc_name contains a '.'
             if '.' not in proc_name:
-                base_module = f'{event_logic_app}.{self.owner.group.name}.tasks'
+                module_name = f'{event_logic_app}.{self.owner.group.name}.tasks'
             else:
                 # Split the proc_name to check further conditions
-                proc_parts = proc_name.split('.', 1)
-                if proc_parts[0] == 'lib' or proc_parts[0] == self.owner.group.name:
-                    base_module = f'{event_logic_app}.{proc_parts[0]}'
-                    proc_name = proc_parts[1]
-                else:
-                    base_module = f'{event_logic_app}.{self.owner.group.name}.{proc_parts[0]}'
-                    proc_name = proc_parts[1]
+                module_name = f'{event_logic_app}.{proc_name}'.rpartition('.')[0]
+                proc_name = proc_name.rpartition('.')[2]
 
             # Load the module and function dynamically
-            module = importlib.import_module(base_module)
+            module = importlib.import_module(module_name)
             proc_func = getattr(module, proc_name)
 
             # Update status and timestamps
@@ -981,12 +1037,11 @@ class Event(WarehauserAbstractInstanceModel, EventFields):
                 self.save()
         except Exception as e:
             err = e
+            raise e
         finally:
             if self.callback is not None:
-                self.callback.post_process(event=self, err=err)
-
-        if err:
-            raise err
+                if hasattr(self.callback, 'post_process') and callable(self.callback.post_process):
+                    self.callback.post_process(event=self, err=err)
 
         return self
 
