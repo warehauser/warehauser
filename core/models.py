@@ -636,7 +636,7 @@ class Warehause(WarehauserAbstractInstanceModel, WarehauseFields):
 
         return stock
 
-    def dispatch(self, dfn, quantity=float(1.0), save_stock:bool=True):
+    def dispatch(self, dfn, quantity=float(1.0), save_product:bool=True, save_stock:bool=True):
         """
         Dispatch a quantity of product of a given definition.
 
@@ -655,6 +655,8 @@ class Warehause(WarehauserAbstractInstanceModel, WarehauseFields):
             if stock is None:
                 raise WarehauserError(msg=_(f'ProductDef not found in Warehause'), code=WarehauserErrorCodes.WAREHAUSE_STOCK_NOT_FOUND, extra={'self': self, 'dfn': dfn})
             product:Product = stock.split(quantity=quantity)
+            if save_product:
+                product.save()
             if save_stock:
                 stock.save()
         except Exception as e:

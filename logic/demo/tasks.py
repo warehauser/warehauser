@@ -32,6 +32,22 @@ from core.serializers import *
 
 logger = logging.getLogger(__name__)
 
+class magic_warehause_callback(WarehauseCallback):
+    def pre_dispatch(self, model, dfn, quantity):
+        super().pre_dispatch(model, dfn, quantity)
+        existing = model.stock.filter(parent__isnull=True, dfn=dfn, quantity__gte=0.0)
+        if existing.exists():
+            existing = existing.first()
+            existing.quantity += quantity
+            existing.save()
+        else:
+            data = {
+                'quantity': quantity,
+                'warehause': model,
+            }
+
+            dfn.create_instance(data=data)
+
 def my_event_process(event:Event):
     # Remember to set the owner of any model object you create to the owner of the event like so:
     # client:Client = event.owner
@@ -85,7 +101,12 @@ def inbound(event:Event):
 
         data = prepare_json(Product, options)
 
-        product = dfn.create_instance(data=data, callback=None)
+        warehause:Warehause = data['warehause']
+        quantity:float = data['quantity'] if 'quantity' in data else 1.0
+
+        warehause.callback = magic_warehause_callback()
+
+        product, _ = warehause.dispatch(dfn=dfn, quantity=quantity)
 
         event.set_option(key='result', value={'id': str(product.id),})
 

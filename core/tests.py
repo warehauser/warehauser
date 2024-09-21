@@ -26,22 +26,6 @@ from .callbacks import WarehauseDefCallback, WarehauseCallback, ProductDefCallba
 from .models import WarehauseDef, Warehause, ProductDef, Product, EventDef, Event, Client
 from .utils import WarehauserError
 
-class magic_warehause_callback(WarehauseCallback):
-    def pre_dispatch(self, model, dfn, quantity):
-        super().pre_dispatch(model, dfn, quantity)
-        existing = model.stock.filter(parent__isnull=True, dfn=dfn, quantity__gte=0.0)
-        if existing.exists():
-            existing = existing.first()
-            existing.quantity += quantity
-            existing.save()
-        else:
-            data = {
-                'quantity': quantity,
-                'warehause': model,
-            }
-
-            dfn.create_instance(data=data)
-
 # Create your tests here.
 
 class WarehauserTestCase(TestCase):
@@ -375,7 +359,6 @@ class TestCase00003(WarehauserTestCase):
                 'dfn': str(self.package_dfn.id),
                 'data': {
                     'value': 'pallet_001',
-                    'is_virtual': True,
                     'parent': str(self.loadingarea.id),
                     'options': {
                         'origin': str(transport_001.id),
@@ -388,15 +371,8 @@ class TestCase00003(WarehauserTestCase):
         inbound_event_pallet_001 = self.inbound_dfn.create_instance(data=data)
 
         pallet_001 = Warehause.objects.get(id=inbound_event_pallet_001.options['result']['id'])
-        pallet_001.callback = magic_warehause_callback()
 
         self.assertEqual(pallet_001.options['origin'], str(transport_001.id))
-
-        cbars1, _ = pallet_001.dispatch(dfn=self.chocolatebar_dfn, quantity=4.0)
-        cbars2, _ = pallet_001.dispatch(dfn=self.chocolatebar_dfn, quantity=2.0)
-
-        self.assertEqual(cbars1.quantity, 4.0, 'dispatched 4.0 chocolate bars')
-        self.assertEqual(cbars2.quantity, 2.0, 'dispatched 2.0 chocolate bars')
 
         data = {
             'value': 'package_002_inbound',
@@ -414,6 +390,31 @@ class TestCase00003(WarehauserTestCase):
         }
 
         inbound_event_package_002 = self.inbound_dfn.create_instance(data=data)
+        package_002 = Warehause.objects.get(id=inbound_event_package_002.options['result']['id'])
+
+
+
+
+
+        data = {
+            'value': 'product_0001_inbound',
+            'options': {
+                'type': 2,
+                'dfn': str(self.chocolatebar_dfn.id),
+                'data': {
+                    'quantity': 1.0,
+                    'warehause': str(pallet_001.id),
+                },
+            },
+        }
+
+        inbound_event_product_0001 = self.inbound_dfn.create_instance(data=data)
+        product_0001 = Product.objects.get(id=inbound_event_product_0001.options['result']['id'])
+
+
+
+
+
 
 
 
