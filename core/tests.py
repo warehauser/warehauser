@@ -392,10 +392,6 @@ class TestCase00003(WarehauserTestCase):
         inbound_event_package_002 = self.inbound_dfn.create_instance(data=data)
         package_002 = Warehause.objects.get(id=inbound_event_package_002.options['result']['id'])
 
-
-
-
-
         data = {
             'value': 'product_0001_inbound',
             'options': {
@@ -403,7 +399,10 @@ class TestCase00003(WarehauserTestCase):
                 'dfn': str(self.chocolatebar_dfn.id),
                 'data': {
                     'quantity': 1.0,
-                    'warehause': str(pallet_001.id),
+                    'warehause': str(package_002.id),
+                    'options': {
+                        'origin': str(pallet_001.id),
+                    },
                 },
             },
         }
@@ -411,6 +410,8 @@ class TestCase00003(WarehauserTestCase):
         inbound_event_product_0001 = self.inbound_dfn.create_instance(data=data)
         product_0001 = Product.objects.get(id=inbound_event_product_0001.options['result']['id'])
 
+        self.assertEqual(product_0001.options['origin'], str(pallet_001.id))
+        self.assertEqual(product_0001.warehause.id, package_002.id)
 
 
 

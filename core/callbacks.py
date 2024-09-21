@@ -142,12 +142,6 @@ class WarehauseCallback(ModelCallback):
                 # The product is not allowed in this warehause
                 raise WarehauserError(_(f'warehause cannot accept unmapped product {product} ProductDef {product.dfn}.'), WarehauserErrorCodes.WAREHAUSE_PRODUCTDEF_NOT_MAPPED, extra={'productdefs': allowed_productdefs})
 
-    # def check_pre_dispatch_quantity(self, model, dfn, quantity, stock):
-    #     if quantity <= float(0.0):
-    #         raise WarehauserError(msg=_(f'quantity must be positive.'), code=WarehauserErrorCodes.BAD_PARAMETER, extra={'self': model, 'quantity': quantity})
-    #     if stock and stock.quantity < quantity:
-    #         raise WarehauserError(msg=_(f'Not enough stock to forfill dispatch.'), code=WarehauserErrorCodes.WAREHAUSE_STOCK_TOO_LOW, extra={'self': model, 'stock': stock, 'quantity': quantity})
-
     def check_pre_dispatch_compatible_dfn(self, model, dfn, quantity):
         if not model.is_permissive:
             if dfn is None:
@@ -170,12 +164,12 @@ class WarehauseCallback(ModelCallback):
     def post_receive(self, model, product, stock, err):
         pass
 
-    def pre_dispatch(self, model, dfn, quantity):
+    def pre_dispatch(self, model, dfn, quantity, destination):
         self.check_status(model=model)
         # self.check_pre_dispatch_quantity(model=model, dfn=dfn, quantity=quantity, stock=product)
         self.check_pre_dispatch_compatible_dfn(model=model, dfn=dfn, quantity=quantity)
 
-    def post_dispatch(self, model, dfn, quantity, stock, product, err):
+    def post_dispatch(self, model, dfn, quantity, destination, stock, product, err):
         pass
 
 # Product callback

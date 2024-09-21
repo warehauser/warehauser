@@ -636,7 +636,7 @@ class Warehause(WarehauserAbstractInstanceModel, WarehauseFields):
 
         return stock
 
-    def dispatch(self, dfn, quantity=float(1.0), save_product:bool=True, save_stock:bool=True):
+    def dispatch(self, dfn, quantity=float(1.0), destination:'Warehause'=None, save_product:bool=True, save_stock:bool=True):
         """
         Dispatch a quantity of product of a given definition.
 
@@ -646,7 +646,7 @@ class Warehause(WarehauserAbstractInstanceModel, WarehauseFields):
         """
         if self.callback:
             if hasattr(self.callback, 'pre_dispatch') and callable(self.callback.pre_dispatch):
-                self.callback.pre_dispatch(model=self, dfn=dfn, quantity=quantity)
+                self.callback.pre_dispatch(model=self, dfn=dfn, quantity=quantity, destination=destination)
 
         stock:Product = self.get_stock(dfn=dfn)
 
@@ -655,6 +655,7 @@ class Warehause(WarehauserAbstractInstanceModel, WarehauseFields):
             if stock is None:
                 raise WarehauserError(msg=_(f'ProductDef not found in Warehause'), code=WarehauserErrorCodes.WAREHAUSE_STOCK_NOT_FOUND, extra={'self': self, 'dfn': dfn})
             product:Product = stock.split(quantity=quantity)
+            product.warehause = destination
             if save_product:
                 product.save()
             if save_stock:
@@ -665,7 +666,7 @@ class Warehause(WarehauserAbstractInstanceModel, WarehauseFields):
         finally:
             if self.callback:
                 if hasattr(self.callback, 'post_dispatch') and callable(self.callback.post_dispatch):
-                    self.callback.post_dispatch(model=self, dfn=dfn, quantity=quantity, product=product, stock=stock, err=err)
+                    self.callback.post_dispatch(model=self, dfn=dfn, quantity=quantity, destination=destination, product=product, stock=stock, err=err)
 
         return product, stock
 
