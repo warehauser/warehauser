@@ -164,12 +164,12 @@ class WarehauseCallback(ModelCallback):
     def post_receive(self, model, product, stock, err):
         pass
 
-    def pre_dispatch(self, model, dfn, quantity, destination):
+    def pre_dispatch(self, model, dfn, quantity):
         self.check_status(model=model)
         # self.check_pre_dispatch_quantity(model=model, dfn=dfn, quantity=quantity, stock=product)
         self.check_pre_dispatch_compatible_dfn(model=model, dfn=dfn, quantity=quantity)
 
-    def post_dispatch(self, model, dfn, quantity, destination, stock, product, err):
+    def post_dispatch(self, model, dfn, quantity, stock, product, err):
         pass
 
 # Product callback

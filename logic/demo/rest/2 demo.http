@@ -2,6 +2,343 @@
 
 # @import ./1 setup.http
 
+###
+# 01. PURCHASE ORDER from head office
+POST http://localhost:8000/api/eventdefs/{{edef_purchaseorder}}/do_spawn/
+Content-Type: application/json
+Authorization: Token {{authtoken}}
+
+{
+    "value": "01 PURCHASE ORDER from head office",
+    "options": {
+        "supplier": "Chocolates R Us",
+        "items": [{
+            "external_id": "SKU001",
+            "dfn": "{{pdef_chocolatebar}}",
+            "quantity": 1.0
+        }]
+    },
+    "parent": null
+}
+
+> {%
+   const responseData = response.body;
+   e_purchaseorder = responseData.id;
+%}
+
+###
+# 02. INBOUND Truck arrival at Dock A
+POST http://localhost:8000/api/eventdefs/{{edef_inbound}}/do_spawn/
+Content-Type: application/json
+Authorization: Token {{authtoken}}
+
+{
+    "value": "02 INBOUND Truck arrival at Dock A",
+    "options": {
+        "dfn": "{{wdef_transport}}",
+        "data": {
+            "value": "ABC-123",
+            "parent": "{{w_docka}}"
+        }
+    }
+}
+
+> {%
+   const responseData = response.body;
+   e_transport_001 = responseData.id;
+   w_transport_001 = responseData.options.result.id;
+%}
+
+###
+
+# 03. INBOUND Unload Pallet from Truck 001 at Dock A
+
+POST http://localhost:8000/api/eventdefs/{{edef_inbound}}/do_spawn/
+Content-Type: application/json
+Authorization: Token {{authtoken}}
+
+{
+    "value": "03 INBOUND Unload Pallet from Truck 001 at Dock A",
+    "options": {
+        "dfn": "{{wdef_package}}",
+        "data": {
+            "value": "pallet_001",
+            "parent": "{{w_docka}}",
+            "options": {
+                "origin": "{{w_transport_001}}",
+                "nonbound": true
+            }
+        }
+    },
+    "parent": "{{e_transport_001}}"
+}
+
+> {%
+   const responseData = response.body;
+   e_inbound_pallet_001 = responseData.id;
+   w_pallet_001 = responseData.options.result.id;
+%}
+
+###
+# 04. OUTBOUND Truck 001 departs from Dock A
+
+POST http://localhost:8000/api/eventdefs/{{edef_outbound}}/do_spawn/
+Content-Type: application/json
+Authorization: Token {{authtoken}}
+
+{
+    "value": "04 OUTBOUND Transport 001 departs from Dock A",
+    "warehause": "{{w_docka}}",
+    "options": {
+        "warehause": "{{w_transport_001}}"
+    },
+    "parent": "{{e_transport_001}}"
+}
+
+> {%
+   const responseData = response.body;
+   e_outbound_transport_001 = responseData.id;
+%}
+
+###
+# 05. INBOUND Package 002 (Created)
+POST http://localhost:8000/api/eventdefs/{{edef_inbound}}/do_spawn/
+Content-Type: application/json
+Authorization: Token {{authtoken}}
+
+{
+    "value": "05 INBOUND Package 002 (Created)",
+    "options": {
+        "dfn": "{{wdef_package}}",
+        "data": {
+            "value": "package_002",
+            "parent": "{{w_docka}}",
+            "options": {
+                "origin": "{{w_docka}}"
+            }
+        }
+    },
+    "parent": "{{e_purchaseorder}}"
+}
+
+> {%
+   const responseData = response.body;
+   e_inbound_package_001 = responseData.id;
+   w_package_002 = responseData.options.result.id;
+%}
+
+
+###
+# 06. TRANSFER Product 0001 from Pallet 001 to Package 002
+POST http://localhost:8000/api/eventdefs/{{edef_transfer}}/do_spawn/
+Content-Type: application/json
+Authorization: Token {{authtoken}}
+
+{
+    "value": "06 TRANSFER Product 0001 from Pallet 001 to Package 002",
+    "options": {
+        "dfn": "{{pdef_chocolatebar}}",
+        "from_warehause": "{{w_pallet_001}}",
+        "to_warehause": "{{w_package_002}}",
+        "quantity": 1.0
+    },
+    "parent": "{{e_purchaseorder}}"
+}
+
+> {%
+   const responseData = response.body;
+   e_transfer_0001 = responseData.id;
+%}
+
+###
+# 07. OUTBOUND Pallet 001 Departure
+
+POST http://localhost:8000/api/eventdefs/{{edef_outbound}}/do_spawn/
+Content-Type: application/json
+Authorization: Token {{authtoken}}
+
+{
+    "value": "07 OUTBOUND Pallet 001 Departure",
+    "warehause": "{{w_docka}}",
+    "options": {
+        "warehause": "{{w_pallet_001}}"
+    },
+    "parent": "{{e_inbound_pallet_001}}"
+}
+
+> {%
+   const responseData = response.body;
+   e_outbound_pallet_001 = responseData.id;
+%}
+
+###
+# 08. TRANSFER Product 0001 from Package 002 to Bin A01-01-01
+
+POST http://localhost:8000/api/eventdefs/{{edef_transfer}}/do_spawn/
+Content-Type: application/json
+Authorization: Token {{authtoken}}
+
+{
+    "value": "08 TRANSFER Product 0001 from Package 002 to Bin A01-01-01",
+    "options": {
+        "dfn": "{{pdef_chocolatebar}}",
+        "from_warehause": "{{w_package_002}}",
+        "to_warehause": "{{w_bin}}",
+        "quantity": 1.0
+    },
+    "parent": "{{e_purchaseorder}}"
+}
+
+> {%
+   const responseData = response.body;
+   e_transfer_0002 = responseData.id;
+%}
+
+
+###
+# 09. CUSTOMER ORDER John Smith, 1 Sunny Street, Sydney, NSW, 2000, Australia
+
+POST http://localhost:8000/api/eventdefs/{{edef_customerorder}}/do_spawn/
+Content-Type: application/json
+Authorization: Token {{authtoken}}
+
+{
+    "value": "09 CUSTOMER ORDER John Smith, 1 Sunny Street, Sydney, NSW, 2000, Australia",
+    "options": {
+        "items": [{
+            "dfn": "{{pdef_chocolatebar}}",
+            "quantity": 1.0
+        }]
+    }
+}
+
+> {%
+   const responseData = response.body;
+   e_customerorder = responseData.id;
+%}
+
+###
+# 10. TRANSFER Product 0001 from Bin A01-01-01 to Package 002
+
+POST http://localhost:8000/api/eventdefs/{{edef_transfer}}/do_spawn/
+Content-Type: application/json
+Authorization: Token {{authtoken}}
+
+{
+    "value": "10 TRANSFER Product 0001 from Bin A01-01-01 to Package 002",
+    "options": {
+        "dfn": "{{pdef_chocolatebar}}",
+        "from_warehause": "{{w_bin}}",
+        "to_warehause": "{{w_package_002}}",
+        "quantity": 1.0
+    },
+    "parent": "{{e_customerorder}}"
+}
+
+> {%
+   const responseData = response.body;
+   e_transfer_0003 = responseData.id;
+%}
+
+###
+# 11. INBOUND Truck arrival at Dock A
+POST http://localhost:8000/api/eventdefs/{{edef_inbound}}/do_spawn/
+Content-Type: application/json
+Authorization: Token {{authtoken}}
+
+{
+    "value": "11 INBOUND Truck arrival at Dock A",
+    "options": {
+        "dfn": "{{wdef_transport}}",
+        "data": {
+            "value": "XYZ-098",
+            "parent": "{{w_docka}}"
+        }
+    },
+    "parent": "{{e_customerorder}}"
+}
+
+> {%
+   const responseData = response.body;
+   e_transport_002 = responseData.id;
+   w_transport_002 = responseData.options.result.id;
+%}
+
+###
+# 12. TRANSFER Package 002 to Transport 002
+
+POST http://localhost:8000/api/eventdefs/{{edef_transfer}}/do_spawn/
+Content-Type: application/json
+Authorization: Token {{authtoken}}
+
+{
+    "value": "12 TRANSFER Package 002 to Transport 002",
+    "options": {
+        "from_warehause": "{{w_package_002}}",
+        "to_warehause": "{{w_transport_002}}"
+    },
+    "parent": "{{e_customerorder}}"
+}
+
+> {%
+   const responseData = response.body;
+   e_transfer_0003 = responseData.id;
+%}
+
+###
+# 13. OUTBOUND Truck 002 departs from Dock A
+
+POST http://localhost:8000/api/eventdefs/{{edef_outbound}}/do_spawn/
+Content-Type: application/json
+Authorization: Token {{authtoken}}
+
+{
+    "value": "13 OUTBOUND Transport 001 departs from Dock A",
+    "warehause": "{{w_docka}}",
+    "options": {
+        "warehause": "{{w_transport_002}}"
+    },
+    "parent": "{{e_transport_002}}"
+}
+
+> {%
+   const responseData = response.body;
+   e_outbound_transport_002 = responseData.id;
+%}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #
 # Get all models created in setup
 #
@@ -20,5 +357,13 @@ Content-Type: application/json
 Authorization: Token {{authtoken}}
 ###
 GET http://localhost:8000/api/warehauses/
+Content-Type: application/json
+Authorization: Token {{authtoken}}
+###
+GET http://localhost:8000/api/products/
+Content-Type: application/json
+Authorization: Token {{authtoken}}
+###
+GET http://localhost:8000/api/events/
 Content-Type: application/json
 Authorization: Token {{authtoken}}

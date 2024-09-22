@@ -304,15 +304,16 @@ class TestCase00003(WarehauserTestCase):
     def test_0001(self):
 
         data = {
-            'value': 'test123',
+            'value': '01 Purchase Order',
             'options': {
                 'supplier': 'Chocolates R Us',
                 'items': [{
                     'external_id': 'SKU001',
                     'dfn': str(self.chocolatebar_dfn.id),
-                    'quantity': 100,
+                    'quantity': 1.0,
                 },],
             },
+            'parent': None,
         }
 
         purchase_order_event = self.purchaseorder_dfn.create_instance(data=data)
@@ -333,9 +334,8 @@ class TestCase00003(WarehauserTestCase):
             self.assertTrue('quantity' in i)
 
         data = {
-            'value': 'transport_001',
+            'value': '02 Transport 001 Arrival',
             'options': {
-                'type': 1,
                 'dfn': str(self.transport_dfn.id),
                 'data': {
                     'value': 'ABC-123',
@@ -353,15 +353,15 @@ class TestCase00003(WarehauserTestCase):
         transport_001 = Warehause.objects.get(id=inbound_event_transport_001.options['result']['id'])
 
         data = {
-            'value': 'pallet_001_inbound',
+            'value': '03 Pallet 001 Inbound',
             'options': {
-                'type': 1,
                 'dfn': str(self.package_dfn.id),
                 'data': {
                     'value': 'pallet_001',
                     'parent': str(self.loadingarea.id),
                     'options': {
                         'origin': str(transport_001.id),
+                        'nonbound': True,
                     },
                 },
             },
@@ -374,10 +374,26 @@ class TestCase00003(WarehauserTestCase):
 
         self.assertEqual(pallet_001.options['origin'], str(transport_001.id))
 
+        # Transport 001 (truck) leaves...
         data = {
-            'value': 'package_002_inbound',
+            'value': '04 Transport 001 Departure',
+            'warehause': self.loadingarea,
             'options': {
-                'type': 1,
+                'warehause': str(transport_001.id),
+            },
+            'parent': inbound_event_transport_001,
+        }
+
+        outbound_event_transport_001 = self.outbound_dfn.create_instance(data=data)
+
+        with self.assertRaises(Warehause.DoesNotExist):
+            transport_001 = Warehause.objects.get(id=transport_001.id)
+
+        print('transport departed.')
+
+        data = {
+            'value': '05 Package 002 Inbound',
+            'options': {
                 'dfn': str(self.package_dfn.id),
                 'data': {
                     'value': 'package_002',
@@ -387,46 +403,144 @@ class TestCase00003(WarehauserTestCase):
                     },
                 },
             },
+            'parent': purchase_order_event,
         }
 
         inbound_event_package_002 = self.inbound_dfn.create_instance(data=data)
         package_002 = Warehause.objects.get(id=inbound_event_package_002.options['result']['id'])
 
         data = {
-            'value': 'product_0001_inbound',
+            'value': '06 Product 0001 Transfer 0001 from Pallet 001 to Package 002',
             'options': {
-                'type': 2,
                 'dfn': str(self.chocolatebar_dfn.id),
-                'data': {
+                'from_warehause': str(pallet_001.id),
+                'to_warehause': str(package_002.id),
+                'quantity': 1.0,
+            },
+            'parent': purchase_order_event,
+        }
+
+        transfer_event_product_0001 = self.transfer_dfn.create_instance(data=data)
+        package_002 = Warehause.objects.get(id=transfer_event_product_0001.options['result']['warehause'])
+
+        self.assertEqual(package_002.get_stock(dfn=self.chocolatebar_dfn,seed_only=False).quantity, 1.0)
+
+        data = {
+            'value': '07 Pallet 001 Departure',
+            'warehause': self.loadingarea,
+            'options': {
+                'warehause': str(pallet_001.id),
+            },
+            'parent': inbound_event_pallet_001,
+        }
+
+        outbound_event_pallet_001 = self.outbound_dfn.create_instance(data=data)
+
+        data = {
+            'value': '08 Product 0001 Transfer from Package 002 to Bin A01-01-01',
+            'options': {
+                'dfn': str(self.chocolatebar_dfn.id),
+                'from_warehause': str(package_002.id),
+                'to_warehause': str(self.bin_A10_01_01.id),
+                'quantity': 1.0,
+            },
+            'parent': purchase_order_event,
+        }
+
+        transfer_event_product_0002 = self.transfer_dfn.create_instance(data=data)
+        bin = Warehause.objects.get(id=transfer_event_product_0002.options['result']['warehause'])
+
+        self.assertEqual(bin.get_stock(dfn=self.chocolatebar_dfn,seed_only=False).quantity, 1.0)
+        self.assertEqual(package_002.get_stock(dfn=self.chocolatebar_dfn,seed_only=False).quantity, 0.0)
+
+        # A Customer orders a chocolate bar
+        data = {
+            'value': '09 John Smith, 1 Sunny Street, Sydney, NSW, 2000, Australia',
+            'options': {
+                'items': [{
+                    'dfn': str(self.chocolatebar_dfn.id),
                     'quantity': 1.0,
-                    'warehause': str(package_002.id),
-                    'options': {
-                        'origin': str(pallet_001.id),
-                    },
-                },
+                },],
             },
         }
 
-        inbound_event_product_0001 = self.inbound_dfn.create_instance(data=data)
-        product_0001 = Product.objects.get(id=inbound_event_product_0001.options['result']['id'])
+        customer_order_event = self.customerorder_dfn.create_instance(data=data)
 
-        self.assertEqual(product_0001.options['origin'], str(pallet_001.id))
-        self.assertEqual(product_0001.warehause.id, package_002.id)
+        data = {
+            'value': '10 Product 0001 Transfer 0003 from Bin A01-01-01 to Package 002',
+            'options': {
+                'dfn': str(self.chocolatebar_dfn.id),
+                'from_warehause': str(self.bin_A10_01_01.id),
+                'to_warehause': str(package_002.id),
+                'quantity': 1.0,
+            },
+            'parent': customer_order_event,
+        }
 
+        transfer_event_product_0003 = self.transfer_dfn.create_instance(data=data)
+        bin = Warehause.objects.get(id=transfer_event_product_0003.options['result']['warehause'])
 
+        data = {
+            'value': '11 Transport 002 Arrival',
+            'options': {
+                'dfn': str(self.transport_dfn.id),
+                'data': {
+                    'value': 'XYZ-098',
+                    'parent': str(self.loadingarea.id),
+                },
+            },
+            'parent': customer_order_event,
+        }
 
+        inbound_event_transport_002 = self.inbound_dfn.create_instance(data=data)
+        self.assertIsNotNone(inbound_event_transport_002.options['result'])
+        self.assertTrue('result' in inbound_event_transport_002.options)
+        self.assertTrue('id' in inbound_event_transport_002.options['result'])
 
+        transport_002 = Warehause.objects.get(id=inbound_event_transport_002.options['result']['id'])
 
+        # Transfer the package to transport_002
+        data = {
+            'value': '12 Package 0002 transfer 0004 Package 002 to Transport 002',
+            'options': {
+                'from_warehause': str(package_002.id),
+                'to_warehause': str(transport_002.id),
+            },
+            'parent': customer_order_event,
+        }
 
+        transfer_event_product_0004 = self.transfer_dfn.create_instance(data=data)
 
+        # Transport 002 departure
+        data = {
+            'value': '13 Transport 002 Departure',
+            'warehause': self.loadingarea,
+            'options': {
+                'warehause': str(transport_002.id),
+            },
+            'parent': inbound_event_transport_002,
+        }
 
+        outbound_event_transport_002 = self.outbound_dfn.create_instance(data=data)
 
+        with self.assertRaises(Warehause.DoesNotExist):
+            transport_002 = Warehause.objects.get(id=transport_002.id)
 
+        with self.assertRaises(Warehause.DoesNotExist):
+            package_002 = Warehause.objects.get(id=package_002.id)
 
+        print('Warehause objects:')
+        for w in Warehause.objects.all():
+            pprint.pprint(w)
 
+        print('Product objects:')
+        for p in Product.objects.all():
+            print(p.warehause.value)
+            pprint.pprint(p)
 
-
-
+        print('Event objects:')
+        for e in Event.objects.all():
+            pprint.pprint(e)
 
 
 

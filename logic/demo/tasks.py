@@ -33,8 +33,8 @@ from core.serializers import *
 logger = logging.getLogger(__name__)
 
 class magic_warehause_callback(WarehauseCallback):
-    def pre_dispatch(self, model, dfn, quantity, destination):
-        super().pre_dispatch(model, dfn, quantity, destination)
+    def pre_dispatch(self, model, dfn, quantity):
+        super().pre_dispatch(model, dfn, quantity)
         existing = model.stock.filter(parent__isnull=True, dfn=dfn, quantity__gte=0.0)
         if existing.exists():
             existing = existing.first()
@@ -86,46 +86,45 @@ def prepare_json(clazz, options):
 def inbound(event:Event):
     options = event.options
 
-    if options['type'] == 1:
-        # Inbound a new Warehause...
-        dfn = WarehauseDef.objects.get(id=options['dfn'])
+    # Inbound a new Warehause...
+    dfn = WarehauseDef.objects.get(id=options['dfn'])
 
-        data = prepare_json(Warehause, options)
+    data = prepare_json(Warehause, options)
 
-        from_warehause = dfn.create_instance(data=data, callback=None)
+    from_warehause = dfn.create_instance(data=data, callback=None)
 
-        event.set_option(key='result', value={'id': str(from_warehause.id),})
-    elif options['type'] == 2:
-        # Inbound a new Product...
-        dfn = ProductDef.objects.get(id=options['dfn'])
-
-        data = prepare_json(Product, options)
-
-        from_warehause:Warehause = Warehause.objects.get(id=data['options']['origin'])
-        to_warehause:Warehause = data['warehause']
-        quantity:float = data['quantity'] if 'quantity' in data else 1.0
-
-        from_warehause.callback = magic_warehause_callback()
-
-        product, _ = from_warehause.dispatch(dfn=dfn, quantity=quantity, destination=to_warehause, save_product=False)
-        product.set_option(key='origin', value=data['options']['origin'])
-        product.save()
-
-        event.set_option(key='result', value={'id': str(product.id),})
+    event.set_option(key='result', value={'id': str(from_warehause.id),})
 
 def outbound(event:Event):
-    pass
+    warehause = Warehause.objects.get(id=event.options['warehause'])
+    warehause.delete()
 
 def transfer(event:Event):
     options = event.options
 
-    dfn:ProductDef = ProductDef.objects.get(id=options['dfn'])
-    warehause:Warehause = Warehause.objects.get(id=options['warehause_id'])
-    destination:Warehause = Warehause.objects.get(id=options['destination'])
+    from_warehause:Warehause = Warehause.objects.get(id=options['from_warehause'])
+    to_warehause:Warehause = Warehause.objects.get(id=options['to_warehause'])
 
-    quantity = options['quantity'] if 'quantity' in options else 1.0
+    if 'dfn' in options:
+        dfn:ProductDef = ProductDef.objects.get(id=options['dfn'])
 
-    product, _ = warehause.dispatch(dfn=dfn, quantity=quantity, save_product=False)
-    product.warehause = destination
-    product.save()
+        quantity = options['quantity'] if 'quantity' in options else 1.0
 
+        if from_warehause.options is not None and 'nonbound' in from_warehause.options and from_warehause.options['nonbound']:
+            # Magic pudding activated...
+            from_warehause.callback = magic_warehause_callback()
+
+        product, _ = from_warehause.dispatch(dfn=dfn, quantity=quantity)
+        product.warehause = to_warehause
+        product.save()
+
+        to_warehause.receive(product=product)
+
+        event.set_option(key='result', value={'id': str(product.id), 'warehause': str(to_warehause.id)})
+    else:
+        # Warehause transfer
+        print(from_warehause.value, from_warehause.parent.value, to_warehause.value)
+        from_warehause.parent = to_warehause
+        from_warehause.save()
+
+        event.set_option(key='result', value={'from': str(from_warehause.id), 'to': str(to_warehause.id)})

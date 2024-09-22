@@ -200,7 +200,7 @@ Authorization: Token {{authtoken}}
 
 {
    "key": "Transfer",
-   "proc_name": "logic.demo.tasks.transfer"
+   "proc_name": "demo.tasks.transfer"
 }
 
 > {%

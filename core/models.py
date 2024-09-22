@@ -71,8 +71,8 @@ class WarehauserAbstractModel(models.Model):
     _callback   = None
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)  # Call the parent class constructor
         self.logs = []
+        super().__init__(*args, **kwargs)  # Call the parent class constructor
 
     @property
     def callback(self):
@@ -244,7 +244,7 @@ class WarehauserAbstractDefinitionModel(WarehauserAbstractModel):
     """
     Abstract parent class for all warehauser core app definition models.
     """
-    def _merge_dfn_defaults(self, data):
+    def _merge_dfn_defaults(self, data:dict):
         validated = dict()
 
         for field in self._meta.fields:
@@ -296,7 +296,18 @@ class WarehauserAbstractDefinitionModel(WarehauserAbstractModel):
 
         err: Exception = None
         try:
-            data = self._merge_dfn_defaults(data)
+            data = self._merge_dfn_defaults(data=data)
+
+            for field in clazz._meta.fields:
+                fieldname = field.name
+                # Check if the field is a ForeignKey
+                if isinstance(field, models.ForeignKey):
+                    # Check if the fieldname exists in the data and has a value
+                    if fieldname in data and isinstance(data[fieldname], str):
+                        # Convert the ID in data[fieldname] to the actual ForeignKey object
+                        related_model = field.related_model  # Get the model the ForeignKey points to
+                        data[fieldname] = related_model.objects.get(id=data[fieldname])
+
             model = clazz.objects.create(**data)
             if isinstance(callback, ModelCallback):
                 model.callback = callback
@@ -623,9 +634,13 @@ class Warehause(WarehauserAbstractInstanceModel, WarehauseFields):
             stock:Product = self.get_stock(dfn=product.dfn)
             if stock:
                 stock.join(product=product)
+                stock.save()
+                return stock
             else:
                 product.warehause = self
-                stock = product
+                product.parent = None
+                product.save()
+                return product
         except Exception as e:
             err = e
             raise e
@@ -634,9 +649,7 @@ class Warehause(WarehauserAbstractInstanceModel, WarehauseFields):
                 if hasattr(self.callback, 'post_receive') and callable(self.callback.post_receive):
                     self.callback.post_receive(model=self, product=product, stock=stock, err=err)
 
-        return stock
-
-    def dispatch(self, dfn, quantity=float(1.0), destination:'Warehause'=None, save_product:bool=True, save_stock:bool=True):
+    def dispatch(self, dfn:WarehauserAbstractDefinitionModel, quantity:float=float(1.0), save_stock:bool=True):
         """
         Dispatch a quantity of product of a given definition.
 
@@ -646,7 +659,7 @@ class Warehause(WarehauserAbstractInstanceModel, WarehauseFields):
         """
         if self.callback:
             if hasattr(self.callback, 'pre_dispatch') and callable(self.callback.pre_dispatch):
-                self.callback.pre_dispatch(model=self, dfn=dfn, quantity=quantity, destination=destination)
+                self.callback.pre_dispatch(model=self, dfn=dfn, quantity=quantity)
 
         stock:Product = self.get_stock(dfn=dfn)
 
@@ -655,9 +668,6 @@ class Warehause(WarehauserAbstractInstanceModel, WarehauseFields):
             if stock is None:
                 raise WarehauserError(msg=_(f'ProductDef not found in Warehause'), code=WarehauserErrorCodes.WAREHAUSE_STOCK_NOT_FOUND, extra={'self': self, 'dfn': dfn})
             product:Product = stock.split(quantity=quantity)
-            product.warehause = destination
-            if save_product:
-                product.save()
             if save_stock:
                 stock.save()
         except Exception as e:
@@ -666,7 +676,7 @@ class Warehause(WarehauserAbstractInstanceModel, WarehauseFields):
         finally:
             if self.callback:
                 if hasattr(self.callback, 'post_dispatch') and callable(self.callback.post_dispatch):
-                    self.callback.post_dispatch(model=self, dfn=dfn, quantity=quantity, destination=destination, product=product, stock=stock, err=err)
+                    self.callback.post_dispatch(model=self, dfn=dfn, quantity=quantity, product=product, stock=stock, err=err)
 
         return product, stock
 
@@ -965,10 +975,6 @@ class EventDef(WarehauserAbstractDefinitionModel, EventFields):
             callback = EventCallback()
         event:Event = super()._create_instance(clazz=Event, data=data, callback=callback, save=save)
 
-        # If the event object is_batched is False then process immediately...
-        if not event.is_batched:
-            event.process()
-
         return event
 
     class Meta(WarehauserAbstractDefinitionModel.Meta):
@@ -1016,6 +1022,7 @@ class Event(WarehauserAbstractInstanceModel, EventFields):
             if self.proc_name is None:
                 return None
 
+            print(proc_name)
             # Determine base_module based on whether proc_name contains a '.'
             if '.' not in proc_name:
                 module_name = f'{event_logic_app}.{self.owner.group.name}.tasks'
@@ -1038,6 +1045,9 @@ class Event(WarehauserAbstractInstanceModel, EventFields):
             finally:
                 self.proc_end = timezone.now()
                 self.save()
+        except ModuleNotFoundError as m:
+            err = m
+            self.log(level=logging.ERROR, msg=_(f'Unable to load module.'), extra={'module': module_name, 'self': self})
         except Exception as e:
             err = e
             raise e
