@@ -123,7 +123,6 @@ def transfer(event:Event):
         event.set_option(key='result', value={'id': str(product.id), 'warehause': str(to_warehause.id)})
     else:
         # Warehause transfer
-        print(from_warehause.value, from_warehause.parent.value, to_warehause.value)
         from_warehause.parent = to_warehause
         from_warehause.save()
 
