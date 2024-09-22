@@ -51,18 +51,18 @@ Authorization: Token {{authtoken}}
 
 ###
 
-# 03. INBOUND Unload Pallet from Truck 001 at Dock A
+# 03. INBOUND Unload Box from Truck 001 at Dock A
 
 POST http://localhost:8000/api/eventdefs/{{edef_inbound}}/do_spawn/
 Content-Type: application/json
 Authorization: Token {{authtoken}}
 
 {
-    "value": "03 INBOUND Unload Pallet from Truck 001 at Dock A",
+    "value": "03 INBOUND Unload Box from Truck 001 at Dock A",
     "options": {
         "dfn": "{{wdef_package}}",
         "data": {
-            "value": "pallet_001",
+            "value": "box_001",
             "parent": "{{w_docka}}",
             "options": {
                 "origin": "{{w_transport_001}}",
@@ -75,8 +75,8 @@ Authorization: Token {{authtoken}}
 
 > {%
    const responseData = response.body;
-   e_inbound_pallet_001 = responseData.id;
-   w_pallet_001 = responseData.options.result.id;
+   e_inbound_box_001 = responseData.id;
+   w_box_001 = responseData.options.result.id;
 %}
 
 ###
@@ -129,16 +129,16 @@ Authorization: Token {{authtoken}}
 
 
 ###
-# 06. TRANSFER Product 0001 from Pallet 001 to Package 002
+# 06. TRANSFER Product 0001 from Box 001 to Package 002
 POST http://localhost:8000/api/eventdefs/{{edef_transfer}}/do_spawn/
 Content-Type: application/json
 Authorization: Token {{authtoken}}
 
 {
-    "value": "06 TRANSFER Product 0001 from Pallet 001 to Package 002",
+    "value": "06 TRANSFER Product 0001 from Box 001 to Package 002",
     "options": {
         "dfn": "{{pdef_chocolatebar}}",
-        "from_warehause": "{{w_pallet_001}}",
+        "from_warehause": "{{w_box_001}}",
         "to_warehause": "{{w_package_002}}",
         "quantity": 1.0
     },
@@ -151,24 +151,24 @@ Authorization: Token {{authtoken}}
 %}
 
 ###
-# 07. OUTBOUND Pallet 001 Departure
+# 07. OUTBOUND Box 001 Departure
 
 POST http://localhost:8000/api/eventdefs/{{edef_outbound}}/do_spawn/
 Content-Type: application/json
 Authorization: Token {{authtoken}}
 
 {
-    "value": "07 OUTBOUND Pallet 001 Departure",
+    "value": "07 OUTBOUND Box 001 Departure",
     "warehause": "{{w_docka}}",
     "options": {
-        "warehause": "{{w_pallet_001}}"
+        "warehause": "{{w_box_001}}"
     },
-    "parent": "{{e_inbound_pallet_001}}"
+    "parent": "{{e_inbound_box_001}}"
 }
 
 > {%
    const responseData = response.body;
-   e_outbound_pallet_001 = responseData.id;
+   e_outbound_box_001 = responseData.id;
 %}
 
 ###
