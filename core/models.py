@@ -1028,7 +1028,7 @@ class Event(WarehauserAbstractInstanceModel, EventFields):
                 module_name = f'{event_logic_app}.{self.owner.group.name}.tasks'
             else:
                 # Split the proc_name to check further conditions
-                module_name = f'{event_logic_app}.{proc_name}'.rpartition('.')[0]
+                module_name = f'{event_logic_app}.{self.owner.group.name}.{proc_name}'.rpartition('.')[0]
                 proc_name = proc_name.rpartition('.')[2]
 
             # Load the module and function dynamically

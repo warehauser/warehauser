@@ -13,7 +13,6 @@ Authorization: Token {{authtoken}}
     "options": {
         "supplier": "Chocolates R Us",
         "items": [{
-            "external_id": "SKU001",
             "dfn": "{{pdef_chocolatebar}}",
             "quantity": 1.0
         }]
