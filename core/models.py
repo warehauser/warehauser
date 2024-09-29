@@ -1047,7 +1047,7 @@ class Event(WarehauserAbstractInstanceModel, EventFields):
                 self.save()
         except ModuleNotFoundError as m:
             err = m
-            self.log(level=logging.ERROR, msg=_(f'Unable to load module.'), extra={'module': module_name, 'self': self})
+            self.log(level=logging.ERROR, msg=_(f'Unable to load module.'), extra={'mod': module_name, 'self': self})
         except Exception as e:
             err = e
             raise e
