@@ -48,7 +48,7 @@ python-dateutil==2.9.0.post0
 python-dotenv==1.2.2
 pytz==2024.2
 referencing==0.35.1
-requests==2.32.4
+requests==2.33.0
 rpds-py==0.22.3
 ruamel.yaml==0.18.6
 ruamel.yaml.clib==0.2.12
