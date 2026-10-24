@@ -57,7 +57,7 @@ scipy==1.14.1
 sendmail==2.0
 silx==2.1.2
 six==1.17.0
-soupsieve==2.8.4
+soupsieve>=2.9.0
 SQLAlchemy==2.0.36
 sqlparse==0.5.4
 typing_extensions==4.12.2
